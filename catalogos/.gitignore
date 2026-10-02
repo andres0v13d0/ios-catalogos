@@ -46,3 +46,12 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Entornos / flavors (tarea 0.2)
+# Los archivos env/*.json contienen solo configuración NO sensible (apiBaseUrl,
+# nombre, flags) y SÍ se commitean. Nunca se commitean secretos: cualquier
+# override local con credenciales debe usar el sufijo .local.json y queda
+# ignorado. Igualmente, los firebase_options por flavor generados por FlutterFire.
+env/*.local.json
+env/secrets*.json
+lib/app/env/firebase_options_*.dart

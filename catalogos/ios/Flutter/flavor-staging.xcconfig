@@ -1,0 +1,4 @@
+// Config del flavor STAGING (ver diseño §2.7).
+FLUTTER_FLAVOR = staging
+APP_DISPLAY_NAME = Revendedores Staging
+PRODUCT_BUNDLE_IDENTIFIER = com.example.catalogos.staging

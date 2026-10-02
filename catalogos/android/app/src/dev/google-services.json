@@ -1,0 +1,121 @@
+{
+  "project_info": {
+    "project_number": "876719111475",
+    "project_id": "surtte-4bf22",
+    "storage_bucket": "surtte-4bf22.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:876719111475:android:814a6694508439cdfb5246",
+        "android_client_info": {
+          "package_name": "com.anonymous.minymolmayoristas"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "876719111475-4uuk6trv8l51to47kv9s9iusmv9jj2qj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9vLDcmBoWmCGbm9SAJLBJvu69mqS5ZyY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "876719111475-4uuk6trv8l51to47kv9s9iusmv9jj2qj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "876719111475-04937s3ishaafeke8odn92djk9r4af5u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.minymol.app",
+                "app_store_id": "6755150521"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:876719111475:android:75199ca8fa63fe07fb5246",
+        "android_client_info": {
+          "package_name": "com.flystock.revendedores.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "876719111475-4uuk6trv8l51to47kv9s9iusmv9jj2qj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9vLDcmBoWmCGbm9SAJLBJvu69mqS5ZyY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "876719111475-4uuk6trv8l51to47kv9s9iusmv9jj2qj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "876719111475-04937s3ishaafeke8odn92djk9r4af5u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.minymol.app",
+                "app_store_id": "6755150521"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:876719111475:android:8bcbf8491ba33493fb5246",
+        "android_client_info": {
+          "package_name": "com.minymol.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "876719111475-4uuk6trv8l51to47kv9s9iusmv9jj2qj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9vLDcmBoWmCGbm9SAJLBJvu69mqS5ZyY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "876719111475-4uuk6trv8l51to47kv9s9iusmv9jj2qj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "876719111475-04937s3ishaafeke8odn92djk9r4af5u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.minymol.app",
+                "app_store_id": "6755150521"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

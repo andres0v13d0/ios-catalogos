@@ -1,30 +1,21 @@
-// This is a basic Flutter widget test.
+// Smoke test de la app de Revendedores (Fase 0).
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Tras la tarea 0.5 la app usa go_router con un guard de auth placeholder.
+// Sin sesión, el guard redirige a `/login`, por lo que la pantalla inicial es
+// la de ingreso.
 
-import 'package:flutter/material.dart';
+import 'package:catalogos/app/app.dart';
+import 'package:catalogos/features/auth/presentation/login_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:catalogos/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('La app arranca y, sin sesión, muestra la pantalla de login',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: RevendedoresApp()));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.text('Entrar'), findsOneWidget);
   });
 }

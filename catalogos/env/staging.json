@@ -1,0 +1,7 @@
+{
+  "flavor": "staging",
+  "appName": "Revendedores Staging",
+  "apiBaseUrl": "https://staging-api.minymol.com",
+  "firebaseOptions": "staging",
+  "enableLogging": true
+}

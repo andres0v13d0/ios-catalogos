@@ -1,0 +1,36 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "0.1 `[FL]` Reemplazar template y crear estructura feature-first en `catalogos/lib` (`app/`, `core/`, `features/`, `shared/`).": [
+      {
+        "executionId": "b3d1d132-c0c5-4113-85e2-ca350400fd7c",
+        "chatSessionId": "sess_108578d8-9f1e-4a32-9516-17637fef113f",
+        "timestamp": 1790908078538
+      },
+      {
+        "executionId": "b3d1d132-c0c5-4113-85e2-ca350400fd7c",
+        "chatSessionId": "sess_108578d8-9f1e-4a32-9516-17637fef113f",
+        "timestamp": 1790908317876
+      }
+    ],
+    "0.2 `[FL]` Configurar flavors dev/staging/prod (Android product flavors, iOS schemes/xcconfig) + `env/*.json` con `apiBaseUrl`.": [
+      {
+        "executionId": "b3d1d132-c0c5-4113-85e2-ca350400fd7c",
+        "chatSessionId": "sess_108578d8-9f1e-4a32-9516-17637fef113f",
+        "timestamp": 1790908321698
+      },
+      {
+        "executionId": "b3d1d132-c0c5-4113-85e2-ca350400fd7c",
+        "chatSessionId": "sess_108578d8-9f1e-4a32-9516-17637fef113f",
+        "timestamp": 1790909913621
+      }
+    ],
+    "0.3 `[FL]` Theme FlyStock: `ThemeData` Poppins + `ColorScheme` (`#001634/#004aad/#5de0e6/#00ff94`), botón gradiente primario.": [
+      {
+        "executionId": "b3d1d132-c0c5-4113-85e2-ca350400fd7c",
+        "chatSessionId": "sess_108578d8-9f1e-4a32-9516-17637fef113f",
+        "timestamp": 1790909917408
+      }
+    ]
+  }
+}

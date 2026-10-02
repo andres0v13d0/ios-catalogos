@@ -1,0 +1,7 @@
+{
+  "flavor": "dev",
+  "appName": "Revendedores Dev",
+  "apiBaseUrl": "https://dev-api.minymol.com",
+  "firebaseOptions": "dev",
+  "enableLogging": true
+}

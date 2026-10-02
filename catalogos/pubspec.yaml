@@ -35,6 +35,43 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # Tipografía Poppins de la identidad FlyStock (tarea 0.3).
+  # Versión fija (pin) para builds reproducibles.
+  google_fonts: 9.0.0
+
+  # Cliente HTTP de la capa de red (tarea 0.4). Dio soporta interceptores
+  # (Auth/Error/AppCheck) y permite inyectar un HttpClientAdapter mock en tests.
+  # Versión fija (pin) para builds reproducibles.
+  dio: 5.11.1
+
+  # Gestión de estado (diseño §2.2). Riverpod expone Notifier/AsyncNotifier,
+  # inyección de dependencias testeable y estados async (loading/data/error).
+  # En Fase 0.5 lo usamos para el `authStateProvider` placeholder que alimenta
+  # el guard de navegación. Versión fija (pin) para builds reproducibles.
+  flutter_riverpod: 3.4.3
+
+  # Navegación declarativa con rutas tipadas y redirect guards (diseño §2.3).
+  # Soporta el guard de auth (placeholder en 0.5) y las rutas base /login y
+  # /home. Versión fija (pin) para builds reproducibles.
+  go_router: 18.0.2
+
+  # Formateo/localización de números y fechas (diseño §5 "Redondeo: COP sin
+  # decimales ... NumberFormat es-CO"). Se usa en `core/utils/money.dart` para
+  # formatear precios en pesos colombianos (tarea 0.6). Versión fija (pin).
+  intl: 0.20.3
+
+  # Caché local clave/valor para lectura offline (diseño §2.5 y §8). Se elige
+  # Hive sobre drift porque no requiere codegen, inicializa en una línea y
+  # permite tests sin dispositivo real (directorio temporal). La caché completa
+  # de catálogos (stale-while-revalidate) se construye en la tarea 1.18; aquí
+  # solo se inicializa la capa con una abstracción mínima. Versión fija (pin).
+  hive: 2.2.3
+
+  # Integración de Hive con Flutter: `Hive.initFlutter()` resuelve el directorio
+  # de documentos de la app para persistir las cajas (tarea 0.6). Versión fija.
+  hive_flutter: 1.1.0
+  firebase_core: ^4.15.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -45,6 +82,15 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # Adaptador de mock para Dio: permite stubear respuestas HTTP en tests
+  # unitarios sin red real (tarea 0.4). Versión fija (pin).
+  http_mock_adapter: 0.6.1
+
+  # Permite inyectar un directorio temporal como ruta de `path_provider` en los
+  # tests de la caché Hive, evitando depender de un dispositivo real (tarea
+  # 0.6). Versión fija (pin).
+  path_provider_platform_interface: 2.1.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

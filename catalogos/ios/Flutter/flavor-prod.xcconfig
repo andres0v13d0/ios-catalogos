@@ -1,0 +1,4 @@
+// Config del flavor PROD (ver diseño §2.7).
+FLUTTER_FLAVOR = prod
+APP_DISPLAY_NAME = Revendedores
+PRODUCT_BUNDLE_IDENTIFIER = com.example.catalogos
