@@ -12,6 +12,7 @@
 /// - permite tests sin dispositivo real usando un directorio temporal.
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Nombre de la caja (box) por defecto para datos cacheados de la app.
@@ -86,3 +87,22 @@ class LocalCache {
   /// Cierra la caja subyacente (liberar en logout o al terminar tests).
   Future<void> close() => _box.close();
 }
+
+/// Provider de la [LocalCache] de la app.
+///
+/// La caché se inicializa de forma asíncrona en el bootstrap (`main.dart`)
+/// mediante [initLocalCache]; por eso este provider se **sobreescribe** con la
+/// instancia ya abierta al crear el `ProviderContainer`/`ProviderScope`. Si no
+/// se sobreescribe (p. ej. en un test que no necesita caché), lanza un error
+/// explicativo en vez de fallar de forma oscura.
+///
+/// Los tests que SÍ ejercitan la caché la sobreescriben con una [LocalCache]
+/// respaldada por un directorio temporal de Hive (`Hive.init(tempDir)` +
+/// `initLocalCache(initHive: false)`), igual que `test/core/storage`.
+final Provider<LocalCache> localCacheProvider = Provider<LocalCache>(
+  (Ref ref) => throw StateError(
+    'localCacheProvider no fue sobreescrito. Sobrescríbelo con la LocalCache '
+    'inicializada en el bootstrap (ver main.dart) o con una caché temporal en '
+    'tests.',
+  ),
+);

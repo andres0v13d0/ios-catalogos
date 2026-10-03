@@ -7,9 +7,26 @@
 abstract final class AppRoutes {
   const AppRoutes._();
 
-  /// Ruta de inicio de sesión (destino del redirect del guard).
+  /// Ruta de inicio de sesión / ingreso de teléfono (destino del redirect del
+  /// guard).
   static const String login = '/login';
+
+  /// Ruta de verificación del OTP (tarea 1.10). Se navega a ella tras
+  /// `codeSent`, pasando el `verificationId` por `extra`.
+  static const String otp = '/login/otp';
+
+  /// Ruta para completar el perfil tras el primer login (tarea 1.13). El guard
+  /// redirige aquí mientras el reseller no tenga `nombre`.
+  static const String completeProfile = '/complete-profile';
 
   /// Ruta principal (autenticada).
   static const String home = '/home';
+
+  /// Ruta del detalle de catálogo (tareas 1.16/1.17/1.18). Recibe el id del
+  /// catálogo como parámetro de path (`/catalog/:id`) y, opcionalmente, el
+  /// nombre conocido vía `extra` para mostrarlo en el AppBar mientras carga.
+  static const String catalogDetail = '/catalog/:id';
+
+  /// Construye el path concreto del detalle para un [catalogId].
+  static String catalogDetailPath(String catalogId) => '/catalog/$catalogId';
 }

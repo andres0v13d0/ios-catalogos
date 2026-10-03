@@ -85,19 +85,45 @@ void main() {
       expect(find.byType(HomePage), findsOneWidget);
     });
 
-    testWidgets('login simulado navega de /login a /home',
+    testWidgets('al iniciar sesión, el guard navega de /login a /home',
         (WidgetTester tester) async {
-      final GoRouter router = await _pumpApp(tester);
+      final ProviderContainer container = ProviderContainer();
+      addTearDown(container.dispose);
+      final GoRouter router = container.read(appRouterProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: AppTheme.themeData,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
 
       // Partimos en login (sin sesión).
       expect(find.byType(LoginPage), findsOneWidget);
 
-      // Pulsar "Entrar" marca la sesión y navega a /home.
-      await tester.tap(find.text('Entrar'));
-      await tester.pumpAndSettle();
+      // Iniciar sesión (equivalente a verificar el OTP con éxito) hace que el
+      // guard reaccione y navegue a /home.
+      container.read(authStateProvider.notifier).signInWithToken(
+            uid: 'uid-test',
+            idToken: 'token-test',
+          );
+      expect(container.read(authStateProvider), AuthStatus.signedIn);
 
+      // Igual que en el flujo real (OtpPage navega a /home al autenticar),
+      // disparamos la navegación; el guard la permite por haber sesión y, al
+      // intentar volver a /login, redirige de nuevo a /home.
+      router.go(AppRoutes.home);
+      await tester.pumpAndSettle();
       expect(router.state.matchedLocation, AppRoutes.home);
       expect(find.byType(HomePage), findsOneWidget);
+
+      router.go(AppRoutes.login);
+      await tester.pumpAndSettle();
+      expect(router.state.matchedLocation, AppRoutes.home);
       expect(find.byType(LoginPage), findsNothing);
     });
   });

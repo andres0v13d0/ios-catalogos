@@ -1,29 +1,48 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
-/// Interceptor de App Check de Firebase.
+import 'app_check_token_source.dart';
+
+/// Interceptor de App Check de Firebase (tarea 1.11).
 ///
-/// STUB temporal (tarea 0.4): por ahora adjunta una cabecera placeholder y
-/// no integra Firebase App Check real.
+/// Adjunta la cabecera `X-Firebase-AppCheck: <token>` a cada petición saliente,
+/// obteniendo el token de un [AppCheckTokenSource] inyectable (la fuente real
+/// usa `firebase_app_check`; los tests inyectan un fake).
 ///
-/// TODO(tarea 1.11): reemplazar por la obtención del token de App Check real
-/// (Play Integrity en Android / DeviceCheck · App Attest en iOS) vía
-/// `firebase_app_check`, y adjuntarlo solo en los endpoints protegidos
-/// (ver diseño §2.4 "AppCheckInterceptor" y §7 "App Check").
+/// RESILIENCIA (requisito de la tarea 1.11): si la obtención del token falla
+/// (o devuelve vacío) la petición continúa SIN la cabecera y se registra una
+/// advertencia, de modo que el desarrollo sin App Check configurado siga
+/// funcionando. El backend decide si rechaza las peticiones sin App Check.
 class AppCheckInterceptor extends Interceptor {
-  AppCheckInterceptor();
+  AppCheckInterceptor(this._tokenSource);
+
+  final AppCheckTokenSource _tokenSource;
 
   /// Nombre de la cabecera de App Check usada por el backend.
   static const String appCheckHeader = 'X-Firebase-AppCheck';
 
   @override
-  void onRequest(
+  Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
-  ) {
-    // STUB: no se adjunta un token real todavía. Se deja la cabecera marcada
-    // para que sea evidente en logs/depuración que App Check aún no está
-    // integrado. No bloquea ninguna petición.
-    options.headers[appCheckHeader] = 'stub';
+  ) async {
+    try {
+      final token = await _tokenSource.getToken();
+      if (token != null && token.isNotEmpty) {
+        options.headers[appCheckHeader] = token;
+      } else {
+        debugPrint(
+          '[AppCheck] token no disponible; la petición continúa sin la '
+          'cabecera $appCheckHeader.',
+        );
+      }
+    } catch (error) {
+      // No bloquear la petición si App Check falla (p. ej. dev sin config).
+      debugPrint(
+        '[AppCheck] fallo al obtener el token; la petición continúa sin la '
+        'cabecera $appCheckHeader. Detalle: $error',
+      );
+    }
     handler.next(options);
   }
 }

@@ -16,6 +16,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(LoginPage), findsOneWidget);
-    expect(find.text('Entrar'), findsOneWidget);
+    expect(find.text('Enviar código'), findsOneWidget);
   });
 }

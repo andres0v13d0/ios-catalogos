@@ -72,6 +72,27 @@ dependencies:
   hive_flutter: 1.1.0
   firebase_core: ^4.15.0
 
+  # Firebase Phone Auth (tareas 1.9/1.10): verifyPhoneNumber (envío OTP),
+  # PhoneAuthCredential + signInWithCredential, user.getIdToken(). Se abstrae
+  # tras `PhoneAuthService` para poder mockearlo en tests (sin Firebase real).
+  # Versión fija (pin) resuelta compatible con firebase_core ^4.x.
+  firebase_auth: 6.7.0
+
+  # Firebase App Check (tarea 1.11): provee el token para la cabecera
+  # `X-Firebase-AppCheck`. En dev se activa con proveedores DEBUG; en prod con
+  # Play Integrity (Android) / App Attest (iOS). Se abstrae tras
+  # `AppCheckTokenSource` para inyectar un fake en tests. Versión fija (pin).
+  firebase_app_check: 0.4.8
+
+  # Almacenamiento seguro de metadatos de sesión del lado de la app (tarea
+  # 1.12): Keychain (iOS) / Keystore+EncryptedSharedPreferences (Android).
+  # NOTA DE DISEÑO: NO guardamos el idToken aquí (es efímero y lo gestiona
+  # firebase_auth, que ya persiste su propio usuario entre reinicios); solo
+  # persistimos metadatos del perfil (reseller id/nombre, estado de onboarding).
+  # El idToken se deriva on-demand con `currentUser.getIdToken()`.
+  # Versión fija (pin) resuelta compatible con el SDK del proyecto.
+  flutter_secure_storage: 11.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

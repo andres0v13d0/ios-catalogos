@@ -28,43 +28,43 @@
 ## Fase 1 — Autenticación (OTP) + catálogos compartidos
 
 ### Backend
-- [ ] 1.1 `[BE]` Migración: añadir valor `revendedor` a enum `usuarios.rol`.
+- [x] 1.1 `[BE]` Migración: añadir valor `revendedor` a enum `usuarios.rol`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: migración sube/baja sin romper; valor disponible.
-- [ ] 1.2 `[BE]` Migración + entidad `resellers` (`firebase_uid` unique, `telefono_e164` unique, `nombre`, `country_code`).
+- [x] 1.2 `[BE]` Migración + entidad `resellers` (`firebase_uid` unique, `telefono_e164` unique, `nombre`, `country_code`). — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: tabla creada; constraints verificados.
-- [ ] 1.3 `[BE]` Migración + entidad `reseller_shared_catalogs` con `unique(reseller_id, catalog_id)`.
+- [x] 1.3 `[BE]` Migración + entidad `reseller_shared_catalogs` con `unique(reseller_id, catalog_id)`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: inserción duplicada rechazada por constraint.
-- [ ] 1.4 `[BE]` Extender `AuthService.login` para detectar/crear `reseller` por `firebase_uid` + teléfono del token; respuesta `tipo:'REVENDEDOR'`.
+- [x] 1.4 `[BE]` Extender `AuthService.login` para detectar/crear `reseller` por `firebase_uid` + teléfono del token; respuesta `tipo:'REVENDEDOR'`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: test: login con teléfono nuevo crea reseller; login repetido no duplica.
-- [ ] 1.5 `[BE]` `ResellerGuard` (resuelve reseller por `firebase_uid`) + endpoints `GET /reseller/me`, `PATCH /reseller/me`.
+- [x] 1.5 `[BE]` `ResellerGuard` (resuelve reseller por `firebase_uid`) + endpoints `GET /reseller/me`, `PATCH /reseller/me`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: sin token → 401; con token de proveedor → 403; con reseller → 200.
-- [ ] 1.6 `[BE]` `POST /reseller/sync-shared-catalogs`: vincula `private_catalogs` por `telefono` E.164 (idempotente).
+- [x] 1.6 `[BE]` `POST /reseller/sync-shared-catalogs`: vincula `private_catalogs` por `telefono` E.164 (idempotente). — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: test: catálogos con teléfono coincidente se vinculan; segunda llamada no duplica.
-- [ ] 1.7 `[BE]` `GET /reseller/me/shared-catalogs` con filtros `providerId`, `search`.
+- [x] 1.7 `[BE]` `GET /reseller/me/shared-catalogs` con filtros `providerId`, `search`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: devuelve solo catálogos del reseller autenticado.
-- [ ] 1.8 `[BE]` App Check: validar en endpoints públicos de red de ventas (reemplazo de reCAPTCHA).
+- [x] 1.8 `[BE]` App Check: validar en endpoints públicos de red de ventas (reemplazo de reCAPTCHA). — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: request sin App Check válido es rechazado en entorno configurado.
 
 ### Flutter
-- [ ] 1.9 `[FL]` Firebase Phone Auth: pantalla de ingreso de teléfono (selector país, default +57) + envío OTP.
+- [x] 1.9 `[FL]` Firebase Phone Auth: pantalla de ingreso de teléfono (selector país, default +57) + envío OTP.
   - CA: envía OTP a número de prueba; muestra errores de formato.
-- [ ] 1.10 `[FL]` Pantalla de verificación OTP (reenvío con cooldown) + obtención de `idToken`.
+- [x] 1.10 `[FL]` Pantalla de verificación OTP (reenvío con cooldown) + obtención de `idToken`.
   - CA: OTP correcto autentica; incorrecto muestra error; reenvío respeta cooldown.
-- [ ] 1.11 `[FL]` Integrar App Check (Play Integrity / DeviceCheck/App Attest).
+- [x] 1.11 `[FL]` Integrar App Check (Play Integrity / DeviceCheck/App Attest).
   - CA: requests incluyen token App Check en header.
-- [ ] 1.12 `[FL]` Sesión: persistir login (secure storage), `AuthInterceptor` real, logout.
+- [x] 1.12 `[FL]` Sesión: persistir login (secure storage), `AuthInterceptor` real, logout.
   - CA: reinicio de app mantiene sesión; 401 persistente cierra sesión.
-- [ ] 1.13 `[FL]` Perfil reseller: completar nombre tras primer login (`GET/PATCH /reseller/me`).
+- [x] 1.13 `[FL]` Perfil reseller: completar nombre tras primer login (`GET/PATCH /reseller/me`).
   - CA: guarda nombre; guard de "perfil incompleto" deja de redirigir.
-- [ ] 1.14 `[FL]` Al iniciar sesión, llamar `POST /reseller/sync-shared-catalogs` y listar catálogos.
+- [x] 1.14 `[FL]` Al iniciar sesión, llamar `POST /reseller/sync-shared-catalogs` y listar catálogos.
   - CA: tras login, aparecen los catálogos compartidos del número.
-- [ ] 1.15 `[FL]` Lista de catálogos compartidos (agrupar/filtrar por proveedor) + pull-to-refresh.
+- [x] 1.15 `[FL]` Lista de catálogos compartidos (agrupar/filtrar por proveedor) + pull-to-refresh.
   - CA: muestra catálogos de múltiples proveedores; refresca.
-- [ ] 1.16 `[FL]` Detalle de catálogo: productos (imágenes, variantes, precios por cantidad, banner) reutilizando `GET /catalog/by-catalog/:id/products` y `POST /catalog/products/previews`.
+- [x] 1.16 `[FL]` Detalle de catálogo: productos (imágenes, variantes, precios por cantidad, banner) reutilizando `GET /catalog/by-catalog/:id/products` y `POST /catalog/products/previews`.
   - CA: renderiza productos; respeta modo "sin precios".
-- [ ] 1.17 `[FL]` Búsqueda y filtro por categoría/subcategoría en el detalle.
+- [x] 1.17 `[FL]` Búsqueda y filtro por categoría/subcategoría en el detalle.
   - CA: filtra resultados correctamente.
-- [ ] 1.18 `[FL]` Caché offline de catálogos consultados (stale-while-revalidate).
+- [x] 1.18 `[FL]` Caché offline de catálogos consultados (stale-while-revalidate).
   - CA: con red apagada tras una consulta previa, el catálogo se muestra desde caché.
 
 ---

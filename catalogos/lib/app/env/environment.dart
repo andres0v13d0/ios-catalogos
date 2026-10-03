@@ -46,9 +46,24 @@ class Environment {
       String.fromEnvironment('flavor', defaultValue: 'dev');
   static const String _appName =
       String.fromEnvironment('appName', defaultValue: 'Revendedores Dev');
+  // Fallback LOCAL para desarrollo: `10.0.2.2` es el alias del emulador de
+  // Android hacia el `localhost` de la máquina anfitriona (el PC donde corre
+  // el backend en el puerto 3000). No apuntamos a `dev-api.minymol.com` porque
+  // ese host puede no existir y el objetivo es desarrollar contra el backend
+  // local.
+  //
+  // Overrides:
+  // - `--dart-define-from-file=env/dev.json` (fuente preferida; ver env/*.json).
+  // - `--dart-define=apiBaseUrl=...` (puntual).
+  // En un DISPOSITIVO físico el emulador no aplica: usar la IP LAN del PC, p.
+  // ej. `--dart-define=apiBaseUrl=http://192.168.1.50:3000` (reemplazar por la
+  // IP real del PC en la red local, <PC_LAN_IP>).
+  //
+  // staging/prod NO cambian: sus URLs se inyectan vía env/staging.json y
+  // env/prod.json y nunca dependen de este fallback.
   static const String _apiBaseUrl = String.fromEnvironment(
     'apiBaseUrl',
-    defaultValue: 'https://dev-api.minymol.com',
+    defaultValue: 'http://10.0.2.2:3000',
   );
   static const String _firebaseOptions =
       String.fromEnvironment('firebaseOptions', defaultValue: 'dev');

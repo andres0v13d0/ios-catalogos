@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/auth_state_provider.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/otp_page.dart';
+import '../../features/profile/presentation/complete_profile_page.dart';
+import '../../features/profile/presentation/profile_controller.dart';
+import '../../features/shared_catalogs/presentation/catalog_detail_page.dart';
 import '../../features/shared_catalogs/presentation/home_page.dart';
 import 'app_routes.dart';
 
@@ -25,15 +29,37 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
     refreshListenable: refresh,
     redirect: (BuildContext context, GoRouterState state) {
       final bool signedIn = ref.read(isSignedInProvider);
-      final bool goingToLogin = state.matchedLocation == AppRoutes.login;
+      final String location = state.matchedLocation;
+      // Las rutas públicas del flujo de login (ingreso de teléfono y OTP) son
+      // accesibles sin sesión.
+      final bool goingToAuthFlow =
+          location == AppRoutes.login || location == AppRoutes.otp;
 
-      // Sin sesión: forzar login (salvo que ya se dirija a login).
+      // Sin sesión: forzar login (salvo que ya se dirija al flujo de auth).
       if (!signedIn) {
-        return goingToLogin ? null : AppRoutes.login;
+        return goingToAuthFlow ? null : AppRoutes.login;
       }
 
-      // Con sesión: no permanecer en login; ir a home.
-      if (goingToLogin) {
+      // Con sesión: no permanecer en el flujo de auth; ir a home.
+      if (goingToAuthFlow) {
+        return AppRoutes.home;
+      }
+
+      // Guard de "perfil incompleto" (tarea 1.13), compuesto con el de auth:
+      // mientras el reseller no tenga nombre, redirige a completar perfil.
+      // Cuando el estado del perfil es `complete`, deja de redirigir; en
+      // `unknown` (aún no consultado) no se fuerza nada para no bloquear la
+      // navegación antes de resolver `/reseller/me`.
+      final ProfileStatus profileStatus =
+          ref.read(profileControllerProvider).status;
+      final bool onCompleteProfile = location == AppRoutes.completeProfile;
+
+      if (profileStatus == ProfileStatus.incomplete && !onCompleteProfile) {
+        return AppRoutes.completeProfile;
+      }
+
+      // Perfil completo: no permanecer en la pantalla de completar perfil.
+      if (profileStatus == ProfileStatus.complete && onCompleteProfile) {
         return AppRoutes.home;
       }
 
@@ -47,10 +73,37 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const LoginPage(),
       ),
       GoRoute(
+        path: AppRoutes.otp,
+        name: 'otp',
+        builder: (BuildContext context, GoRouterState state) {
+          final String verificationId = state.extra is String
+              ? state.extra! as String
+              : '';
+          return OtpPage(verificationId: verificationId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.completeProfile,
+        name: 'completeProfile',
+        builder: (BuildContext context, GoRouterState state) =>
+            const CompleteProfilePage(),
+      ),
+      GoRoute(
         path: AppRoutes.home,
         name: 'home',
         builder: (BuildContext context, GoRouterState state) =>
             const HomePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.catalogDetail,
+        name: 'catalogDetail',
+        builder: (BuildContext context, GoRouterState state) {
+          final String id = state.pathParameters['id'] ?? '';
+          final String? title = state.extra is String
+              ? state.extra! as String
+              : null;
+          return CatalogDetailPage(catalogId: id, title: title);
+        },
       ),
     ],
   );
@@ -60,17 +113,25 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
 /// estado de autenticación para que vuelva a evaluar el `redirect`.
 class _RouterRefreshListenable extends ChangeNotifier {
   _RouterRefreshListenable(Ref ref) {
-    _subscription = ref.listen<AuthStatus>(
+    _authSub = ref.listen<AuthStatus>(
       authStateProvider,
       (AuthStatus? previous, AuthStatus next) => notifyListeners(),
     );
+    // El guard de "perfil incompleto" (tarea 1.13) también debe re-evaluarse
+    // cuando cambia el estado del perfil (p. ej. tras guardar el nombre).
+    _profileSub = ref.listen<ProfileStatus>(
+      profileControllerProvider.select((ProfileState s) => s.status),
+      (ProfileStatus? previous, ProfileStatus next) => notifyListeners(),
+    );
   }
 
-  late final ProviderSubscription<AuthStatus> _subscription;
+  late final ProviderSubscription<AuthStatus> _authSub;
+  late final ProviderSubscription<ProfileStatus> _profileSub;
 
   @override
   void dispose() {
-    _subscription.close();
+    _authSub.close();
+    _profileSub.close();
     super.dispose();
   }
 }
