@@ -3,21 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../auth/presentation/auth_state_provider.dart';
 import '../domain/catalog.dart';
 import '../domain/catalog_grouping.dart';
 import 'shared_catalogs_controller.dart';
 import 'shared_catalogs_filter.dart';
 
-/// Pantalla principal / autenticada (tareas 1.14 y 1.15).
+/// Pantalla principal / autenticada (tareas 1.14 y 1.15, rediseño UX).
 ///
 /// Al montarse, observa [sharedCatalogsControllerProvider], cuyo `build`
 /// dispara el `POST /reseller/sync-shared-catalogs` (idempotente) seguido del
 /// `GET /reseller/me/shared-catalogs` y aplica la caché offline
-/// *stale-while-revalidate*. Muestra los catálogos **agrupados por proveedor**,
-/// con filtro por proveedor (chips) y búsqueda por nombre, además de
-/// pull-to-refresh. Si la lista proviene de la caché (red caída) muestra un
-/// indicador sutil de "sin conexión".
+/// *stale-while-revalidate*.
+///
+/// === REDISEÑO: el CATÁLOGO es el protagonista ===
+/// En vez de agrupar por proveedor, se muestra una **lista plana de tarjetas de
+/// catálogo** ([_CatalogCard]). Cada tarjeta destaca la imagen de portada del
+/// catálogo (banner → ogImage → banner del proveedor → gradiente de marca) y su
+/// nombre público; el proveedor aparece en una fila secundaria (logo + nombre).
+/// Para revendedores con muchos proveedores se conservan el **buscador por
+/// nombre** y el **filtro por proveedor** (chips). Pull-to-refresh e indicador
+/// de "sin conexión" se mantienen.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -51,8 +58,8 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-/// Cuerpo con la lista agrupada, el filtro de proveedor, la búsqueda, el
-/// indicador offline y el pull-to-refresh.
+/// Cuerpo con la lista plana de tarjetas, el filtro de proveedor, la búsqueda,
+/// el indicador offline y el pull-to-refresh.
 class _CatalogsBody extends ConsumerWidget {
   const _CatalogsBody({required this.state});
 
@@ -67,8 +74,10 @@ class _CatalogsBody extends ConsumerWidget {
       state.catalogs,
       providerId: filter.providerId,
       search: filter.search,
-    );
-    final List<CatalogGroup> groups = groupByProvider(filtered);
+    )
+      // Orden estable por nombre de catálogo (A→Z) para una lista plana.
+      ..sort((a, b) =>
+          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
 
     Future<void> onRefresh() =>
         ref.read(sharedCatalogsControllerProvider.notifier).refresh();
@@ -95,15 +104,16 @@ class _CatalogsBody extends ConsumerWidget {
         Expanded(
           child: RefreshIndicator(
             onRefresh: onRefresh,
-            child: groups.isEmpty
+            child: filtered.isEmpty
                 ? const _EmptyBody()
-                : ListView(
+                : ListView.separated(
                     key: const Key('shared_catalogs_list'),
-                    padding: const EdgeInsets.only(bottom: 24),
-                    children: <Widget>[
-                      for (final CatalogGroup group in groups)
-                        _ProviderSection(group: group),
-                    ],
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    itemCount: filtered.length,
+                    separatorBuilder: (BuildContext context, int index) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (BuildContext context, int index) =>
+                        _CatalogCard(catalog: filtered[index]),
                   ),
           ),
         ),
@@ -112,7 +122,7 @@ class _CatalogsBody extends ConsumerWidget {
   }
 }
 
-/// Barra de chips para filtrar por proveedor (tarea 1.15).
+/// Barra de chips para filtrar por proveedor (se mantiene en el rediseño).
 class _ProviderFilterBar extends ConsumerWidget {
   const _ProviderFilterBar({required this.providers, required this.selected});
 
@@ -125,6 +135,7 @@ class _ProviderFilterBar extends ConsumerWidget {
     return SizedBox(
       height: 48,
       child: ListView(
+        key: const Key('shared_catalogs_provider_filter'),
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: <Widget>[
@@ -140,6 +151,7 @@ class _ProviderFilterBar extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
+                key: Key('provider_chip_${option.id}'),
                 label: Text(option.label),
                 selected: selected == option.id,
                 onSelected: (_) => controller.selectProvider(option.id),
@@ -151,57 +163,153 @@ class _ProviderFilterBar extends ConsumerWidget {
   }
 }
 
-/// Sección de un proveedor: encabezado (logo + nombre) + sus catálogos.
-class _ProviderSection extends StatelessWidget {
-  const _ProviderSection({required this.group});
+/// Tarjeta de un catálogo (el protagonista del rediseño).
+///
+/// - Imagen principal = [Catalog.coverImageUrl] (banner del catálogo → portada
+///   ogImage → banner del proveedor). Si no hay ninguna, un gradiente de marca
+///   FlyStock ([AppColors.primaryGradient]).
+/// - Título = nombre público del catálogo ([Catalog.displayName]).
+/// - Fila secundaria = avatar + nombre del proveedor.
+/// - Insignia "Sin precios" cuando [Catalog.isPriceHidden].
+/// - Al tocar navega al detalle con el UUID del catálogo y pasa el nombre
+///   público como título.
+class _CatalogCard extends StatelessWidget {
+  const _CatalogCard({required this.catalog});
 
-  final CatalogGroup group;
+  final Catalog catalog;
 
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
-    // El logo/nombre vienen en cada Catalog; dentro del grupo todos comparten
-    // proveedor, así que tomamos el primero como representante.
-    final Catalog representative = group.catalogs.first;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Row(
-            children: <Widget>[
-              _ProviderAvatar(catalog: representative),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  group.providerLabel,
-                  style: textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
+    return Card(
+      key: Key('catalog_${catalog.id}'),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(
+          // catalog.id es el UUID del catálogo (no el id del vínculo), por lo
+          // que el detalle llama a /catalog/by-catalog/<uuid>/products.
+          AppRoutes.catalogDetailPath(catalog.id),
+          extra: catalog.displayName,
         ),
-        for (final Catalog catalog in group.catalogs)
-          ListTile(
-            key: Key('catalog_${catalog.id}'),
-            leading: const Icon(Icons.collections_bookmark_outlined),
-            title: Text(catalog.displayName),
-            // La descripción del propio catálogo es más útil que repetir el
-            // nombre del proveedor (ya está en el encabezado). Si no hay
-            // descripción, no mostramos subtítulo.
-            subtitle: (catalog.priceField == 'none')
-                ? const Text('Sin precios')
-                : null,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(
-              // catalog.id ahora es el UUID del catálogo (no el id del vínculo),
-              // por lo que el detalle llama /catalog/by-catalog/<uuid>/products.
-              AppRoutes.catalogDetailPath(catalog.id),
-              extra: catalog.displayName,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _CatalogCover(catalog: catalog),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    catalog.displayName,
+                    style: textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      _ProviderAvatar(catalog: catalog),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          catalog.providerLabel,
+                          style: textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (catalog.isPriceHidden) const _NoPriceBadge(),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-      ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Portada de la tarjeta: imagen de red (si hay) o gradiente de marca.
+class _CatalogCover extends StatelessWidget {
+  const _CatalogCover({required this.catalog});
+
+  final Catalog catalog;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? url = catalog.coverImageUrl;
+    return AspectRatio(
+      key: Key('catalog_cover_${catalog.id}'),
+      aspectRatio: 16 / 9,
+      child: url == null
+          ? const _GradientCover()
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (
+                BuildContext context,
+                Object error,
+                StackTrace? stack,
+              ) =>
+                  const _GradientCover(),
+            ),
+    );
+  }
+}
+
+/// Fondo con el gradiente de marca FlyStock (`#004AAD → #5DE0E6 → #00FF94`),
+/// usado cuando el catálogo no tiene ninguna imagen de portada.
+class _GradientCover extends StatelessWidget {
+  const _GradientCover();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.collections_bookmark_outlined,
+          color: AppColors.onDark,
+          size: 36,
+        ),
+      ),
+    );
+  }
+}
+
+/// Insignia discreta de "Sin precios".
+class _NoPriceBadge extends StatelessWidget {
+  const _NoPriceBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('catalog_no_price_badge'),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'Sin precios',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.onSecondaryContainer,
+            ),
+      ),
     );
   }
 }
@@ -220,26 +328,26 @@ class _ProviderAvatar extends StatelessWidget {
       catalog.providerInitials,
       style: Theme.of(context)
           .textTheme
-          .labelMedium
+          .labelSmall
           ?.copyWith(color: colors.onSecondaryContainer),
     );
 
     if (logo == null || logo.trim().isEmpty) {
       return CircleAvatar(
-        radius: 16,
+        radius: 12,
         backgroundColor: colors.secondaryContainer,
         child: initials,
       );
     }
 
     return CircleAvatar(
-      radius: 16,
+      radius: 12,
       backgroundColor: colors.secondaryContainer,
       child: ClipOval(
         child: Image.network(
           logo,
-          width: 32,
-          height: 32,
+          width: 24,
+          height: 24,
           fit: BoxFit.cover,
           errorBuilder:
               (BuildContext context, Object error, StackTrace? stack) =>

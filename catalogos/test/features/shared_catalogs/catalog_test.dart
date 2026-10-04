@@ -20,6 +20,7 @@ Map<String, dynamic> realNestedFixture() => <String, dynamic>{
         'publicName': 'Catálogo Público',
         'description': 'desc',
         'bannerUrl': 'https://cdn/catalog-banner.jpg',
+        'ogImageUrl': 'https://cdn/catalog-og.jpg',
         'enlace': 'mi-enlace',
         'priceField': 'none',
       },
@@ -69,6 +70,79 @@ void main() {
     test('priceField mapeado (modo sin precios)', () {
       final c = Catalog.fromJson(realNestedFixture());
       expect(c.priceField, 'none');
+    });
+
+    test('ogImageUrl mapeado (catalog.ogImageUrl / og_image_url)', () {
+      final c = Catalog.fromJson(realNestedFixture());
+      expect(c.ogImageUrl, 'https://cdn/catalog-og.jpg');
+
+      final json = realNestedFixture();
+      final cat = json['catalog'] as Map<String, dynamic>;
+      cat.remove('ogImageUrl');
+      cat['og_image_url'] = 'https://cdn/snake-og.jpg';
+      expect(Catalog.fromJson(json).ogImageUrl, 'https://cdn/snake-og.jpg');
+    });
+  });
+
+  group('PRIVACIDAD: internalName NUNCA se usa como displayName', () {
+    test('ignora internalName aunque falte publicName', () {
+      final json = realNestedFixture();
+      final cat = json['catalog'] as Map<String, dynamic>;
+      cat.remove('publicName');
+      cat['internalName'] = 'NOMBRE INTERNO SECRETO';
+      // También a nivel plano, por si el payload legado lo trae arriba.
+      json['internalName'] = 'NOMBRE INTERNO SECRETO';
+
+      final c = Catalog.fromJson(json);
+      // Sin publicName, displayName queda vacío; nunca el nombre interno.
+      expect(c.displayName, isNot('NOMBRE INTERNO SECRETO'));
+      expect(c.displayName, '');
+    });
+  });
+
+  group('coverImageUrl (portada de la tarjeta)', () {
+    test('prefiere el banner del catálogo', () {
+      final c = Catalog.fromJson(realNestedFixture());
+      expect(c.coverImageUrl, 'https://cdn/catalog-banner.jpg');
+    });
+
+    test('cae a ogImageUrl cuando no hay banner del catálogo', () {
+      final json = realNestedFixture();
+      (json['catalog'] as Map<String, dynamic>).remove('bannerUrl');
+      final c = Catalog.fromJson(json);
+      expect(c.coverImageUrl, 'https://cdn/catalog-og.jpg');
+    });
+
+    test('cae al banner del proveedor cuando no hay banner ni ogImage', () {
+      final json = realNestedFixture();
+      final cat = json['catalog'] as Map<String, dynamic>;
+      cat.remove('bannerUrl');
+      cat.remove('ogImageUrl');
+      final c = Catalog.fromJson(json);
+      expect(c.coverImageUrl, 'https://cdn/provider-banner.jpg');
+    });
+
+    test('es null cuando no hay ninguna imagen (la UI usa gradiente)', () {
+      final json = realNestedFixture();
+      final cat = json['catalog'] as Map<String, dynamic>;
+      cat.remove('bannerUrl');
+      cat.remove('ogImageUrl');
+      (json['provider'] as Map<String, dynamic>).remove('bannerUrl');
+      final c = Catalog.fromJson(json);
+      expect(c.coverImageUrl, isNull);
+    });
+  });
+
+  group('isPriceHidden', () {
+    test('true cuando priceField == none', () {
+      final c = Catalog.fromJson(realNestedFixture());
+      expect(c.isPriceHidden, isTrue);
+    });
+
+    test('false cuando priceField es otro valor', () {
+      final json = realNestedFixture();
+      (json['catalog'] as Map<String, dynamic>)['priceField'] = 'mayorista';
+      expect(Catalog.fromJson(json).isPriceHidden, isFalse);
     });
   });
 

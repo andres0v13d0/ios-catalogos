@@ -42,6 +42,7 @@ class Catalog {
     this.providerLogoUrl,
     this.providerBannerUrl,
     this.bannerUrl,
+    this.ogImageUrl,
     this.priceField,
     this.isReseller,
   });
@@ -71,6 +72,11 @@ class Catalog {
 
   /// URL del banner del catálogo; puede ser `null`.
   final String? bannerUrl;
+
+  /// Portada de respaldo del catálogo (`catalog.ogImageUrl`); puede ser `null`.
+  /// Se usa como segundo candidato de imagen de la tarjeta cuando no hay
+  /// [bannerUrl] propio del catálogo.
+  final String? ogImageUrl;
 
   /// Campo de precio del catálogo. `'none'` ⇒ modo "sin precios".
   final String? priceField;
@@ -104,6 +110,22 @@ class Catalog {
     return (words[0][0] + words[1][0]).toUpperCase();
   }
 
+  /// Imagen principal de la tarjeta (el CATÁLOGO es el protagonista). Orden de
+  /// resolución: banner del catálogo → portada (ogImage) del catálogo → banner
+  /// del proveedor → `null` (la UI muestra un gradiente de marca). Las cadenas
+  /// vacías se tratan como ausentes.
+  String? get coverImageUrl {
+    final candidates = <String?>[bannerUrl, ogImageUrl, providerBannerUrl];
+    for (final c in candidates) {
+      if (c != null && c.trim().isNotEmpty) return c;
+    }
+    return null;
+  }
+
+  /// `true` si el catálogo oculta precios (`priceField == 'none'`). La UI
+  /// muestra una insignia discreta "Sin precios".
+  bool get isPriceHidden => (priceField ?? '').toLowerCase() == 'none';
+
   /// Construye un [Catalog] desde el JSON del backend. Prioriza la forma
   /// anidada real (`catalog`/`provider`) y acepta también claves planas
   /// (snake/camelCase) por tolerancia (caché local / payloads legados).
@@ -127,14 +149,14 @@ class Catalog {
         (legacyUuid == null ? _asInt(topLevelId) : null);
 
     // --- displayName: catalog.publicName | ... | top-level publicName | ''.
+    // PRIVACIDAD: NUNCA se usa internalName/internal_name como fallback; el
+    // nombre interno del catálogo jamás debe mostrarse al revendedor.
     final String displayName = _asString(
           _pick(catalog, const <String>['publicName', 'public_name']) ??
               _pick(json, const <String>[
                 'publicName',
                 'public_name',
                 'nombre',
-                'internalName',
-                'internal_name',
               ]),
         ) ??
         '';
@@ -185,6 +207,12 @@ class Catalog {
           _pick(json, const <String>['bannerUrl', 'banner_url']),
     );
 
+    // --- ogImageUrl (portada del catálogo): catalog.ogImageUrl | ... | top-level.
+    final String? ogImageUrl = _asString(
+      _pick(catalog, const <String>['ogImageUrl', 'og_image_url']) ??
+          _pick(json, const <String>['ogImageUrl', 'og_image_url']),
+    );
+
     // --- priceField: catalog.priceField | ... | top-level.
     final String? priceField = _asString(
       _pick(catalog, const <String>['priceField', 'price_field']) ??
@@ -206,6 +234,7 @@ class Catalog {
       providerLogoUrl: providerLogoUrl,
       providerBannerUrl: providerBannerUrl,
       bannerUrl: bannerUrl,
+      ogImageUrl: ogImageUrl,
       priceField: priceField,
       isReseller: isReseller,
     );
@@ -222,6 +251,7 @@ class Catalog {
         'providerLogoUrl': providerLogoUrl,
         'providerBannerUrl': providerBannerUrl,
         'bannerUrl': bannerUrl,
+        'ogImageUrl': ogImageUrl,
         'priceField': priceField,
         'isReseller': isReseller,
       };
@@ -289,6 +319,7 @@ class Catalog {
           other.providerLogoUrl == providerLogoUrl &&
           other.providerBannerUrl == providerBannerUrl &&
           other.bannerUrl == bannerUrl &&
+          other.ogImageUrl == ogImageUrl &&
           other.priceField == priceField &&
           other.isReseller == isReseller;
 
@@ -302,6 +333,7 @@ class Catalog {
         providerLogoUrl,
         providerBannerUrl,
         bannerUrl,
+        ogImageUrl,
         priceField,
         isReseller,
       );

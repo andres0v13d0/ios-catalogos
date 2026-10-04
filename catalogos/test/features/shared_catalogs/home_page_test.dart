@@ -1,12 +1,14 @@
-// Widget test de HomePage (tareas 1.14/1.15).
+// Widget test de HomePage (rediseño UX: el catálogo es el protagonista).
 //
-// - Muestra los catálogos agrupados por proveedor (encabezados de sección).
-// - El pull-to-refresh (RefreshIndicator) dispara una recarga, verificado con
-//   un controlador fake que cuenta las recargas.
+// - Muestra una lista plana de TARJETAS de catálogo (sin secciones por
+//   proveedor). Cada tarjeta expone el nombre público del catálogo (título),
+//   el nombre del proveedor (fila secundaria) y una insignia "Sin precios"
+//   cuando priceField == 'none'.
+// - La key de la tarjeta es Key('catalog_<uuid>') para la navegación.
+// - El buscador por nombre y el filtro por proveedor siguen funcionando.
+// - El pull-to-refresh (RefreshIndicator) dispara una recarga.
 //
-// Se sobreescribe el controlador con un fake en memoria (sin Hive ni red), de
-// modo que el test se centra en la UI (agrupación + wiring del refresh) y no
-// depende de IO de archivos ni del event loop asíncrono real.
+// Se sobreescribe el controlador con un fake en memoria (sin Hive ni red).
 
 import 'package:catalogos/features/shared_catalogs/domain/catalog.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/home_page.dart';
@@ -20,8 +22,6 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeController extends SharedCatalogsController {
   int refreshCount = 0;
 
-  // Ids = UUID (como los devuelve el backend ya corregido), con nombre y logo
-  // del proveedor para verificar el encabezado con nombre + avatar.
   static const List<Catalog> _catalogs = <Catalog>[
     Catalog(
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -29,12 +29,14 @@ class _FakeController extends SharedCatalogsController {
       providerId: 10,
       providerName: 'Proveedor A',
       providerLogoUrl: 'https://cdn/logo-a.webp',
+      priceField: 'none', // catálogo sin precios → insignia
     ),
     Catalog(
       id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
       displayName: 'Camisas',
       providerId: 20,
       providerName: 'Proveedor B',
+      priceField: 'mayorista',
     ),
   ];
 
@@ -51,6 +53,15 @@ class _FakeController extends SharedCatalogsController {
 void main() {
   late _FakeController fake;
 
+  // Superficie alta: las tarjetas tienen portada 16/9, de modo que en una
+  // ventana pequeña el ListView (perezoso) no construiría la segunda tarjeta.
+  void useTallSurface(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
   Widget wrap() {
     fake = _FakeController();
     return ProviderScope(
@@ -61,39 +72,42 @@ void main() {
     );
   }
 
-  testWidgets('muestra los catálogos agrupados por proveedor (con nombre)',
+  testWidgets(
+      'cada tarjeta muestra el nombre público del catálogo y el del proveedor',
       (WidgetTester tester) async {
+    useTallSurface(tester);
     await tester.pumpWidget(wrap());
     await tester.pump();
 
-    // Encabezados de sección por NOMBRE de proveedor (no "Proveedor <id>").
+    // Títulos = nombres públicos de catálogo.
+    expect(find.text('Zapatos'), findsOneWidget);
+    expect(find.text('Camisas'), findsOneWidget);
+
+    // Nombre del proveedor presente (en la fila secundaria de la tarjeta y,
+    // además, en el chip del filtro por proveedor). NUNCA "Proveedor <id>".
     expect(find.text('Proveedor A'), findsWidgets);
     expect(find.text('Proveedor B'), findsWidgets);
     expect(find.textContaining('Proveedor 10'), findsNothing);
     expect(find.textContaining('Proveedor 20'), findsNothing);
-    // Catálogos.
-    expect(find.text('Zapatos'), findsOneWidget);
-    expect(find.text('Camisas'), findsOneWidget);
   });
 
-  testWidgets('renderiza el avatar del proveedor (iniciales como fallback)',
+  testWidgets('la insignia "Sin precios" aparece solo para priceField==none',
       (WidgetTester tester) async {
+    useTallSurface(tester);
     await tester.pumpWidget(wrap());
     await tester.pump();
 
-    // Hay avatares de proveedor (CircleAvatar) en los encabezados.
-    expect(find.byType(CircleAvatar), findsWidgets);
-    // El proveedor sin logo muestra iniciales 'PB' (Proveedor B).
-    expect(find.text('PB'), findsOneWidget);
+    // Solo un catálogo ('Zapatos') está en modo sin precios.
+    expect(find.text('Sin precios'), findsOneWidget);
+    expect(find.byKey(const Key('catalog_no_price_badge')), findsOneWidget);
   });
 
-  testWidgets('el ListTile del catálogo usa el UUID como key (navegación)',
+  testWidgets('la tarjeta usa Key(catalog_<uuid>) para la navegación',
       (WidgetTester tester) async {
+    useTallSurface(tester);
     await tester.pumpWidget(wrap());
     await tester.pump();
 
-    // La key del ListTile incorpora catalog.id, que ahora es el UUID; esto
-    // garantiza que la navegación al detalle recibe el UUID y no el link id.
     expect(
       find.byKey(const Key('catalog_aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')),
       findsOneWidget,
@@ -104,27 +118,37 @@ void main() {
     );
   });
 
-  testWidgets('el pull-to-refresh (RefreshIndicator.onRefresh) recarga',
+  testWidgets('renderiza el avatar del proveedor (iniciales como fallback)',
       (WidgetTester tester) async {
+    useTallSurface(tester);
     await tester.pumpWidget(wrap());
     await tester.pump();
 
-    // La lista está envuelta por un RefreshIndicator (pull-to-refresh).
+    expect(find.byType(CircleAvatar), findsWidgets);
+    // El proveedor sin logo muestra iniciales 'PB' (Proveedor B).
+    expect(find.text('PB'), findsOneWidget);
+  });
+
+  testWidgets('el pull-to-refresh (RefreshIndicator.onRefresh) recarga',
+      (WidgetTester tester) async {
+    useTallSurface(tester);
+    await tester.pumpWidget(wrap());
+    await tester.pump();
+
     final Finder indicatorFinder = find.byType(RefreshIndicator);
     expect(indicatorFinder, findsOneWidget);
 
     expect(fake.refreshCount, 0);
 
-    // Invoca el callback de pull-to-refresh directamente (equivalente al gesto
-    // de arrastre, pero sin su animación, que colgaría pumpAndSettle).
     final RefreshIndicator indicator = tester.widget(indicatorFinder);
     await indicator.onRefresh();
 
     expect(fake.refreshCount, 1);
   });
 
-  testWidgets('la búsqueda filtra la lista por nombre',
+  testWidgets('la búsqueda filtra la lista por nombre de catálogo',
       (WidgetTester tester) async {
+    useTallSurface(tester);
     await tester.pumpWidget(wrap());
     await tester.pump();
 
@@ -136,5 +160,25 @@ void main() {
 
     expect(find.text('Zapatos'), findsOneWidget);
     expect(find.text('Camisas'), findsNothing);
+  });
+
+  testWidgets('el filtro por proveedor estrecha la lista',
+      (WidgetTester tester) async {
+    useTallSurface(tester);
+    await tester.pumpWidget(wrap());
+    await tester.pump();
+
+    // Hay más de un proveedor → se muestra la barra de filtro.
+    expect(
+      find.byKey(const Key('shared_catalogs_provider_filter')),
+      findsOneWidget,
+    );
+
+    // Seleccionar el chip del Proveedor B (id 20) deja solo sus catálogos.
+    await tester.tap(find.byKey(const Key('provider_chip_20')));
+    await tester.pump();
+
+    expect(find.text('Camisas'), findsOneWidget);
+    expect(find.text('Zapatos'), findsNothing);
   });
 }

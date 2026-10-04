@@ -300,12 +300,16 @@ class CatalogDetail {
           'logoUrl',
         ]),
       ),
+      // PRIVACIDAD: NUNCA se usa 'internalName' como fallback. El endpoint
+      // legado puede incluir internalName, pero el nombre interno del catálogo
+      // jamás debe renderizarse. ('name' en ese endpoint = publicName, por eso
+      // es un fallback aceptable.) Ver displayName: si publicName queda vacío,
+      // cae al nombre del proveedor o a 'Catálogo', nunca al interno.
       publicName: _asString(
         _pick(catalog, const <String>[
           'publicName',
           'public_name',
           'name',
-          'internalName',
         ]),
       ),
       description: _asString(

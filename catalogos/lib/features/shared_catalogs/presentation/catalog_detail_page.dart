@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../domain/catalog_detail.dart';
 import 'catalog_detail_controller.dart';
@@ -87,8 +88,17 @@ class _DetailBody extends ConsumerWidget {
         slivers: <Widget>[
           if (state.fromCache)
             const SliverToBoxAdapter(child: _OfflineBanner()),
-          if (detail.bannerUrl != null)
-            SliverToBoxAdapter(child: _Banner(url: detail.bannerUrl!)),
+          // Banner del detalle: usa la MISMA portada pública que la tarjeta de
+          // la lista. Si no hay bannerUrl del catálogo, cae al logo del
+          // proveedor y, en último término, a un gradiente de marca. Nunca el
+          // nombre interno (el título ya usa displayName = publicName).
+          SliverToBoxAdapter(
+            child: _Banner(
+              url: detail.bannerUrl ?? detail.logoUrl,
+            ),
+          ),
+          if ((detail.nombreEmpresa ?? '').trim().isNotEmpty)
+            SliverToBoxAdapter(child: _ProviderHeader(detail: detail)),
           if (detail.priceHidden)
             const SliverToBoxAdapter(child: _PriceHiddenNotice()),
           SliverToBoxAdapter(
@@ -147,26 +157,130 @@ class _DetailBody extends ConsumerWidget {
   }
 }
 
-/// Banner superior del catálogo.
+/// Banner superior del catálogo. Si [url] es nulo o la imagen falla, muestra el
+/// gradiente de marca FlyStock (`#004AAD → #5DE0E6 → #00FF94`), igual que la
+/// portada de respaldo de la tarjeta en la lista.
 class _Banner extends StatelessWidget {
   const _Banner({required this.url});
 
-  final String url;
+  final String? url;
 
   @override
   Widget build(BuildContext context) {
+    final String? src = (url ?? '').trim().isEmpty ? null : url;
     return AspectRatio(
       key: const Key('catalog_detail_banner'),
       aspectRatio: 16 / 6,
-      child: Image.network(
-        url,
-        fit: BoxFit.cover,
-        errorBuilder: (BuildContext context, Object error, StackTrace? stack) =>
-            Container(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          alignment: Alignment.center,
-          child: const Icon(Icons.image_not_supported_outlined),
+      child: src == null
+          ? const _GradientBanner()
+          : Image.network(
+              src,
+              fit: BoxFit.cover,
+              errorBuilder: (
+                BuildContext context,
+                Object error,
+                StackTrace? stack,
+              ) =>
+                  const _GradientBanner(),
+            ),
+    );
+  }
+}
+
+/// Fondo con el gradiente de marca para el banner del detalle sin imagen.
+class _GradientBanner extends StatelessWidget {
+  const _GradientBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.collections_bookmark_outlined,
+          color: AppColors.onDark,
+          size: 40,
+        ),
+      ),
+    );
+  }
+}
+
+/// Fila con el proveedor (logo + nombre) bajo el banner del detalle. Reutiliza
+/// un avatar circular con iniciales de respaldo.
+class _ProviderHeader extends StatelessWidget {
+  const _ProviderHeader({required this.detail});
+
+  final CatalogDetail detail;
+
+  String get _initials {
+    final name = (detail.nombreEmpresa ?? '').trim();
+    if (name.isEmpty) return 'PR';
+    final words =
+        name.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.isEmpty) return 'PR';
+    if (words.length == 1) {
+      final w = words.first;
+      return (w.length >= 2 ? w.substring(0, 2) : w).toUpperCase();
+    }
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final String? logo = detail.logoUrl;
+    final Widget initials = Text(
+      _initials,
+      style: Theme.of(context)
+          .textTheme
+          .labelSmall
+          ?.copyWith(color: colors.onSecondaryContainer),
+    );
+
+    return Padding(
+      key: const Key('catalog_detail_provider'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: <Widget>[
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: colors.secondaryContainer,
+            child: (logo == null || logo.trim().isEmpty)
+                ? initials
+                : ClipOval(
+                    child: Image.network(
+                      logo,
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                      errorBuilder: (
+                        BuildContext context,
+                        Object error,
+                        StackTrace? stack,
+                      ) =>
+                          initials,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              detail.nombreEmpresa!.trim(),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
