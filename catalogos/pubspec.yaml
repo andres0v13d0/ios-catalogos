@@ -72,9 +72,10 @@ dependencies:
   hive_flutter: 1.1.0
   firebase_core: ^4.15.0
 
-  # Firebase Phone Auth (tareas 1.9/1.10): verifyPhoneNumber (envío OTP),
-  # PhoneAuthCredential + signInWithCredential, user.getIdToken(). Se abstrae
-  # tras `PhoneAuthService` para poder mockearlo en tests (sin Firebase real).
+  # Firebase Auth (tareas 1.10/1.13a): tras verificar el código WhatsApp en el
+  # backend, la app canjea el `customToken` con
+  # `FirebaseAuth.signInWithCustomToken` y obtiene `user.getIdToken()`. Se
+  # abstrae tras `AuthUserService` para mockearlo en tests (sin Firebase real).
   # Versión fija (pin) resuelta compatible con firebase_core ^4.x.
   firebase_auth: 6.7.0
 

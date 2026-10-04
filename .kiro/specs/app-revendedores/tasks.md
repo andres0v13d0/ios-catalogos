@@ -25,9 +25,26 @@
 
 ---
 
-## Fase 1 — Autenticación (OTP) + catálogos compartidos
+## Fase 1 — Autenticación (código WhatsApp + custom token) + catálogos compartidos
 
-### Backend
+### Backend — Login revendedor por código WhatsApp + custom token (NUEVO, hardened)
+
+> Flujo NUEVO y aislado (ver `design.md` §4.0). NO reutiliza ni altera `/notifications/verify*` ni `/users/recover-password`. `POST /auth/login` permanece sin cambios. Las migraciones quedan **pendientes de ejecutar** (mostrar SQL al usuario + snapshot RDS antes).
+
+- [x] 1.1a `[BE]` Migración ADITIVA + entidad `reseller_login_codes` (`code_hash`, `attempts`, `consumed_at`, `locked_until`, `created_at`, `expires_at`, índices por `phone_e164` y por `(phone_e164, created_at)`). SQL en `design.md` §4.0.6. — ⚠️ migración pendiente de ejecutar (requiere snapshot RDS + aprobación del SQL). — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+  - CA: tabla e índices creados con `IF NOT EXISTS`; nada en `verification_codes` cambia.
+- [x] 1.1b `[BE]` `POST /auth/reseller/request-code`: normaliza teléfono (`libphonenumber-js`), genera código seguro (`crypto.randomInt`), lo guarda hasheado, lo envía por WhatsApp (`WhatsappService` + plantilla `verificacion_codigo` reutilizada tal cual). Respuesta `{ ok, expiresInSeconds, resendAvailableInSeconds }` — NUNCA el código. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+  - CA: test: la respuesta no contiene el código; se persiste `code_hash` (no claro); expiración 5 min.
+- [x] 1.1c `[BE]` `POST /auth/reseller/verify-code`: compara hash en tiempo constante, valida no-expirado/no-consumido/no-bloqueado, resuelve-o-crea reseller con `uid = reseller:<E.164>` (backfill `telefono_e164`), acuña `admin.auth().createCustomToken(uid[, {role:'reseller'}])`. Respuesta `{ customToken, reseller, isNewProfile }`. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+  - CA: test: código correcto → custom token + reseller; uid estable; `isNewProfile` correcto; single-use (segundo intento con el mismo código falla).
+- [x] 1.1d `[BE]` `POST /auth/reseller/resend-code` (o plegado en request-code) con cooldown de 60 s. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+  - CA: test: reenvío dentro de 60 s → 429 con `resendAvailableInSeconds`.
+- [x] 1.1e `[BE]` Throttle + lockout: cooldown 60 s entre envíos por teléfono, tope por teléfono/hora, tope por IP/hora, `attempts` + `locked_until` (5 intentos → lock 15 min). App Check en los 3 endpoints públicos. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+  - CA: test: 5 intentos fallidos → 429 lockout; exceso de envíos → 429; request sin App Check válido rechazado en entorno configurado.
+- [x] 1.1f `[BE]` Tests unitarios del servicio de login revendedor (RNG seguro, hash, single-use, expiración, lockout, no-fuga del código, casos de falla de §4.0.9). — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+  - CA: suite verde; cobertura de los casos de falla documentados.
+
+### Backend — Base de identidad y catálogos compartidos
 - [x] 1.1 `[BE]` Migración: añadir valor `revendedor` a enum `usuarios.rol`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
   - CA: migración sube/baja sin romper; valor disponible.
 - [x] 1.2 `[BE]` Migración + entidad `resellers` (`firebase_uid` unique, `telefono_e164` unique, `nombre`, `country_code`). — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
@@ -46,16 +63,21 @@
   - CA: request sin App Check válido es rechazado en entorno configurado.
 
 ### Flutter
-- [x] 1.9 `[FL]` Firebase Phone Auth: pantalla de ingreso de teléfono (selector país, default +57) + envío OTP.
-  - CA: envía OTP a número de prueba; muestra errores de formato.
-- [x] 1.10 `[FL]` Pantalla de verificación OTP (reenvío con cooldown) + obtención de `idToken`.
-  - CA: OTP correcto autentica; incorrecto muestra error; reenvío respeta cooldown.
-- [x] 1.11 `[FL]` Integrar App Check (Play Integrity / DeviceCheck/App Attest).
-  - CA: requests incluyen token App Check en header.
-- [x] 1.12 `[FL]` Sesión: persistir login (secure storage), `AuthInterceptor` real, logout.
+
+> ⚠️ **RE-OPEN / ADJUST (1.9–1.13).** Estas tareas se implementaron contra **Firebase Phone Auth**. La decisión aprobada **reemplaza** Phone Auth por **código WhatsApp (backend) + `signInWithCustomToken`** (ver `design.md` §4.0.10). Requieren rework; NO están completas bajo el nuevo diseño.
+
+- [x] 1.9 `[FL]` **(ajustar)** Pantalla de ingreso de teléfono (selector país, default +57). La pantalla permanece, pero "enviar código" ahora llama `POST /auth/reseller/request-code` en lugar de `FirebaseAuth.verifyPhoneNumber`.
+  - CA: envía solicitud a `request-code`; muestra errores de formato y de rate-limit (429) con cooldown.
+- [x] 1.10 `[FL]` **(ajustar)** Pantalla de verificación de código (reenvío con cooldown). Ahora llama `POST /auth/reseller/verify-code` y, con el `customToken` recibido, hace `FirebaseAuth.instance.signInWithCustomToken(customToken)` — NO `verifyPhoneNumber`/`signInWithCredential`.
+  - CA: código correcto → `signInWithCustomToken` autentica y obtiene `idToken`; incorrecto muestra error; reenvío respeta cooldown de 60 s; maneja 429/lockout.
+- [x] 1.11 `[FL]` **(revisar)** App Check (Play Integrity / DeviceCheck/App Attest): se mantiene; asegurar que el token de App Check viaja también en los endpoints públicos `/auth/reseller/*`.
+  - CA: requests de login incluyen token App Check en header.
+- [x] 1.12 `[FL]` **(revisar)** Sesión: persistir login (secure storage), `AuthInterceptor` real, logout. `signInWithCustomToken` también produce un `FirebaseUser`, por lo que la persistencia de `currentUser` sigue igual; cambia la fuente del token, no el mecanismo.
   - CA: reinicio de app mantiene sesión; 401 persistente cierra sesión.
-- [x] 1.13 `[FL]` Perfil reseller: completar nombre tras primer login (`GET/PATCH /reseller/me`).
-  - CA: guarda nombre; guard de "perfil incompleto" deja de redirigir.
+- [x] 1.13 `[FL]` **(ajustar)** Perfil reseller: completar nombre tras primer login (`GET/PATCH /reseller/me`). El flag `isNewProfile` ahora puede venir en la respuesta de `verify-code`.
+  - CA: guarda nombre; guard de "perfil incompleto" usa `isNewProfile`/perfil y deja de redirigir una vez completo.
+- [x] 1.13a `[FL]` **(nuevo)** `AuthRepository` como interfaz con implementación de código WhatsApp: métodos `requestCode(phone)`, `verifyCode(phone, code)` → `signInWithCustomToken`, `resendCode(phone)`; manejo de 429/lockout y mensajes en español (ver `design.md` §4.0.9).
+  - CA: tests de repo con mocks de los 3 endpoints y de los casos de falla.
 - [x] 1.14 `[FL]` Al iniciar sesión, llamar `POST /reseller/sync-shared-catalogs` y listar catálogos.
   - CA: tras login, aparecen los catálogos compartidos del número.
 - [x] 1.15 `[FL]` Lista de catálogos compartidos (agrupar/filtrar por proveedor) + pull-to-refresh.
@@ -66,6 +88,8 @@
   - CA: filtra resultados correctamente.
 - [x] 1.18 `[FL]` Caché offline de catálogos consultados (stale-while-revalidate).
   - CA: con red apagada tras una consulta previa, el catálogo se muestra desde caché.
+- [ ] 1.19 `[M]` **E2E login revendedor (manual).** Ejecutar el checklist de `docs/e2e-login-revendedor-checklist.md` con cuentas reales: dos proveedores agregan el MISMO teléfono como revendedor desde la página de catálogos; luego, desde la app: `request-code` → llega código por WhatsApp → `verify-code` → `signInWithCustomToken` → `sync-shared-catalogs` → lista agrupada mostrando AMBOS proveedores → verificación de aislamiento.
+  - CA: el revendedor ve catálogos de ambos proveedores; el proveedor no ve clientes privados del revendedor; datos de prueba revertidos según el doc.
 
 ---
 
@@ -202,24 +226,32 @@
 ### Firebase (proyecto `surtte-4bf22`)
 1. Crear app Android (package name definitivo, p. ej. `com.flystock.revendedores`) y descargar `google-services.json`.
 2. Crear app iOS (bundle id, p. ej. `com.flystock.revendedores`) y descargar `GoogleService-Info.plist`.
-3. Habilitar **Phone Authentication** (y números de prueba para QA).
+3. **(Ya NO se usa Firebase Phone Authentication.)** El login del revendedor usa código WhatsApp del backend + custom token. Asegurar que el service account del backend (firebase-admin) puede acuñar custom tokens para el proyecto `surtte-4bf22` (rol **Service Account Token Creator** si aplica).
 4. Habilitar **App Check**: Play Integrity (Android) y DeviceCheck/App Attest (iOS); registrar apps y claves.
 5. Habilitar **Cloud Messaging (FCM)**; en iOS subir **APNs Auth Key** (.p8) y configurar capacidades Push.
 6. Confirmar correo/propietario para que el backend (firebase-admin) acepte los `idToken` de estas apps (mismo proyecto).
 
 ### Backend / entornos
-7. Confirmar si existe **staging** (RE-2). Proveer `apiBaseUrl` de dev/staging y, si aplica, credenciales no productivas.
-8. Autorizar la ejecución de las migraciones `[BE]` por fase (tras aprobación del spec).
+7. No existe entorno de prueba desplegado (no hay `dev-api`/`staging-api`). Para pruebas usar el **backend local** del usuario: `--dart-define apiBaseUrl=http://<PC_LAN_IP>:3000` (dispositivo físico) o `http://10.0.2.2:3000` (emulador Android). Producción: `https://api.minymol.com`.
+8. Autorizar la ejecución de las migraciones `[BE]` por fase (tras aprobación del spec). **Mostrar el SQL al usuario antes de ejecutar.**
+- [ ] **M-a** `[M]` **Snapshot de RDS antes de cualquier migración.** Tomar snapshot manual de la instancia RDS (producción) previo a ejecutar `reseller_login_codes` o cualquier otra migración de la spec.
+  - CA: snapshot visible en la consola de RDS con fecha previa a la migración.
+- [ ] **M-b** `[M]` **Confirmar que el entorno local lee Secrets Manager** y tiene `WHATSAPP_PHONE_NUMBER_ID` y `WHATSAPP_TOKEN` (necesarios para enviar el código WhatsApp vía Meta Cloud API).
+  - CA: el backend local arranca y puede enviar un mensaje de plantilla `verificacion_codigo` sin error de credenciales.
 
 ### Tiendas
 9. Cuenta **Google Play Console** y **Apple Developer** activas.
 10. Definir nombre público de la app, descripción, capturas, íconos.
-11. **Política de privacidad** publicada (debe cubrir: datos de clientes privados del revendedor, teléfono/OTP, push). Enlace para fichas de tienda y data safety / privacy nutrition labels.
+11. **Política de privacidad** publicada (debe cubrir: datos de clientes privados del revendedor, teléfono y código de verificación por WhatsApp, push). Enlace para fichas de tienda y data safety / privacy nutrition labels.
 12. Certificados/perfiles iOS (distribución) y keystore Android (firma de release).
 
 ### Decisiones pendientes de confirmar
 13. Bundle id/package name definitivos.
 14. ¿La UI del proveedor (separado/entregado) va en la app Flutter o se queda en el frontend web? (afecta tarea 5.4).
+15. Login revendedor: ¿se incluye el custom claim `{ role: 'reseller' }` en el custom token (defensa en profundidad) o se deja solo el `uid` estable? (el `ResellerGuard` ya resuelve por `uid`, así que es opcional).
+16. Login revendedor: hash del código → ¿`bcrypt` (recomendado) o `sha256 + sal`? Confirmar.
+17. Login revendedor: ¿se expone `resend-code` como endpoint propio o se pliega en `request-code`? (diseño propone endpoint propio con cooldown compartido).
+18. Confirmar límites finales: cooldown de reenvío (60 s), tope de envíos por teléfono/hora (5), tope por IP/hora (20), intentos antes de lockout (5), duración de lockout (15 min), expiración de código (5 min).
 
 ---
 

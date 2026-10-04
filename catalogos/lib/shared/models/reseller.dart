@@ -11,9 +11,9 @@
 class Reseller {
   const Reseller({
     required this.id,
-    required this.firebaseUid,
     required this.telefonoE164,
     required this.countryCode,
+    this.firebaseUid,
     this.nombre,
   });
 
@@ -21,7 +21,12 @@ class Reseller {
   final int id;
 
   /// UID de Firebase asociado.
-  final String firebaseUid;
+  ///
+  /// Puede ser `null`: la respuesta de `POST /auth/reseller/verify-code`
+  /// devuelve el reseller SIN `firebaseUid` (`{ id, telefonoE164, nombre,
+  /// countryCode }`), mientras que `GET/PATCH /reseller/me` y `POST /auth/login`
+  /// sí lo incluyen. [fromJson] tolera su ausencia.
+  final String? firebaseUid;
 
   /// Teléfono en formato E.164.
   final String telefonoE164;
@@ -37,11 +42,12 @@ class Reseller {
 
   /// Construye un [Reseller] desde el JSON del backend (camelCase).
   ///
-  /// Tolera el campo extra `tipo` (presente solo en `/auth/login`).
+  /// Tolera el campo extra `tipo` (presente solo en `/auth/login`) y la
+  /// ausencia de `firebaseUid` (ausente en la respuesta de `verify-code`).
   factory Reseller.fromJson(Map<String, dynamic> json) {
     return Reseller(
       id: (json['id'] as num).toInt(),
-      firebaseUid: json['firebaseUid'] as String,
+      firebaseUid: json['firebaseUid'] as String?,
       telefonoE164: json['telefonoE164'] as String,
       nombre: json['nombre'] as String?,
       countryCode: json['countryCode'] as String,

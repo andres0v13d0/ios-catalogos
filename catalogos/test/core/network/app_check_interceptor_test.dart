@@ -79,5 +79,59 @@ void main() {
         isFalse,
       );
     });
+
+    // Tarea 1.11: los endpoints PÚBLICOS del login revendedor
+    // (`/auth/reseller/*`) van por el mismo Dio, así que también deben llevar
+    // la cabecera X-Firebase-AppCheck.
+    test('adjunta X-Firebase-AppCheck a /auth/reseller/request-code', () async {
+      dio = buildDio(_FakeTokenSource(token: 'app-check-login'));
+      adapter.onPost(
+        '/auth/reseller/request-code',
+        (server) => server.reply(200, {
+          'ok': true,
+          'expiresInSeconds': 300,
+          'resendAvailableInSeconds': 60,
+        }),
+        data: {'phoneNumber': '+573001234567'},
+      );
+
+      final response = await dio.post<Map<String, dynamic>>(
+        '/auth/reseller/request-code',
+        data: {'phoneNumber': '+573001234567'},
+      );
+
+      expect(
+        response.requestOptions.headers[AppCheckInterceptor.appCheckHeader],
+        'app-check-login',
+      );
+    });
+
+    test('adjunta X-Firebase-AppCheck a /auth/reseller/verify-code', () async {
+      dio = buildDio(_FakeTokenSource(token: 'app-check-login'));
+      adapter.onPost(
+        '/auth/reseller/verify-code',
+        (server) => server.reply(200, {
+          'customToken': 'ct',
+          'reseller': {
+            'id': 1,
+            'telefonoE164': '+573001234567',
+            'nombre': null,
+            'countryCode': 'CO',
+          },
+          'isNewProfile': false,
+        }),
+        data: {'phoneNumber': '+573001234567', 'code': '123456'},
+      );
+
+      final response = await dio.post<Map<String, dynamic>>(
+        '/auth/reseller/verify-code',
+        data: {'phoneNumber': '+573001234567', 'code': '123456'},
+      );
+
+      expect(
+        response.requestOptions.headers[AppCheckInterceptor.appCheckHeader],
+        'app-check-login',
+      );
+    });
   });
 }

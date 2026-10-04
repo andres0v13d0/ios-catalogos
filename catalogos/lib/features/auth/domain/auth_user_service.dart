@@ -26,6 +26,39 @@ class AuthUser {
   final String? phoneNumber;
 }
 
+/// Resultado de un `signInWithCustomToken` exitoso (tarea 1.13a).
+class SignInResult {
+  const SignInResult({
+    required this.uid,
+    required this.idToken,
+    this.phoneNumber,
+  });
+
+  /// UID de Firebase del usuario autenticado.
+  final String uid;
+
+  /// `idToken` de Firebase (JWT) resultante; lo consume `AuthInterceptor` como
+  /// `Authorization: Bearer <idToken>` en las llamadas a `/reseller/*`.
+  final String idToken;
+
+  /// Teléfono E.164 asociado, si Firebase lo expone.
+  final String? phoneNumber;
+}
+
+/// Fallo al canjear el custom token (tarea 1.13a). La UI muestra [message].
+class SignInWithCustomTokenException implements Exception {
+  const SignInWithCustomTokenException(this.message, {this.cause});
+
+  /// Mensaje legible en español para la UI.
+  final String message;
+
+  /// Causa subyacente (p. ej. la excepción de Firebase) para diagnóstico.
+  final Object? cause;
+
+  @override
+  String toString() => 'SignInWithCustomTokenException: $message';
+}
+
 /// Servicio de estado de usuario/sesión desacoplado de Firebase.
 abstract interface class AuthUserService {
   /// Usuario actualmente autenticado según Firebase, o `null` si no hay
@@ -36,6 +69,12 @@ abstract interface class AuthUserService {
   /// es `true` o si Firebase determina que está por expirar), o `null` si no
   /// hay sesión. No debe lanzar: ante un fallo devuelve `null`.
   Future<String?> getIdToken({bool forceRefresh = false});
+
+  /// Canjea el [customToken] (devuelto por `verify-code`) con
+  /// `FirebaseAuth.signInWithCustomToken` para abrir la sesión de Firebase, y
+  /// devuelve el [SignInResult] con el `uid` y el `idToken` resultante
+  /// (tarea 1.13a). Lanza [SignInWithCustomTokenException] si falla.
+  Future<SignInResult> signInWithCustomToken(String customToken);
 
   /// Cierra la sesión de Firebase.
   Future<void> signOut();

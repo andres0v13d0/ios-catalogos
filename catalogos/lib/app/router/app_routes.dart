@@ -11,8 +11,8 @@ abstract final class AppRoutes {
   /// guard).
   static const String login = '/login';
 
-  /// Ruta de verificación del OTP (tarea 1.10). Se navega a ella tras
-  /// `codeSent`, pasando el `verificationId` por `extra`.
+  /// Ruta de verificación del código WhatsApp (tarea 1.10). Se navega a ella
+  /// tras `codeSent`; el estado del flujo (teléfono) vive en el controlador.
   static const String otp = '/login/otp';
 
   /// Ruta para completar el perfil tras el primer login (tarea 1.13). El guard

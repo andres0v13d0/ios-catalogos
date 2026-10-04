@@ -8,7 +8,7 @@
 ## 1. Resumen ejecutivo (máx. 15 líneas)
 
 1. El backend es **NestJS 10 + TypeScript + TypeORM 0.3 + PostgreSQL**, monolito modular (~40 módulos), sin Swagger/OpenAPI. Evidencia: `surtte/main/backend/package.json`, `src/app.module.ts`.
-2. La **autenticación es por Firebase**: el cliente obtiene un `idToken` de Firebase Auth y el backend lo verifica con `firebase-admin`. No hay JWT propio ni OTP gestionado por el backend. Evidencia: `src/modules/auth/auth.service.ts`, `flystock-catalogos/src/utils/secureFetch.ts`.
+2. La **autenticación es por Firebase**: el cliente obtiene un `idToken` de Firebase Auth y el backend lo verifica con `firebase-admin`. No hay JWT propio (el login principal no emite JWT propio). **(CORRECCIÓN 2026-10-03):** ~~ni OTP gestionado por el backend~~ — **SÍ existe un sistema de códigos de verificación en el backend** (tabla `verification_codes`), usado hoy para **recuperación de contraseña** / verificación de email/teléfono, con endpoints `POST /notifications/verify`, `POST /notifications/verify/resend` y `POST /notifications/verify/confirm` por **WhatsApp (Meta Cloud API)** y **email (SES)**. Ver detalle en **§A.2.1**. Evidencia: `src/modules/auth/auth.service.ts`, `src/modules/notifications/entities/verification-code.entity.ts`, `src/modules/notifications/notifications.service.ts`, `flystock-catalogos/src/utils/secureFetch.ts`.
 3. **Ya existe el concepto de "Red de ventas" / "revendedor" (afiliado)**, pero modelado como filas hijas de `private_catalogs` que pertenecen al **proveedor**, no como una cuenta propia del revendedor. Evidencia: `src/modules/private-catalogs/entities/private-catalog.entity.ts`.
 4. La **compartición por número de celular** existe: el proveedor da de alta afiliados por teléfono (canal de venta) y el afiliado "reclama" su enlace en una página pública ingresando su WhatsApp. Evidencia: `private-catalogs.controller.ts`, `private-catalogs.claim-affiliate.spec.ts`.
 5. **NO existe** una cuenta de revendedor que **acumule catálogos de varios proveedores**, ni un **catálogo general multi-proveedor**, ni **clientes privados del revendedor**, ni **estados de pedido separados** proveedor/revendedor. Evidencia: `src/modules/orders/entities/order.entity.ts` (estado único), `customers/entity/customer.entity.ts` (cliente ligado a `provider`).
@@ -37,8 +37,52 @@ Ruta base del repo: `/mnt/ssd_secundario/Repositorios/surtte/main/backend`.
 - Se protege con **reCAPTCHA Enterprise** opcional (`recaptchaToken`). Evidencia: `auth.controller.ts`.
 - El guard `FirebaseAuthGuard` valida el `Bearer <firebaseIdToken>` en cada request protegido; el `@nestjs/jwt` existe en deps pero el login principal **no** emite un JWT propio. Evidencia: `common/guards/firebase-auth.guard.ts` (referenciado en controladores), `secureFetch.ts` (frontend adjunta `Authorization: Bearer <idToken>`).
 - **Resolución de identidad en login** (`auth.service.ts`): busca en `usuarios` por `firebaseUid`; si es `PROVEEDOR` devuelve permisos `ALL`; si no, busca en `store_users` (empleados, rol `VENDEDOR`); si no existe, **crea un usuario nuevo como `COMERCIANTE`**. Soporta `partnerCode` para referidos.
-- **Login por teléfono / OTP:** no es gestionado por el backend. Se asume que Firebase (en el cliente) maneja el método (teléfono/OTP, email, etc.). El backend solo ve el `idToken`. **NO ENCONTRADO** un endpoint propio de envío/verificación de OTP.
+- **Login por teléfono / OTP (Firebase):** el *login* en sí no es gestionado por el backend. Se asume que Firebase (en el cliente) maneja el método (teléfono/OTP, email, etc.) y el backend solo verifica el `idToken` resultante. **CORRECCIÓN 2026-10-03:** ~~**NO ENCONTRADO** un endpoint propio de envío/verificación de OTP.~~ Esta afirmación era **INCORRECTA**. El backend **SÍ** cuenta con un **sistema propio de códigos de verificación** (envío/reenvío/confirmación por WhatsApp y email), aunque hoy **no** se usa para el login de Firebase sino para **recuperación de contraseña** y verificación de email/teléfono. Ver **§A.2.1**. Evidencia: `src/modules/notifications/notifications.controller.ts`, `src/modules/notifications/notifications.service.ts`, `src/modules/users/users.service.ts` (`recoverPassword`).
 - **Concepto de revendedor/reseller como rol:** **NO ENCONTRADO** en `RolUsuario`. Roles existentes: `admin, verificador, moderador, soporte, proveedor, comerciante, vendedor, empleado`. Evidencia: `src/modules/users/entity/user.entity.ts`.
+
+#### A.2.1 Sistema de códigos de verificación (CORRECCIÓN)
+
+> **CORRECCIÓN 2026-10-03.** El análisis previo afirmaba que el backend **no** gestionaba OTP/códigos. Es **falso**: existe un sistema completo de códigos de verificación. A continuación la evidencia leída directamente del código.
+
+**Entidad** — `src/modules/notifications/entities/verification-code.entity.ts`:
+- `@Entity('verification_codes')`, PK `uuid`.
+- Columnas: `email?` `varchar(100)` (`@Index`), `phoneNumber?` `varchar(20)` (`@Index`), `code` `varchar(6)`, `channel` enum `VerificationChannel { EMAIL='email', WHATSAPP='whatsapp' }`, `type` enum `VerificationType { VERIFY_EMAIL='verify_email', VERIFY_PHONE='verify_phone', RECOVER_PASSWORD='recover_password' }`, `createdAt` (`CreateDateColumn`), `expiresAt` `timestamp`, `isConfirmed` `boolean` (default `false`).
+- ⚠️ El código se almacena en **CLARO** (no hasheado). **NO** hay columna de contador de intentos ni columna de rate-limit por registro.
+
+**Servicio** — `src/modules/notifications/notifications.service.ts`:
+- `sendVerification(dto)`: borra los códigos no confirmados previos para `{channel,type,email,phoneNumber}`, genera un código de **6 dígitos** con `Math.floor(100000 + Math.random()*900000)` (⚠️ **NO** criptográficamente seguro, usa `Math.random`), expiración de **30 MINUTOS**, lo guarda y lo envía por el canal. ⚠️ El método **DEVUELVE el código en la respuesta JSON** (`code: success ? code : undefined`) — una preocupación de seguridad si se usara para login.
+- `resendVerification(dto)`: si existe un código no confirmado y aún no expirado, **reenvía el MISMO código**; en caso contrario genera uno nuevo.
+- `confirmVerification(dto)`: busca un registro no confirmado que coincida con `{channel,type,email,phoneNumber,code}`; si no lo encuentra → `NotFoundException('Código incorrecto o expirado')`; si está expirado → lo **borra** + `BadRequestException('Código expirado')`; de lo contrario pone `isConfirmed=true`. ⚠️ **NO** hay límite de intentos ni bloqueo (lockout): se permiten **intentos ilimitados** hasta la expiración (preocupación de fuerza bruta para un código de 6 dígitos).
+- `validateCode({phoneNumber, code, type})`: devuelve `true` si existe un registro con `isConfirmed=true` **y** `expiresAt > now`. (Se usa post-confirmación.)
+
+**Controlador** — `src/modules/notifications/notifications.controller.ts`:
+- `@Controller('notifications')` **SIN** `@UseGuards` y **SIN** `@Public()`. Endpoints: `POST /notifications/verify` (envío), `POST /notifications/verify/resend`, `POST /notifications/verify/confirm`, y `POST /notifications` (notificación genérica).
+- ⚠️ Estos endpoints de verificación están efectivamente **ABIERTOS** (no se aplica el guard de Firebase en el controlador).
+
+**Canales**:
+- **WhatsApp** — `src/modules/notifications/whatsapp/whatsapp.service.ts`: Meta WhatsApp Cloud API (`https://graph.facebook.com/v18.0`), env `WHATSAPP_PHONE_NUMBER_ID` y `WHATSAPP_TOKEN`. La plantilla `src/modules/notifications/templates/whatsapp/verify-code.template.ts` usa una plantilla pre-registrada llamada `verificacion_codigo`, idioma `es_CO`, con el código como parámetro del body y un parámetro de botón-URL. (Los mensajes de plantilla de Meta pueden enviarse a cualquier número válido, incluso números que **aún no** son usuarios de la app.)
+- **Email** — `src/modules/notifications/email/email.service.ts`: AWS SES / MJML (según ya documenta este análisis).
+- Cada envío queda registrado en `notification_logs` (entidad `NotificationLog`) vía `sendByChannel`.
+
+**Limpieza / cron** — `src/modules/notifications/cron/verification-cleaner.job.ts`: `@Cron(EVERY_5_MINUTES)` borra los códigos con `isConfirmed=false` **y** `expiresAt < now`.
+
+**Uso real actual** — `src/modules/users/users.service.ts`: `recoverPassword()` llama a `notificationsService.validateCode({ phoneNumber, code, type:'recover_password' })` y luego `admin.auth().updateUser(firebaseUid, { password })`. Es decir, el sistema de códigos se usa **HOY para RECUPERACIÓN DE CONTRASEÑA** (y el enum también soporta `verify_email` / `verify_phone`).
+
+**Protecciones existentes vs faltantes**:
+- Rate limiting: **solo** el limitador global casero por IP/usuario de `src/main.ts` (100 req/min anónimos, 200 req/min autenticados). **NO** hay throttle específico de verificación, **NO** hay límite de intentos por teléfono, **NO** hay lockout.
+- El endpoint de envío **devuelve el código** en la respuesta.
+- Firebase custom token: un grep de `createCustomToken` **NO** halló uso existente en el backend (sería código **NET-NEW** si se quisiera emitir sesión Firebase desde el backend).
+
+**Evaluación para login de revendedor** — brechas de seguridad a corregir **antes** de reutilizar este sistema para *login*:
+1. Dejar de **devolver el código** en la respuesta.
+2. Añadir **límite de intentos por teléfono + lockout**.
+3. Considerar **hashear** el código almacenado.
+4. Usar un **RNG más fuerte** (criptográficamente seguro) en lugar de `Math.random`.
+5. **Proteger/throttlear** los endpoints abiertos (p. ej. Firebase App Check + throttle específico).
+6. **Expiración corta** para login (p. ej. 5 min, no 30).
+7. Forzar **uso único** del código (single-use).
+
+> **Decisión de diseño (2026-10-XX):** el login del revendedor NO reutiliza este sistema; nace endurecido en una tabla dedicada `reseller_login_codes` con endpoints nuevos `/auth/reseller/*` que acuñan un **Firebase custom token** (ver `.kiro/specs/app-revendedores/design.md` §4.0). El endurecimiento del sistema legado de recover-password se trata como backlog aparte en `docs/backlog-seguridad-verification-codes.md`. El checklist E2E manual del login está en `docs/e2e-login-revendedor-checklist.md`.
 
 ### A.3 Modelo de datos relevante (ver diagrama ER en §4)
 Entidades leídas directamente:
@@ -338,9 +382,9 @@ Dependencias candidatas (a decidir): `firebase_core`, `firebase_auth`, `dio` o `
 - N-3. ¿Un revendedor puede recibir catálogos de **cuántos proveedores** (límite)? ¿Hay planes/cobros para el revendedor?
 
 ### Autenticación
-- 🔴 A-1. ¿Login **por teléfono + OTP** vía Firebase Phone Auth? ¿Soportamos también email? ¿Qué país(es) por defecto (hoy todo es muy Colombia-céntrico)?
+- 🔴 A-1. ¿Login **por teléfono + OTP** vía Firebase Phone Auth, o reutilizamos el **sistema de códigos de verificación propio del backend** (ver §A.2.1, hoy usado para recuperación de contraseña)? ¿Soportamos también email? ¿Qué país(es) por defecto (hoy todo es muy Colombia-céntrico)?
 - A-2. ¿Registramos la app en el proyecto Firebase `surtte-4bf22` (Android/iOS) o se crea un proyecto nuevo?
-- A-3. Endpoints públicos con reCAPTCHA: ¿los sustituimos por **Firebase App Check** en móvil?
+- A-3. Endpoints públicos con reCAPTCHA (y los endpoints **abiertos** de verificación, ver §A.2.1): ¿los sustituimos/protegemos con **Firebase App Check** en móvil?
 
 ### Pedidos
 - 🔴 P-1 (D-1). Catálogo general multi-proveedor: ¿**un pedido por proveedor** (agrupados) o un solo pedido mezclado? (ver R-2).

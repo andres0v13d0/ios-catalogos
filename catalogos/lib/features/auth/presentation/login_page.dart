@@ -30,14 +30,15 @@ const List<_Country> _countries = <_Country>[
   _Country('🇺🇸', 'Estados Unidos', '1'),
 ];
 
-/// Pantalla de ingreso de teléfono + envío de OTP (tarea 1.9).
+/// Pantalla de ingreso de teléfono + solicitud del código WhatsApp (tarea 1.9).
 ///
 /// - Selector de país con default +57 (Colombia).
 /// - Campo de número local editable, validado/normalizado a E.164 con
 ///   `normalizeToE164`; muestra errores de formato inline.
-/// - Al pulsar "Enviar código" invoca [AuthController.sendCode]; cuando el
-///   controlador llega a `codeSent`, navega a la pantalla de OTP pasando el
-///   `verificationId`.
+/// - Al pulsar "Enviar código" invoca [AuthController.sendCode], que llama a
+///   `POST /auth/reseller/request-code`; cuando el backend confirma el envío
+///   (`codeSent`) navega a la pantalla de verificación. Errores de formato y de
+///   rate-limit (429 con cooldown) se muestran inline.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -82,13 +83,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final TextTheme textTheme = Theme.of(context).textTheme;
     final AuthFlowState auth = ref.watch(authControllerProvider);
 
-    // Cuando el código fue enviado, navega a la pantalla de OTP (una sola vez).
+    // Cuando el backend confirma el envío del código, navega a la pantalla de
+    // verificación (una sola vez).
     ref.listen<AuthFlowState>(authControllerProvider, (previous, next) {
-      if (next.stage == AuthFlowStage.codeSent &&
-          next.verificationId != null &&
-          !_navigatedToOtp) {
+      if (next.stage == AuthFlowStage.codeSent && !_navigatedToOtp) {
         _navigatedToOtp = true;
-        context.push(AppRoutes.otp, extra: next.verificationId);
+        context.push(AppRoutes.otp);
       }
     });
 

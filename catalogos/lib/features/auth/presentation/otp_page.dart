@@ -12,19 +12,19 @@ import 'auth_controller.dart';
 /// Duración del cooldown de reenvío de OTP (CA tarea 1.10).
 const Duration kResendCooldown = Duration(seconds: 60);
 
-/// Pantalla de verificación del OTP (tarea 1.10).
+/// Pantalla de verificación del código WhatsApp (tarea 1.10).
 ///
 /// - Campo para el código de 6 dígitos; al enviar, [AuthController.verifyCode]
-///   crea la credencial e inicia sesión (obtiene `idToken`).
+///   llama a `verify-code` y, con el `customToken`, hace
+///   `signInWithCustomToken` para abrir la sesión (obtiene `idToken`).
 /// - Código correcto → navega a `/home` (vía el guard que reacciona al estado
-///   de sesión). Código incorrecto → muestra el error mapeado.
-/// - Botón de reenvío con cooldown de 60s: deshabilitado durante la cuenta
-///   regresiva, mostrando los segundos restantes.
+///   de sesión). Código incorrecto/expirado (400) o lockout (429) → muestra el
+///   error mapeado.
+/// - Botón de reenvío con cooldown de 60s (`resend-code`): deshabilitado
+///   durante la cuenta regresiva, mostrando los segundos restantes. Honra
+///   también el `resendAvailableInSeconds` que el backend devuelve en los 429.
 class OtpPage extends ConsumerStatefulWidget {
-  const OtpPage({super.key, required this.verificationId});
-
-  /// `verificationId` entregado por `codeSent` (vía `extra` del router).
-  final String verificationId;
+  const OtpPage({super.key});
 
   @override
   ConsumerState<OtpPage> createState() => _OtpPageState();
@@ -39,7 +39,11 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   void initState() {
     super.initState();
     // El código ya fue enviado al llegar a esta pantalla: inicia el cooldown.
-    _startCooldown();
+    // Honra el `resendAvailableInSeconds` que informó `request-code` (si lo
+    // hay); si no, usa el cooldown por defecto de 60s.
+    final seconds =
+        ref.read(authControllerProvider).resendAvailableInSeconds;
+    _startCooldown(seconds: seconds);
   }
 
   @override
@@ -49,9 +53,12 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     super.dispose();
   }
 
-  void _startCooldown() {
+  void _startCooldown({int? seconds}) {
     _timer?.cancel();
-    setState(() => _secondsRemaining = kResendCooldown.inSeconds);
+    final total = (seconds != null && seconds > 0)
+        ? seconds
+        : kResendCooldown.inSeconds;
+    setState(() => _secondsRemaining = total);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining <= 1) {
         timer.cancel();
@@ -77,7 +84,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   Future<void> _onResend() async {
     if (!_canResend) return;
     await ref.read(authControllerProvider.notifier).resendCode();
-    _startCooldown();
+    // Reinicia el cooldown con los segundos que informó el backend (p. ej. tras
+    // un 429 el `resendAvailableInSeconds` puede ser mayor), o 60s por defecto.
+    final seconds = ref.read(authControllerProvider).resendAvailableInSeconds;
+    _startCooldown(seconds: seconds);
   }
 
   @override
@@ -112,7 +122,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enviamos un código de 6 dígitos por SMS a $phone.',
+                  'Enviamos un código de 6 dígitos por WhatsApp a $phone.',
                   style: textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),

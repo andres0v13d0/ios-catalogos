@@ -61,6 +61,37 @@ final class RateLimitFailure extends Failure {
   final Duration? retryAfter;
 }
 
+/// Bloqueo/throttle del login por código WhatsApp (HTTP 429).
+///
+/// Se diferencia de [RateLimitFailure] porque transporta explícitamente los
+/// segundos de cooldown/espera que el backend del login revendedor devuelve en
+/// el body (`resendAvailableInSeconds` / `retryAfterSeconds`) para que la UI
+/// pueda mostrar la cuenta regresiva o deshabilitar el reenvío. Se usa tanto
+/// para el cooldown de reenvío como para el lockout por intentos fallidos.
+final class LockedFailure extends Failure {
+  const LockedFailure({
+    super.message =
+        'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
+    this.retryAfterSeconds,
+    super.cause,
+  }) : super(statusCode: 429);
+
+  /// Segundos sugeridos de espera antes de reintentar, si el backend los
+  /// indicó (`resendAvailableInSeconds` o `retryAfterSeconds`).
+  final int? retryAfterSeconds;
+}
+
+/// Error de validación del lado del servidor (HTTP 400) con un mensaje legible
+/// provisto por el backend (p. ej. "Código incorrecto", "El código expiró",
+/// "número de teléfono inválido"). La UI muestra [message] tal cual.
+final class ValidationFailure extends Failure {
+  const ValidationFailure({
+    required super.message,
+    super.statusCode = 400,
+    super.cause,
+  });
+}
+
 /// Error del lado del servidor (HTTP 5xx) u otras respuestas de error no
 /// mapeadas a un caso más específico (p. ej. 4xx de validación).
 final class ServerFailure extends Failure {

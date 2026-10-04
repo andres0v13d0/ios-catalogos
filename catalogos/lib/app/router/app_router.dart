@@ -75,12 +75,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.otp,
         name: 'otp',
-        builder: (BuildContext context, GoRouterState state) {
-          final String verificationId = state.extra is String
-              ? state.extra! as String
-              : '';
-          return OtpPage(verificationId: verificationId);
-        },
+        builder: (BuildContext context, GoRouterState state) =>
+            const OtpPage(),
       ),
       GoRoute(
         path: AppRoutes.completeProfile,

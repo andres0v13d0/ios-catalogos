@@ -1,53 +1,66 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/result/failure.dart';
+import '../../../core/result/result.dart';
 import '../../../core/utils/phone.dart';
 import '../../profile/presentation/profile_controller.dart';
-import '../data/firebase_phone_auth_service.dart';
-import '../domain/phone_auth_service.dart';
+import '../data/backend_auth_repository.dart';
+import '../domain/auth_repository.dart';
+import '../domain/auth_user_service.dart';
 import 'auth_state_provider.dart';
 
-/// Etapa del flujo de autenticación por OTP.
+/// Etapa del flujo de autenticación por código WhatsApp (tareas 1.9/1.10).
+///
+/// Se conservan las mismas etapas que el flujo anterior (Phone Auth); solo
+/// cambia QUÉ hace cada una: ahora el código lo envía el backend por WhatsApp
+/// (`request-code`) y la verificación (`verify-code`) devuelve un `customToken`
+/// que se canjea con `signInWithCustomToken`.
 enum AuthFlowStage {
-  /// Ingreso de teléfono (aún no se envió el código).
+  /// Ingreso de teléfono (aún no se solicitó el código).
   phoneEntry,
 
-  /// Enviando el OTP (verifyPhoneNumber en curso).
+  /// Solicitando el envío del código (`request-code`/`resend-code` en curso).
   sendingCode,
 
-  /// Código enviado; esperando que el usuario ingrese el OTP.
+  /// Código enviado por WhatsApp; esperando que el usuario lo ingrese.
   codeSent,
 
-  /// Verificando el OTP (signInWithCredential en curso).
+  /// Verificando el código (`verify-code` + `signInWithCustomToken` en curso).
   verifying,
 
   /// Sesión iniciada con éxito.
   signedIn,
 }
 
-/// Estado inmutable del flujo de autenticación (teléfono + OTP).
+/// Estado inmutable del flujo de autenticación (teléfono + código WhatsApp).
 class AuthFlowState {
   const AuthFlowState({
     this.stage = AuthFlowStage.phoneEntry,
     this.phoneNumberE164,
-    this.verificationId,
-    this.resendToken,
+    this.countryCode,
+    this.resendAvailableInSeconds,
+    this.isNewProfile = false,
     this.errorMessage,
   });
 
   /// Etapa actual del flujo.
   final AuthFlowStage stage;
 
-  /// Teléfono normalizado a E.164 al que se envió (o se enviará) el OTP.
+  /// Teléfono normalizado a E.164 al que se envió (o se enviará) el código.
   final String? phoneNumberE164;
 
-  /// Identificador de verificación entregado por `codeSent`; necesario para
-  /// construir la credencial al verificar el OTP.
-  final String? verificationId;
+  /// Código de país (dial code, p. ej. `57`) usado al enviar la solicitud.
+  final String? countryCode;
 
-  /// Token para reenviar el SMS reutilizando la sesión de verificación.
-  final int? resendToken;
+  /// Segundos de cooldown de reenvío informados por el backend
+  /// (`resendAvailableInSeconds`, también presente en los 429). La UI puede
+  /// usarlo para la cuenta regresiva del botón "Reenviar".
+  final int? resendAvailableInSeconds;
+
+  /// `true` si `verify-code` indicó que el perfil es nuevo (tarea 1.13).
+  final bool isNewProfile;
 
   /// Mensaje de error legible para la UI (o `null` si no hay error).
   final String? errorMessage;
@@ -58,36 +71,44 @@ class AuthFlowState {
   AuthFlowState copyWith({
     AuthFlowStage? stage,
     String? phoneNumberE164,
-    String? verificationId,
-    int? resendToken,
+    String? countryCode,
+    int? resendAvailableInSeconds,
+    bool? isNewProfile,
     String? errorMessage,
     bool clearError = false,
   }) {
     return AuthFlowState(
       stage: stage ?? this.stage,
       phoneNumberE164: phoneNumberE164 ?? this.phoneNumberE164,
-      verificationId: verificationId ?? this.verificationId,
-      resendToken: resendToken ?? this.resendToken,
+      countryCode: countryCode ?? this.countryCode,
+      resendAvailableInSeconds:
+          resendAvailableInSeconds ?? this.resendAvailableInSeconds,
+      isNewProfile: isNewProfile ?? this.isNewProfile,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
 
-/// Controlador del flujo de autenticación por OTP (tareas 1.9/1.10).
+/// Controlador del flujo de login revendedor por código WhatsApp
+/// (tareas 1.9/1.10/1.13a).
 ///
-/// Orquesta [PhoneAuthService] (abstracción mockeable) y, al verificar con
-/// éxito, eleva la sesión al [authStateProvider]. No conoce Firebase.
+/// Orquesta [AuthRepository] (los 3 endpoints del backend) y, al verificar con
+/// éxito, canjea el `customToken` con [AuthUserService.signInWithCustomToken]
+/// y eleva la sesión al [authStateProvider]. No conoce Firebase ni Dio
+/// directamente (ambos están tras interfaces mockeables).
 class AuthController extends Notifier<AuthFlowState> {
   @override
   AuthFlowState build() => const AuthFlowState();
 
-  PhoneAuthService get _service => ref.read(phoneAuthServiceProvider);
+  AuthRepository get _repo => ref.read(authRepositoryProvider);
+  AuthUserService get _authUserService => ref.read(authUserServiceProvider);
 
-  /// Envía el OTP al [rawPhone] usando [countryCode] como país por defecto.
+  /// Solicita el envío del código al [rawPhone] usando [countryCode] (dial
+  /// code) como país por defecto (`57` = Colombia).
   ///
-  /// Valida y normaliza a E.164 con `normalizeToE164`. Devuelve el E.164
-  /// enviado, o `null` si el número no es válido (en cuyo caso deja un
-  /// `errorMessage` de formato en el estado).
+  /// Valida/normaliza a E.164. Devuelve el E.164 enviado, o `null` si el número
+  /// no es válido (deja un `errorMessage` de formato) o si `request-code` falla
+  /// (deja el `errorMessage` mapeado, p. ej. 429 con cooldown).
   Future<String?> sendCode({
     required String rawPhone,
     String countryCode = defaultCountryCode,
@@ -104,74 +125,72 @@ class AuthController extends Notifier<AuthFlowState> {
     state = state.copyWith(
       stage: AuthFlowStage.sendingCode,
       phoneNumberE164: e164,
+      countryCode: countryCode,
       clearError: true,
     );
 
-    await _service.verifyPhoneNumber(
+    final result = await _repo.requestCode(
       phoneNumber: e164,
-      callbacks: PhoneVerificationCallbacks(
-        onCodeSent: (verificationId, resendToken) {
-          state = state.copyWith(
-            stage: AuthFlowStage.codeSent,
-            verificationId: verificationId,
-            resendToken: resendToken,
-            clearError: true,
-          );
-        },
-        onError: (failure) {
-          state = state.copyWith(
-            stage: AuthFlowStage.phoneEntry,
-            errorMessage: failure.message,
-          );
-        },
-        onAutoVerified: (result) {
-          _promoteSession(result);
-        },
-      ),
+      countryCode: countryCode,
     );
 
-    return e164;
+    switch (result) {
+      case Ok<RequestCodeResult>(:final value):
+        state = state.copyWith(
+          stage: AuthFlowStage.codeSent,
+          resendAvailableInSeconds: value.resendAvailableInSeconds,
+          clearError: true,
+        );
+        return e164;
+      case Err<RequestCodeResult>(:final failure):
+        state = state.copyWith(
+          stage: AuthFlowStage.phoneEntry,
+          resendAvailableInSeconds: _secondsOf(failure),
+          errorMessage: failure.message,
+        );
+        return null;
+    }
   }
 
-  /// Reenvía el OTP al mismo número, reutilizando el `resendToken` si existe.
+  /// Reenvía el código al mismo número (`resend-code`). Respeta el cooldown de
+  /// 60s del backend: si está activo responde 429 → [LockedFailure] y la UI
+  /// muestra el error + `resendAvailableInSeconds`.
   Future<void> resendCode() async {
     final phone = state.phoneNumberE164;
     if (phone == null) return;
 
     state = state.copyWith(stage: AuthFlowStage.sendingCode, clearError: true);
 
-    await _service.verifyPhoneNumber(
+    final result = await _repo.resendCode(
       phoneNumber: phone,
-      resendToken: state.resendToken,
-      callbacks: PhoneVerificationCallbacks(
-        onCodeSent: (verificationId, resendToken) {
-          state = state.copyWith(
-            stage: AuthFlowStage.codeSent,
-            verificationId: verificationId,
-            resendToken: resendToken,
-            clearError: true,
-          );
-        },
-        onError: (failure) {
-          state = state.copyWith(
-            stage: AuthFlowStage.codeSent,
-            errorMessage: failure.message,
-          );
-        },
-        onAutoVerified: (result) {
-          _promoteSession(result);
-        },
-      ),
+      countryCode: state.countryCode,
     );
+
+    switch (result) {
+      case Ok<RequestCodeResult>(:final value):
+        state = state.copyWith(
+          stage: AuthFlowStage.codeSent,
+          resendAvailableInSeconds: value.resendAvailableInSeconds,
+          clearError: true,
+        );
+      case Err<RequestCodeResult>(:final failure):
+        state = state.copyWith(
+          stage: AuthFlowStage.codeSent,
+          resendAvailableInSeconds: _secondsOf(failure),
+          errorMessage: failure.message,
+        );
+    }
   }
 
-  /// Verifica el [smsCode] contra el `verificationId` actual. En caso de éxito
-  /// eleva la sesión; en caso de error deja un `errorMessage` en el estado.
+  /// Verifica el [code] contra el teléfono actual (`verify-code`). En éxito
+  /// canjea el `customToken` con `signInWithCustomToken` y eleva la sesión; en
+  /// error deja un `errorMessage` (400 código incorrecto/expirado, 429
+  /// lockout).
   ///
   /// Devuelve `true` si el inicio de sesión fue exitoso.
-  Future<bool> verifyCode(String smsCode) async {
-    final verificationId = state.verificationId;
-    if (verificationId == null) {
+  Future<bool> verifyCode(String code) async {
+    final phone = state.phoneNumberE164;
+    if (phone == null) {
       state = state.copyWith(
         errorMessage: 'La verificación expiró. Solicita un nuevo código.',
       );
@@ -180,44 +199,62 @@ class AuthController extends Notifier<AuthFlowState> {
 
     state = state.copyWith(stage: AuthFlowStage.verifying, clearError: true);
 
-    try {
-      final result = await _service.signInWithSmsCode(
-        verificationId: verificationId,
-        smsCode: smsCode.trim(),
-      );
-      _promoteSession(result);
-      return true;
-    } on PhoneAuthFailure catch (failure) {
-      state = state.copyWith(
-        stage: AuthFlowStage.codeSent,
-        errorMessage: failure.message,
-      );
-      return false;
+    final result = await _repo.verifyCode(
+      phoneNumber: phone,
+      code: code.trim(),
+      countryCode: state.countryCode,
+    );
+
+    switch (result) {
+      case Ok<VerifyCodeResult>(:final value):
+        try {
+          final signIn =
+              await _authUserService.signInWithCustomToken(value.customToken);
+          _promoteSession(signIn, isNewProfile: value.isNewProfile);
+          return true;
+        } on SignInWithCustomTokenException catch (e) {
+          state = state.copyWith(
+            stage: AuthFlowStage.codeSent,
+            errorMessage: e.message,
+          );
+          return false;
+        }
+      case Err<VerifyCodeResult>(:final failure):
+        state = state.copyWith(
+          stage: AuthFlowStage.codeSent,
+          resendAvailableInSeconds: _secondsOf(failure),
+          errorMessage: failure.message,
+        );
+        return false;
     }
   }
 
   /// Reinicia el flujo al ingreso de teléfono (p. ej. al salir de la pantalla
-  /// de OTP para corregir el número).
+  /// de código para corregir el número).
   void reset() => state = const AuthFlowState();
 
-  void _promoteSession(PhoneSignInResult result) {
+  /// Segundos de cooldown transportados por un [LockedFailure], si aplica.
+  int? _secondsOf(Failure failure) =>
+      failure is LockedFailure ? failure.retryAfterSeconds : null;
+
+  void _promoteSession(SignInResult result, {required bool isNewProfile}) {
     ref.read(authStateProvider.notifier).signInWithToken(
           uid: result.uid,
           idToken: result.idToken,
-          phoneNumber: result.phoneNumber,
+          phoneNumber: result.phoneNumber ?? state.phoneNumberE164,
         );
-    state = state.copyWith(stage: AuthFlowStage.signedIn, clearError: true);
+    state = state.copyWith(
+      stage: AuthFlowStage.signedIn,
+      isNewProfile: isNewProfile,
+      clearError: true,
+    );
     // Tras el login, carga el perfil (`GET /reseller/me`) para que el guard de
     // "perfil incompleto" (tarea 1.13) decida si hay que completar el nombre.
-    // No bloqueamos el flujo de OTP: se dispara en segundo plano.
+    // `isNewProfile` ya es una señal temprana; `loadProfile` lo confirma contra
+    // el backend. No bloqueamos el flujo: se dispara en segundo plano.
     unawaited(ref.read(profileControllerProvider.notifier).loadProfile());
   }
 }
-
-/// Provider del [PhoneAuthService]. Por defecto usa la implementación real de
-/// Firebase; los tests lo sobreescriben con un fake.
-final Provider<PhoneAuthService> phoneAuthServiceProvider =
-    Provider<PhoneAuthService>((Ref ref) => FirebasePhoneAuthService());
 
 /// Provider del controlador del flujo de autenticación.
 final NotifierProvider<AuthController, AuthFlowState> authControllerProvider =

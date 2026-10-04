@@ -36,5 +36,36 @@ class FirebaseAuthUserService implements AuthUserService {
   }
 
   @override
+  Future<SignInResult> signInWithCustomToken(String customToken) async {
+    try {
+      final cred = await _auth.signInWithCustomToken(customToken);
+      final user = cred.user;
+      if (user == null) {
+        throw const SignInWithCustomTokenException(
+          'No se pudo iniciar sesión. Inténtalo de nuevo.',
+        );
+      }
+      final idToken = await user.getIdToken();
+      if (idToken == null || idToken.isEmpty) {
+        throw const SignInWithCustomTokenException(
+          'No se pudo obtener el token de sesión. Inténtalo de nuevo.',
+        );
+      }
+      return SignInResult(
+        uid: user.uid,
+        idToken: idToken,
+        phoneNumber: user.phoneNumber,
+      );
+    } on SignInWithCustomTokenException {
+      rethrow;
+    } on FirebaseAuthException catch (e) {
+      throw SignInWithCustomTokenException(
+        'No se pudo validar la sesión. Inténtalo de nuevo.',
+        cause: e,
+      );
+    }
+  }
+
+  @override
   Future<void> signOut() => _auth.signOut();
 }
