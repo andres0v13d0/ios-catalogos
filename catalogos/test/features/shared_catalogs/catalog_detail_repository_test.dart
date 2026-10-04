@@ -9,6 +9,7 @@
 // Sin red ni Firebase reales.
 
 import 'package:catalogos/core/network/error_interceptor.dart';
+import 'package:catalogos/core/network/logging_interceptor.dart';
 import 'package:catalogos/core/result/failure.dart';
 import 'package:catalogos/core/result/result.dart';
 import 'package:catalogos/features/shared_catalogs/data/catalog_detail_repository.dart';
@@ -237,6 +238,33 @@ void main() {
       final detail = (result as Ok<CatalogDetail>).value;
       expect(detail.products, hasLength(1));
       expect(detail.products.first.id, 'p1');
+    });
+  });
+
+  group('observabilidad del parse-error (200 OK con cuerpo mal formado)', () {
+    test('200 con cuerpo no-mapa → log [PARSE-ERR] y Err (sin cambio de Result)',
+        () async {
+      final logs = <String>[];
+      final repoWithSink = CatalogDetailRepository(dio, logSink: logs.add);
+      // 200 OK pero el cuerpo es una lista (forma inesperada) → _parseDetail
+      // lanza FormatException, que NO es una DioException.
+      adapter.onGet(
+        '/catalog/by-catalog/cat-bad/products',
+        (server) => server.reply(200, <dynamic>['no', 'es', 'un', 'mapa']),
+      );
+
+      final result = await repoWithSink.getCatalogProducts('cat-bad');
+
+      // Comportamiento inalterado: sigue devolviendo Err(UnknownFailure).
+      expect(result, isA<Err<CatalogDetail>>());
+      expect((result as Err<CatalogDetail>).failure, isA<UnknownFailure>());
+
+      // Y ahora el caso es visible.
+      expect(logs, hasLength(1));
+      final line = logs.single;
+      expect(line, contains(kParseErrorTag));
+      expect(line, contains('/catalog/by-catalog/cat-bad/products'));
+      expect(line, contains('error='));
     });
   });
 

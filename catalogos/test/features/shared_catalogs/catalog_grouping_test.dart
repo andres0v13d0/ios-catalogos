@@ -44,11 +44,13 @@ void main() {
       expect(groups[0].catalogs.first.displayName, 'Bolsos');
     });
 
-    test('usa providerLabel de fallback cuando no hay providerName', () {
+    test('usa providerLabel de fallback (sin id) cuando no hay providerName',
+        () {
       final groups = groupByProvider(<Catalog>[
         _c(id: 'x', name: 'Sin nombre', providerId: 77),
       ]);
-      expect(groups.single.providerLabel, 'Proveedor 77');
+      // Nunca "Proveedor 77": sin nombre cae a 'Proveedor' sin el id.
+      expect(groups.single.providerLabel, 'Proveedor');
     });
   });
 

@@ -470,3 +470,35 @@ Con `checkout_enabled=false`: no se crean orders; se devuelve el mensaje/payload
 ## 11. Dependencias Flutter propuestas
 
 `firebase_core`, `firebase_auth`, `firebase_app_check`, `firebase_messaging`, `dio`, `go_router`, `flutter_riverpod`, `riverpod_annotation`, `freezed`/`json_serializable`, `intl`, `cached_network_image`, `url_launcher`, `image_picker`, `image_cropper`, `drift` (o `hive`), `flutter_secure_storage`, `flutter_dotenv`/dart-define. Dev: `build_runner`, `mocktail`, `flutter_lints`.
+
+## 12. Detalle de catálogo compartido — bugfix de mapeo y evaluación de endpoint dedicado
+
+> Añadido tras corregir dos bugs reales del flujo de catálogos compartidos del revendedor.
+
+### 12.1 Causa raíz corregida (mapper Flutter)
+
+El endpoint `GET /reseller/me/shared-catalogs` (`backend/src/modules/reseller/reseller.controller.ts` → `serializeSharedCatalog`) **ya** devolvía una forma anidada correcta:
+
+```
+{ id: 3 (link id INT), catalogId: "<uuid>", providerId, linkedAt,
+  catalog: { id: "<uuid>", publicName, description, bannerUrl, enlace, priceField },
+  provider: { id, nombreEmpresa, logoUrl, ... } }
+```
+
+El bug estaba en `Catalog.fromJson` (`lib/features/shared_catalogs/domain/catalog.dart`), que leía campos planos equivocados:
+
+- **PROBLEMA 1 (el detalle fallaba):** usaba el `id` top-level (= `3`, el id del vínculo `reseller_shared_catalogs.id`) como id del catálogo. El detalle llama `GET /catalog/by-catalog/:catalogId/products` (`@Param ParseUUIDPipe`), que rechazaba `3` con 400 "uuid is expected". **Fix:** `id` ahora se toma de `catalogId` (= `private_catalogs.id`, UUID). Se añadió `linkId` para conservar el id del vínculo.
+- **PROBLEMA 2 ("Proveedor \<id\>"):** `providerName` se buscaba plano (ausente) → la UI mostraba `Proveedor <id>`. **Fix:** se lee de `provider.nombreEmpresa`; `providerLogoUrl` de `provider.logoOptimizedUrl` (fallback `logoUrl`); `providerLabel`/iniciales nunca muestran el id.
+
+El backend solo se **enriqueció** (aditivo, sin migración): `provider.logoOptimizedUrl`, `provider.bannerUrl`, `provider.bannerDesktopUrl`, `provider.bannerMobileUrl` (columnas ya existentes en `proveedores`). No se exponen campos sensibles del proveedor.
+
+### 12.2 Punto 4 — Evaluación de endpoint dedicado del revendedor (DECISIÓN: NO implementar)
+
+Se evaluó mover el detalle del endpoint público legado `GET /catalog/by-catalog/:catalogId/products` a uno dedicado del revendedor (p. ej. `GET /reseller/me/shared-catalogs/:catalogId/products`) que verifique la propiedad (que el catálogo esté vinculado al revendedor autenticado) + App Check + guard de revendedor.
+
+**Decisión: NO se implementa ahora.** No cumple el criterio de "cambio pequeño / delegación delgada":
+
+- El endpoint delega finalmente en `PrivateCatalogsService.getCatalogProductsFormatted` (`backend/src/modules/private-catalogs/private-catalogs.service.ts`). Para reutilizarlo desde `ResellerController`, habría que inyectar ese servicio en `ResellerModule`, lo que obliga a importar `PrivateCatalogsModule` completo (arrastra `ProductsService`, S3, PDF jobs, reCAPTCHA, etc.) con riesgo de dependencias circulares y de ampliar la superficie del módulo. Eso excede una "delegación delgada".
+- El endpoint público actual **no filtra datos privados del revendedor**: devuelve la vista pública del catálogo del proveedor (los mismos productos/precios que ve cualquiera con el enlace). No hay fuga de `reseller_customers` ni de otros datos del revendedor.
+
+**Recomendación (futuro, si se desea reforzar):** crear el endpoint dedicado cuando se aborde la Fase 2 (donde `PrivateCatalogsService` ya se integrará para pedidos), exponiendo un método delgado en `ResellerController` que: (1) valide el vínculo `(reseller_id, catalogId)` en `reseller_shared_catalogs` (ya disponible vía `ResellerService`/repositorio), (2) delegue en `getCatalogProductsFormatted`, (3) adjunte App Check + `ResellerGuard`. Mientras tanto, el detalle Flutter sigue usando el endpoint público con el **UUID correcto** (fix de PROBLEMA 1), que es lo que desbloquea el 200.

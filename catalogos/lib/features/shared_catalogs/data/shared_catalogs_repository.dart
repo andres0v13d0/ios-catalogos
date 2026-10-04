@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/dio_provider.dart';
 import '../../../core/network/error_interceptor.dart';
+import '../../../core/network/logging_interceptor.dart';
 import '../../../core/result/failure.dart';
 import '../../../core/result/result.dart';
 import '../domain/catalog.dart';
@@ -20,9 +21,14 @@ import '../domain/catalog.dart';
 /// del [Dio] inyectado (ver `dioProvider`). Devuelve `Result<T>` en vez de
 /// lanzar: mapea errores de Dio a [Failure] (mismo patrón que `ResellerRepository`).
 class SharedCatalogsRepository {
-  const SharedCatalogsRepository(this._dio);
+  const SharedCatalogsRepository(this._dio, {NetLogSink? logSink})
+      // ignore: prefer_initializing_formals -- `logSink` es el nombre público.
+      : _logSink = logSink;
 
   final Dio _dio;
+
+  /// Sink de logging inyectable para tests (captura de `[PARSE-ERR]`).
+  final NetLogSink? _logSink;
 
   static const String _syncPath = '/reseller/sync-shared-catalogs';
   static const String _listPath = '/reseller/me/shared-catalogs';
@@ -30,15 +36,20 @@ class SharedCatalogsRepository {
   /// `POST /reseller/sync-shared-catalogs` — vincula catálogos por teléfono del
   /// token (idempotente). Parsea `{ linked, catalogs }`.
   Future<Result<SyncResult>> syncSharedCatalogs() async {
+    dynamic rawBody;
     try {
       final response = await _dio.post<dynamic>(
         _syncPath,
         data: const <String, dynamic>{},
       );
-      return Ok<SyncResult>(_parseSync(response.data));
+      rawBody = response.data;
+      return Ok<SyncResult>(_parseSync(rawBody));
     } on DioException catch (e) {
       return Err<SyncResult>(_failureOf(e));
     } catch (e) {
+      // 200 OK con cuerpo mal formado (no DioException): hazlo visible sin
+      // cambiar el Result devuelto.
+      logNetworkParseError(_syncPath, e, rawBody: rawBody, sink: _logSink);
       return Err<SyncResult>(UnknownFailure(cause: e));
     }
   }
@@ -58,15 +69,18 @@ class SharedCatalogsRepository {
     if (search != null && search.trim().isNotEmpty) {
       query['search'] = search.trim();
     }
+    dynamic rawBody;
     try {
       final response = await _dio.get<dynamic>(
         _listPath,
         queryParameters: query.isEmpty ? null : query,
       );
-      return Ok<List<Catalog>>(_parseList(response.data));
+      rawBody = response.data;
+      return Ok<List<Catalog>>(_parseList(rawBody));
     } on DioException catch (e) {
       return Err<List<Catalog>>(_failureOf(e));
     } catch (e) {
+      logNetworkParseError(_listPath, e, rawBody: rawBody, sink: _logSink);
       return Err<List<Catalog>>(UnknownFailure(cause: e));
     }
   }

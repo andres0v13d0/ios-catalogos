@@ -20,15 +20,18 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeController extends SharedCatalogsController {
   int refreshCount = 0;
 
+  // Ids = UUID (como los devuelve el backend ya corregido), con nombre y logo
+  // del proveedor para verificar el encabezado con nombre + avatar.
   static const List<Catalog> _catalogs = <Catalog>[
     Catalog(
-      id: 'c1',
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       displayName: 'Zapatos',
       providerId: 10,
       providerName: 'Proveedor A',
+      providerLogoUrl: 'https://cdn/logo-a.webp',
     ),
     Catalog(
-      id: 'c2',
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
       displayName: 'Camisas',
       providerId: 20,
       providerName: 'Proveedor B',
@@ -58,17 +61,47 @@ void main() {
     );
   }
 
-  testWidgets('muestra los catálogos agrupados por proveedor',
+  testWidgets('muestra los catálogos agrupados por proveedor (con nombre)',
       (WidgetTester tester) async {
     await tester.pumpWidget(wrap());
     await tester.pump();
 
-    // Encabezados de sección por proveedor.
+    // Encabezados de sección por NOMBRE de proveedor (no "Proveedor <id>").
     expect(find.text('Proveedor A'), findsWidgets);
     expect(find.text('Proveedor B'), findsWidgets);
+    expect(find.textContaining('Proveedor 10'), findsNothing);
+    expect(find.textContaining('Proveedor 20'), findsNothing);
     // Catálogos.
     expect(find.text('Zapatos'), findsOneWidget);
     expect(find.text('Camisas'), findsOneWidget);
+  });
+
+  testWidgets('renderiza el avatar del proveedor (iniciales como fallback)',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pump();
+
+    // Hay avatares de proveedor (CircleAvatar) en los encabezados.
+    expect(find.byType(CircleAvatar), findsWidgets);
+    // El proveedor sin logo muestra iniciales 'PB' (Proveedor B).
+    expect(find.text('PB'), findsOneWidget);
+  });
+
+  testWidgets('el ListTile del catálogo usa el UUID como key (navegación)',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pump();
+
+    // La key del ListTile incorpora catalog.id, que ahora es el UUID; esto
+    // garantiza que la navegación al detalle recibe el UUID y no el link id.
+    expect(
+      find.byKey(const Key('catalog_aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('catalog_bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('el pull-to-refresh (RefreshIndicator.onRefresh) recarga',

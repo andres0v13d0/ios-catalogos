@@ -73,16 +73,30 @@ void main() {
       (server) => server.reply(200, <String, dynamic>{
         'catalogs': <Map<String, dynamic>>[
           <String, dynamic>{
-            'id': 'c1',
-            'publicName': 'Alfa',
+            'id': 1,
+            'catalogId': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
             'providerId': 10,
-            'providerName': 'Proveedor A',
+            'catalog': <String, dynamic>{
+              'id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+              'publicName': 'Alfa',
+            },
+            'provider': <String, dynamic>{
+              'id': 10,
+              'nombreEmpresa': 'Proveedor A',
+            },
           },
           <String, dynamic>{
-            'id': 'c2',
-            'publicName': 'Beta',
+            'id': 2,
+            'catalogId': 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
             'providerId': 20,
-            'providerName': 'Proveedor B',
+            'catalog': <String, dynamic>{
+              'id': 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+              'publicName': 'Beta',
+            },
+            'provider': <String, dynamic>{
+              'id': 20,
+              'nombreEmpresa': 'Proveedor B',
+            },
           },
         ],
       }),

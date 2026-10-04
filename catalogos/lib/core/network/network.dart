@@ -10,5 +10,6 @@ export 'auth_interceptor.dart';
 export 'dio_client.dart';
 export 'dio_provider.dart';
 export 'error_interceptor.dart';
+export 'logging_interceptor.dart';
 export 'token_provider.dart';
 export 'unauthorized_interceptor.dart';

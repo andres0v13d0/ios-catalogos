@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/dio_provider.dart';
 import '../../../core/network/error_interceptor.dart';
+import '../../../core/network/logging_interceptor.dart';
 import '../../../core/result/failure.dart';
 import '../../../core/result/result.dart';
 import '../domain/catalog_detail.dart';
@@ -20,9 +21,15 @@ import '../domain/catalog_detail.dart';
 /// (el `AuthInterceptor`/`AppCheckInterceptor` del Dio inyectado adjuntan las
 /// cabeceras; el `ErrorInterceptor` adjunta el [Failure]).
 class CatalogDetailRepository {
-  const CatalogDetailRepository(this._dio);
+  const CatalogDetailRepository(this._dio, {NetLogSink? logSink})
+      // ignore: prefer_initializing_formals -- `logSink` es el nombre público.
+      : _logSink = logSink;
 
   final Dio _dio;
+
+  /// Sink de logging inyectable para tests (captura de `[PARSE-ERR]`). En
+  /// producción es `null` y se usa el [netLogSink] global.
+  final NetLogSink? _logSink;
 
   static const String _previewsPath = '/catalog/products/previews';
 
@@ -31,12 +38,20 @@ class CatalogDetailRepository {
 
   /// `GET /catalog/by-catalog/:id/products` — detalle con productos.
   Future<Result<CatalogDetail>> getCatalogProducts(String catalogId) async {
+    final path = _productsPath(catalogId);
+    dynamic rawBody;
     try {
-      final response = await _dio.get<dynamic>(_productsPath(catalogId));
-      return Ok<CatalogDetail>(_parseDetail(response.data, catalogId));
+      final response = await _dio.get<dynamic>(path);
+      rawBody = response.data;
+      return Ok<CatalogDetail>(_parseDetail(rawBody, catalogId));
     } on DioException catch (e) {
+      // El LoggingInterceptor ya registró el `[NET-ERR]` (observabilidad).
       return Err<CatalogDetail>(_failureOf(e));
     } catch (e) {
+      // 200 OK con cuerpo mal formado: no es DioException, por lo que el
+      // LoggingInterceptor.onError nunca se dispara. Hacemos visible el caso
+      // sin cambiar el Result devuelto.
+      logNetworkParseError(path, e, rawBody: rawBody, sink: _logSink);
       return Err<CatalogDetail>(UnknownFailure(cause: e));
     }
   }
@@ -52,12 +67,15 @@ class CatalogDetailRepository {
       'ids': ids,
       'catalogId': ?catalogId,
     };
+    dynamic rawBody;
     try {
       final response = await _dio.post<dynamic>(_previewsPath, data: body);
-      return Ok<CatalogDetail>(_parseDetail(response.data, catalogId));
+      rawBody = response.data;
+      return Ok<CatalogDetail>(_parseDetail(rawBody, catalogId));
     } on DioException catch (e) {
       return Err<CatalogDetail>(_failureOf(e));
     } catch (e) {
+      logNetworkParseError(_previewsPath, e, rawBody: rawBody, sink: _logSink);
       return Err<CatalogDetail>(UnknownFailure(cause: e));
     }
   }

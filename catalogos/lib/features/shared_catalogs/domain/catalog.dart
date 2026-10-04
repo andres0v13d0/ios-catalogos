@@ -1,97 +1,228 @@
 /// Modelo de un catálogo compartido vinculado al revendedor (tareas 1.14/1.15).
 ///
-/// === RECONCILIACIÓN DE NOMBRES DE CAMPO (TODO cuando el backend esté vivo) ===
-/// Los contratos reales del backend (`POST /reseller/sync-shared-catalogs`,
-/// `GET /reseller/me/shared-catalogs`) devuelven una lista `catalogs: [...]`,
-/// pero los **nombres exactos** de los campos de cada catálogo NO están
-/// totalmente fijados en el diseño (§3 denormaliza `provider_id` en
-/// `reseller_shared_catalogs`, y la entidad origen es `private_catalogs`).
+/// === FORMA REAL DEL BACKEND (anidada) ===
+/// `GET /reseller/me/shared-catalogs` y `POST /reseller/sync-shared-catalogs`
+/// devuelven elementos con esta forma (ver `serializeSharedCatalog` en
+/// `backend/src/modules/reseller/reseller.controller.ts`):
 ///
-/// Para no bloquearnos, [Catalog.fromJson] es **tolerante**: acepta tanto
-/// `snake_case` como `camelCase` para las claves ambiguas:
-///   - id            ← id
-///   - nombre a mostrar ← publicName | public_name | nombre | internalName | internal_name
-///   - providerId    ← providerId | provider_id
-///   - providerName  ← providerName | provider_name | null
-///   - bannerUrl     ← bannerUrl | banner_url | null
-///   - isReseller    ← isReseller | is_reseller | null
+/// ```json
+/// {
+///   "id": 3,                 // reseller_shared_catalogs.id (INT serial) — el id del VÍNCULO
+///   "catalogId": "<uuid>",   // private_catalogs.id (UUID) — el que necesita el detalle
+///   "providerId": 5,
+///   "linkedAt": "...",
+///   "catalog":  { "id": "<uuid>", "publicName", "description", "bannerUrl", "enlace", "priceField" },
+///   "provider": { "id", "nombreEmpresa", "logoUrl", "logoOptimizedUrl", "bannerUrl", "bannerDesktopUrl", "bannerMobileUrl" }
+/// }
+/// ```
 ///
-/// Cuando el backend esté en vivo, revisar la respuesta real y, si procede,
-/// endurecer este parser a los nombres definitivos (centralizado aquí para que
-/// el cambio sea de un solo punto). Ver también `tasks.md` 1.14/1.15.
+/// === RELACIÓN DE ENTIDADES (backend) ===
+/// - `reseller_shared_catalogs.id` = INT serial (el "3"). Entidad:
+///   `backend/src/modules/reseller/entities/reseller-shared-catalog.entity.ts`.
+///   NUNCA usar este id como id de catálogo.
+/// - `reseller_shared_catalogs.catalog_id` = UUID → FK a `private_catalogs.id`.
+///   El detalle `GET /catalog/by-catalog/:catalogId/products`
+///   (`backend/src/modules/private-catalogs/private-catalogs.controller.ts`,
+///   `@Param ParseUUIDPipe`) EXIGE este UUID. Por eso [id] debe ser el UUID.
+/// - Datos públicos del proveedor en `proveedores`
+///   (`backend/src/modules/providers/entity/provider.entity.ts`): `nombre_empresa`,
+///   `logo_url`, `logo_optimized_url`, `banner_url`, `banner_desktop_url`,
+///   `banner_mobile_url`.
+///
+/// [Catalog.fromJson] prioriza la forma anidada real, pero sigue siendo
+/// **tolerante** (acepta claves anidadas o planas, snake o camelCase) para la
+/// caché local y para payloads legados.
 class Catalog {
   const Catalog({
     required this.id,
     required this.displayName,
     required this.providerId,
+    this.linkId,
     this.providerName,
+    this.providerLogoUrl,
+    this.providerBannerUrl,
     this.bannerUrl,
+    this.priceField,
     this.isReseller,
   });
 
-  /// Id del catálogo (uuid del `private_catalogs`).
+  /// Id del catálogo (**UUID** de `private_catalogs`). Es el que se pasa al
+  /// detalle (`/catalog/by-catalog/<uuid>/products`). NUNCA el id del vínculo.
   final String id;
 
-  /// Nombre a mostrar del catálogo (preferimos `publicName`).
+  /// Id serial del vínculo `reseller_shared_catalogs` (top-level `id`). Es
+  /// opcional e informativo; no debe usarse para abrir el detalle.
+  final int? linkId;
+
+  /// Nombre a mostrar del catálogo (preferimos `catalog.publicName`).
   final String displayName;
 
   /// Id del proveedor (denormalizado en `reseller_shared_catalogs`).
   final int providerId;
 
-  /// Nombre del proveedor para agrupar/encabezados; puede ser `null`.
+  /// Nombre del proveedor (de `provider.nombreEmpresa`); puede ser `null`.
   final String? providerName;
+
+  /// Logo del proveedor (preferimos el optimizado); puede ser `null`.
+  final String? providerLogoUrl;
+
+  /// Banner del proveedor para encabezados; puede ser `null`.
+  final String? providerBannerUrl;
 
   /// URL del banner del catálogo; puede ser `null`.
   final String? bannerUrl;
 
+  /// Campo de precio del catálogo. `'none'` ⇒ modo "sin precios".
+  final String? priceField;
+
   /// Marca opcional de catálogo de revendedor; puede ser `null`.
   final bool? isReseller;
 
-  /// Etiqueta de proveedor usada para agrupar en la UI. Si no hay
-  /// `providerName`, cae a `Proveedor <providerId>`.
-  String get providerLabel =>
-      (providerName ?? '').trim().isNotEmpty
-          ? providerName!.trim()
-          : 'Proveedor $providerId';
+  /// Etiqueta de proveedor usada para agrupar/encabezados en la UI. Si hay
+  /// [providerName] lo usa; si no, cae a un genérico `'Proveedor'` SIN el id
+  /// (nunca `Proveedor <id>`).
+  String get providerLabel {
+    final name = (providerName ?? '').trim();
+    return name.isNotEmpty ? name : 'Proveedor';
+  }
 
-  /// Construye un [Catalog] desde el JSON del backend de forma **tolerante**
-  /// (acepta snake_case y camelCase). Ver nota de reconciliación arriba.
+  /// Iniciales (hasta 2, mayúsculas) del nombre del proveedor para el avatar.
+  /// Devuelve un marcador neutro `'PR'` cuando no hay nombre.
+  String get providerInitials {
+    final name = (providerName ?? '').trim();
+    if (name.isEmpty) return 'PR';
+    final words = name
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isEmpty) return 'PR';
+    if (words.length == 1) {
+      final w = words.first;
+      final take = w.length >= 2 ? w.substring(0, 2) : w;
+      return take.toUpperCase();
+    }
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+
+  /// Construye un [Catalog] desde el JSON del backend. Prioriza la forma
+  /// anidada real (`catalog`/`provider`) y acepta también claves planas
+  /// (snake/camelCase) por tolerancia (caché local / payloads legados).
   factory Catalog.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> catalog = _asMap(json['catalog']);
+    final Map<String, dynamic> provider = _asMap(json['provider']);
+
+    // --- id del catálogo (UUID). Prioriza catalogId / catalog.id; el top-level
+    // `id` solo se acepta si parece un UUID (nunca el id numérico del vínculo).
+    final String? catalogIdField =
+        _asString(_pick(json, const <String>['catalogId', 'catalog_id']));
+    final String? nestedCatalogId = _asString(catalog['id']);
+    final dynamic topLevelId = json['id'];
+    final String? legacyUuid =
+        _looksLikeUuid(topLevelId) ? _asString(topLevelId) : null;
+    final String id = catalogIdField ?? nestedCatalogId ?? legacyUuid ?? '';
+
+    // --- linkId: clave explícita `linkId` (round-trip de la caché) o el
+    // top-level `id` cuando es numérico (forma real del backend).
+    final int? linkId = _asInt(json['linkId']) ??
+        (legacyUuid == null ? _asInt(topLevelId) : null);
+
+    // --- displayName: catalog.publicName | ... | top-level publicName | ''.
+    final String displayName = _asString(
+          _pick(catalog, const <String>['publicName', 'public_name']) ??
+              _pick(json, const <String>[
+                'publicName',
+                'public_name',
+                'nombre',
+                'internalName',
+                'internal_name',
+              ]),
+        ) ??
+        '';
+
+    // --- providerId: top-level providerId | provider.id | provider_id.
+    final int providerId = _asInt(
+          _pick(json, const <String>['providerId', 'provider_id']) ??
+              provider['id'],
+        ) ??
+        0;
+
+    // --- providerName: provider.nombreEmpresa | ... | top-level providerName.
+    final String? providerName = _asString(
+      _pick(provider, const <String>['nombreEmpresa', 'nombre_empresa']) ??
+          _pick(json, const <String>[
+            'providerName',
+            'provider_name',
+            'providerNombreEmpresa',
+          ]),
+    );
+
+    // --- providerLogoUrl: optimizado primero, luego logo_url.
+    final String? providerLogoUrl = _asString(
+      _pick(provider, const <String>[
+            'logoOptimizedUrl',
+            'logo_optimized_url',
+            'logoUrl',
+            'logo_url',
+          ]) ??
+          _pick(json, const <String>[
+            'providerLogoUrl',
+            'provider_logo_url',
+          ]),
+    );
+
+    // --- providerBannerUrl: provider.bannerUrl | banner_url.
+    final String? providerBannerUrl = _asString(
+      _pick(provider, const <String>['bannerUrl', 'banner_url']) ??
+          _pick(json, const <String>[
+            'providerBannerUrl',
+            'provider_banner_url',
+          ]),
+    );
+
+    // --- bannerUrl (del catálogo): catalog.bannerUrl | ... | top-level.
+    final String? bannerUrl = _asString(
+      _pick(catalog, const <String>['bannerUrl', 'banner_url']) ??
+          _pick(json, const <String>['bannerUrl', 'banner_url']),
+    );
+
+    // --- priceField: catalog.priceField | ... | top-level.
+    final String? priceField = _asString(
+      _pick(catalog, const <String>['priceField', 'price_field']) ??
+          _pick(json, const <String>['priceField', 'price_field']),
+    );
+
+    // --- isReseller: catalog.isReseller | ... | top-level.
+    final bool? isReseller = _asBool(
+      _pick(catalog, const <String>['isReseller', 'is_reseller']) ??
+          _pick(json, const <String>['isReseller', 'is_reseller']),
+    );
+
     return Catalog(
-      id: _asString(_pick(json, const <String>['id']))!,
-      displayName: _asString(
-            _pick(json, const <String>[
-              'publicName',
-              'public_name',
-              'nombre',
-              'internalName',
-              'internal_name',
-            ]),
-          ) ??
-          '',
-      providerId: _asInt(
-            _pick(json, const <String>['providerId', 'provider_id']),
-          ) ??
-          0,
-      providerName: _asString(
-        _pick(json, const <String>['providerName', 'provider_name']),
-      ),
-      bannerUrl: _asString(
-        _pick(json, const <String>['bannerUrl', 'banner_url']),
-      ),
-      isReseller: _asBool(
-        _pick(json, const <String>['isReseller', 'is_reseller']),
-      ),
+      id: id,
+      linkId: linkId,
+      displayName: displayName,
+      providerId: providerId,
+      providerName: providerName,
+      providerLogoUrl: providerLogoUrl,
+      providerBannerUrl: providerBannerUrl,
+      bannerUrl: bannerUrl,
+      priceField: priceField,
+      isReseller: isReseller,
     );
   }
 
-  /// Serializa a JSON en camelCase (usado para la caché local Hive).
+  /// Serializa a JSON plano con claves estables (usado para la caché local
+  /// Hive). Diseñado para que `fromJson(toJson(x)) == x` (round-trip).
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
+        'catalogId': id,
+        'linkId': linkId,
         'publicName': displayName,
         'providerId': providerId,
         'providerName': providerName,
+        'providerLogoUrl': providerLogoUrl,
+        'providerBannerUrl': providerBannerUrl,
         'bannerUrl': bannerUrl,
+        'priceField': priceField,
         'isReseller': isReseller,
       };
 
@@ -102,6 +233,22 @@ class Catalog {
       if (value != null) return value;
     }
     return null;
+  }
+
+  static Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return const <String, dynamic>{};
+  }
+
+  /// Heurística para distinguir un UUID de un id numérico del vínculo.
+  static bool _looksLikeUuid(dynamic value) {
+    if (value is! String) return false;
+    final re = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
+      r'[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    return re.hasMatch(value);
   }
 
   static String? _asString(dynamic value) {
@@ -135,15 +282,29 @@ class Catalog {
       identical(this, other) ||
       other is Catalog &&
           other.id == id &&
+          other.linkId == linkId &&
           other.displayName == displayName &&
           other.providerId == providerId &&
           other.providerName == providerName &&
+          other.providerLogoUrl == providerLogoUrl &&
+          other.providerBannerUrl == providerBannerUrl &&
           other.bannerUrl == bannerUrl &&
+          other.priceField == priceField &&
           other.isReseller == isReseller;
 
   @override
-  int get hashCode =>
-      Object.hash(id, displayName, providerId, providerName, bannerUrl, isReseller);
+  int get hashCode => Object.hash(
+        id,
+        linkId,
+        displayName,
+        providerId,
+        providerName,
+        providerLogoUrl,
+        providerBannerUrl,
+        bannerUrl,
+        priceField,
+        isReseller,
+      );
 
   @override
   String toString() =>

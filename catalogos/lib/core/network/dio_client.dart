@@ -5,6 +5,7 @@ import 'app_check_interceptor.dart';
 import 'app_check_token_source.dart';
 import 'auth_interceptor.dart';
 import 'error_interceptor.dart';
+import 'logging_interceptor.dart';
 import 'token_provider.dart';
 import 'unauthorized_interceptor.dart';
 
@@ -17,7 +18,10 @@ import 'unauthorized_interceptor.dart';
 ///   1. [AuthInterceptor]           → adjunta `Authorization: Bearer <idToken>`
 ///   2. [AppCheckInterceptor]       → adjunta `X-Firebase-AppCheck` (tarea 1.11)
 ///   3. [ErrorInterceptor]          → mapea errores HTTP a `Failure`
-///   4. [UnauthorizedInterceptor]   → política 401 persistente → logout (1.12)
+///   4. [LoggingInterceptor]        → observabilidad de red (punto D). Va
+///      DESPUÉS del ErrorInterceptor para leer `err.response` ya mapeado sin
+///      alterar el `Failure`. No-op si `Environment.enableLogging` es false.
+///   5. [UnauthorizedInterceptor]   → política 401 persistente → logout (1.12)
 ///
 /// El orden importa: Auth y AppCheck actúan en `onRequest`; el ErrorInterceptor
 /// mapea el error ANTES de que el UnauthorizedInterceptor decida cerrar sesión.
@@ -44,6 +48,7 @@ class DioClient {
     TokenProvider? tokenProvider,
     AppCheckTokenSource? appCheckTokenSource,
     Environment? environment,
+    NetLogSink? logSink,
     Future<void> Function()? onUnauthorized,
     Future<String?> Function()? refreshToken,
   }) {
@@ -66,6 +71,11 @@ class DioClient {
         appCheckTokenSource ?? const NoopAppCheckTokenSource(),
       ),
       const ErrorInterceptor(),
+      // Observabilidad (punto D): siempre se añade; el propio interceptor hace
+      // no-op cuando `Environment.enableLogging` es false. Va justo DESPUÉS del
+      // ErrorInterceptor para seguir leyendo `err.response.statusCode/data`
+      // (ErrorInterceptor hace copyWith(error: failure) sin tocar `response`).
+      LoggingInterceptor(environment: env, sink: logSink),
     ]);
 
     if (onUnauthorized != null) {

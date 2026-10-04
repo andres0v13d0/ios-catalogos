@@ -51,7 +51,9 @@ List<CatalogGroup> groupByProvider(List<Catalog> catalogs) {
           a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
     return CatalogGroup(
       providerId: entry.key,
-      providerLabel: labels[entry.key] ?? 'Proveedor ${entry.key}',
+      // La etiqueta usa el NOMBRE del proveedor (providerLabel). Nunca
+      // "Proveedor <id>": cuando falta el nombre cae a 'Proveedor' sin id.
+      providerLabel: labels[entry.key] ?? 'Proveedor',
       catalogs: list,
     );
   }).toList()

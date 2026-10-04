@@ -80,6 +80,24 @@ class Environment {
     enableLogging: _enableLogging,
   );
 
+  /// Construye un [Environment] arbitrario. Pensado para **tests** (p. ej.
+  /// alternar `enableLogging`); en producción se usa [current].
+  @visibleForTesting
+  factory Environment.test({
+    Flavor flavor = Flavor.dev,
+    String appName = 'Test',
+    String apiBaseUrl = 'https://api.test',
+    String firebaseOptions = 'dev',
+    bool enableLogging = true,
+  }) =>
+      Environment._(
+        flavor: flavor,
+        appName: appName,
+        apiBaseUrl: apiBaseUrl,
+        firebaseOptions: firebaseOptions,
+        enableLogging: enableLogging,
+      );
+
   bool get isDev => flavor == Flavor.dev;
   bool get isStaging => flavor == Flavor.staging;
   bool get isProd => flavor == Flavor.prod;

@@ -151,7 +151,7 @@ class _ProviderFilterBar extends ConsumerWidget {
   }
 }
 
-/// Sección de un proveedor: encabezado + sus catálogos.
+/// Sección de un proveedor: encabezado (logo + nombre) + sus catálogos.
 class _ProviderSection extends StatelessWidget {
   const _ProviderSection({required this.group});
 
@@ -160,14 +160,26 @@ class _ProviderSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+    // El logo/nombre vienen en cada Catalog; dentro del grupo todos comparten
+    // proveedor, así que tomamos el primero como representante.
+    final Catalog representative = group.catalogs.first;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text(
-            group.providerLabel,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          child: Row(
+            children: <Widget>[
+              _ProviderAvatar(catalog: representative),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  group.providerLabel,
+                  style: textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
         ),
         for (final Catalog catalog in group.catalogs)
@@ -175,14 +187,65 @@ class _ProviderSection extends StatelessWidget {
             key: Key('catalog_${catalog.id}'),
             leading: const Icon(Icons.collections_bookmark_outlined),
             title: Text(catalog.displayName),
-            subtitle: Text(group.providerLabel),
+            // La descripción del propio catálogo es más útil que repetir el
+            // nombre del proveedor (ya está en el encabezado). Si no hay
+            // descripción, no mostramos subtítulo.
+            subtitle: (catalog.priceField == 'none')
+                ? const Text('Sin precios')
+                : null,
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(
+              // catalog.id ahora es el UUID del catálogo (no el id del vínculo),
+              // por lo que el detalle llama /catalog/by-catalog/<uuid>/products.
               AppRoutes.catalogDetailPath(catalog.id),
               extra: catalog.displayName,
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Avatar circular del proveedor: logo (si hay) con fallback a iniciales.
+class _ProviderAvatar extends StatelessWidget {
+  const _ProviderAvatar({required this.catalog});
+
+  final Catalog catalog;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final String? logo = catalog.providerLogoUrl;
+    final Widget initials = Text(
+      catalog.providerInitials,
+      style: Theme.of(context)
+          .textTheme
+          .labelMedium
+          ?.copyWith(color: colors.onSecondaryContainer),
+    );
+
+    if (logo == null || logo.trim().isEmpty) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor: colors.secondaryContainer,
+        child: initials,
+      );
+    }
+
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: colors.secondaryContainer,
+      child: ClipOval(
+        child: Image.network(
+          logo,
+          width: 32,
+          height: 32,
+          fit: BoxFit.cover,
+          errorBuilder:
+              (BuildContext context, Object error, StackTrace? stack) =>
+                  initials,
+        ),
+      ),
     );
   }
 }
