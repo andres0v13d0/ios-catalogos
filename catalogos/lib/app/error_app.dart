@@ -18,7 +18,7 @@ class ErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Revendedores',
+      title: 'FLYmovil',
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: AppColors.background,

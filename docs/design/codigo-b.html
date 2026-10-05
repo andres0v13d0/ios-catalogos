@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLYmovil · Código B (referencia de diseño)</title>
+<!--
+  REFERENCIA DE DISEÑO PARA FLUTTER.
+  Marco: 390x844 dp. Posiciones, tamaños, radios, sombras, rotaciones y colores
+  están en estilos en línea: replícalos 1:1 en Flutter. No es código de producción.
+  Las casillas del código y el teclado numérico son widgets propios (no hay campo
+  de texto del sistema: NO debe abrirse el teclado del celular).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#0b0f19;display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
+  a{color:#5de0e6}a:hover{color:#ffffff}
+</style>
+</head>
+<body>
+<div style="position:relative;width:390px;height:844px;overflow:hidden;background:linear-gradient(180deg,#001634 0%,#003a85 55%,#004aad 100%);font-family:'Poppins',system-ui,sans-serif;color:#ffffff">
+
+  <!-- Brillo y círculo de fondo -->
+  <div style="position:absolute;left:-60px;top:-40px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(93,224,230,0.4) 0%,rgba(93,224,230,0) 68%)"></div>
+  <div style="position:absolute;right:-70px;top:420px;width:200px;height:200px;border-radius:50%;background:rgba(0,255,148,0.14)"></div>
+
+  <!-- Botón volver: 44x44, left 16, top 48 -->
+  <button type="button" aria-label="Volver" style="position:absolute;left:16px;top:48px;width:44px;height:44px;border:none;border-radius:50%;background:rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+
+  <!-- Encabezado -->
+  <div style="position:absolute;left:24px;right:24px;top:116px">
+    <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,#5de0e6,#00ff94);box-shadow:0 16px 34px rgba(0,255,148,0.35);display:flex;align-items:center;justify-content:center;transform:rotate(-6deg)">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#001634" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.5L3 20.5l1.6-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg>
+    </div>
+    <h1 style="margin:22px 0 0;font-size:28px;line-height:1.2;font-weight:600;color:#ffffff">Revisa tu WhatsApp</h1>
+    <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#C9D8EE">Escribe el código de 6 dígitos que enviamos al <span style="font-weight:600;color:#ffffff">+57 300 123 4567</span></p>
+    <a href="#" style="display:inline-block;margin-top:2px;font-size:13px;font-weight:600;line-height:1.8">Cambiar número</a>
+  </div>
+
+  <!-- Casillas del código: 6, gap 8, alto 64. Estados: llena / activa / vacía -->
+  <div style="position:absolute;left:24px;right:24px;top:352px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px">
+    <div style="height:64px;box-sizing:border-box;border-radius:16px;background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:#ffffff">4</div>
+    <div style="height:64px;box-sizing:border-box;border-radius:16px;background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:#ffffff">8</div>
+    <div style="height:64px;box-sizing:border-box;border-radius:16px;background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:#ffffff">2</div>
+    <!-- ACTIVA: fondo cian 18%, borde 2 cian, sombra cian, cursor parpadeante -->
+    <div style="height:64px;box-sizing:border-box;border-radius:16px;background:rgba(93,224,230,0.18);border:2px solid #5de0e6;box-shadow:0 10px 24px rgba(93,224,230,0.3);display:flex;align-items:center;justify-content:center"><div style="width:2px;height:28px;background:#5de0e6"></div></div>
+    <!-- VACÍAS -->
+    <div style="height:64px;box-sizing:border-box;border-radius:16px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.18)"></div>
+    <div style="height:64px;box-sizing:border-box;border-radius:16px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.18)"></div>
+  </div>
+
+  <p style="position:absolute;left:24px;right:24px;top:436px;margin:0;text-align:center;font-size:13px;line-height:1.5;color:#C9D8EE">Puedes pedir otro código en <span style="font-weight:600;color:#ffffff">0:42</span></p>
+
+  <!-- Botón Verificar -->
+  <button type="button" style="position:absolute;left:24px;right:24px;top:476px;display:flex;align-items:center;justify-content:center;gap:10px;height:54px;border:none;border-radius:16px;background:linear-gradient(90deg,#5de0e6,#00ff94);box-shadow:0 10px 24px rgba(0,255,148,0.3);font-family:inherit;font-size:16px;font-weight:600;color:#001634">
+    Verificar
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#001634" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+  </button>
+
+  <!-- Teclado numérico propio, anclado abajo: alto 268, 3 columnas, gap 8, teclas de alto 52 -->
+  <div style="position:absolute;left:0;right:0;bottom:0;height:268px;box-sizing:border-box;padding:12px 20px 20px;background:rgba(0,12,32,0.55);border-radius:28px 28px 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">1</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">2</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">3</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">4</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">5</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">6</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">7</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">8</button>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">9</button>
+    <div></div>
+    <button type="button" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);font-family:inherit;font-size:22px;font-weight:500;color:#ffffff">0</button>
+    <button type="button" aria-label="Borrar" style="height:52px;border:none;border-radius:14px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12V5z"/><path d="M13 9.5l5 5M18 9.5l-5 5"/></svg>
+    </button>
+  </div>
+</div>
+</body>
+</html>

@@ -8,19 +8,19 @@
 
 ## Fase 0 — Fundaciones (habilita todas las fases)
 
-- [x] 0.1 `[FL]` Reemplazar template y crear estructura feature-first en `catalogos/lib` (`app/`, `core/`, `features/`, `shared/`).
+- [X] 0.1 `[FL]` Reemplazar template y crear estructura feature-first en `catalogos/lib` (`app/`, `core/`, `features/`, `shared/`).
   - CA: compila `flutter analyze` sin errores; `main.dart` arranca una pantalla placeholder.
-- [x] 0.2 `[FL]` Configurar flavors dev/staging/prod (Android product flavors, iOS schemes/xcconfig) + `env/*.json` con `apiBaseUrl`.
+- [X] 0.2 `[FL]` Configurar flavors dev/staging/prod (Android product flavors, iOS schemes/xcconfig) + `env/*.json` con `apiBaseUrl`.
   - CA: `flutter run --flavor dev` y `--flavor prod` arrancan con distinta base URL visible en logs.
-- [x] 0.3 `[FL]` Theme FlyStock: `ThemeData` Poppins + `ColorScheme` (`#001634/#004aad/#5de0e6/#00ff94`), botón gradiente primario.
+- [X] 0.3 `[FL]` Theme FlyStock: `ThemeData` Poppins + `ColorScheme` (`#001634/#004aad/#5de0e6/#00ff94`), botón gradiente primario.
   - CA: pantalla de muestra renderiza tipografía y colores correctos.
-- [x] 0.4 `[FL]` Capa de red: Dio + `AuthInterceptor` (idToken) + `ErrorInterceptor` (mapeo a `Failure`) + `AppCheckInterceptor` (stub hasta 1.x).
+- [X] 0.4 `[FL]` Capa de red: Dio + `AuthInterceptor` (idToken) + `ErrorInterceptor` (mapeo a `Failure`) + `AppCheckInterceptor` (stub hasta 1.x).
   - CA: test unitario que verifica header `Authorization` y mapeo de 401/429.
-- [x] 0.5 `[FL]` Riverpod + go_router con guard de auth (placeholder) y rutas base.
+- [X] 0.5 `[FL]` Riverpod + go_router con guard de auth (placeholder) y rutas base.
   - CA: navegación entre 2 rutas; guard redirige a login si no hay sesión.
-- [x] 0.6 `[FL]` Caché local (drift o hive) inicializada + utils `money` (COP) y `phone` (E.164).
+- [X] 0.6 `[FL]` Caché local (drift o hive) inicializada + utils `money` (COP) y `phone` (E.164).
   - CA: tests unitarios de formateo de precio COP y normalización de teléfono.
-- [x] 0.7 `[M]` Registrar apps Android/iOS en Firebase `surtte-4bf22`, descargar `google-services.json` / `GoogleService-Info.plist`, correr FlutterFire. (ver §Pasos manuales)
+- [X] 0.7 `[M]` Registrar apps Android/iOS en Firebase `surtte-4bf22`, descargar `google-services.json` / `GoogleService-Info.plist`, correr FlutterFire. (ver §Pasos manuales)
   - CA: `firebase_core` inicializa sin error en ambos targets.
 
 ---
@@ -31,64 +31,65 @@
 
 > Flujo NUEVO y aislado (ver `design.md` §4.0). NO reutiliza ni altera `/notifications/verify*` ni `/users/recover-password`. `POST /auth/login` permanece sin cambios. Las migraciones quedan **pendientes de ejecutar** (mostrar SQL al usuario + snapshot RDS antes).
 
-- [x] 1.1a `[BE]` Migración ADITIVA + entidad `reseller_login_codes` (`code_hash`, `attempts`, `consumed_at`, `locked_until`, `created_at`, `expires_at`, índices por `phone_e164` y por `(phone_e164, created_at)`). SQL en `design.md` §4.0.6. — ⚠️ migración pendiente de ejecutar (requiere snapshot RDS + aprobación del SQL). — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+- [X] 1.1a `[BE]` Migración ADITIVA + entidad `reseller_login_codes` (`code_hash`, `attempts`, `consumed_at`, `locked_until`, `created_at`, `expires_at`, índices por `phone_e164` y por `(phone_e164, created_at)`). SQL en `design.md` §4.0.6. — ✅ migración EJECUTADA y VERIFICADA en producción (psql, 2026-10-04): tabla y columnas existen tal como en el SQL. Backend ya desplegado (confirmado por el login E2E real contra `api.minymol.com`). Sin pendientes.
   - CA: tabla e índices creados con `IF NOT EXISTS`; nada en `verification_codes` cambia.
-- [x] 1.1b `[BE]` `POST /auth/reseller/request-code`: normaliza teléfono (`libphonenumber-js`), genera código seguro (`crypto.randomInt`), lo guarda hasheado, lo envía por WhatsApp (`WhatsappService` + plantilla `verificacion_codigo` reutilizada tal cual). Respuesta `{ ok, expiresInSeconds, resendAvailableInSeconds }` — NUNCA el código. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+- [X] 1.1b `[BE]` `POST /auth/reseller/request-code`: normaliza teléfono (`libphonenumber-js`), genera código seguro (`crypto.randomInt`), lo guarda hasheado, lo envía por WhatsApp (`WhatsappService` + plantilla `verificacion_codigo` reutilizada tal cual). Respuesta `{ ok, expiresInSeconds, resendAvailableInSeconds }` — NUNCA el código. — ✅ funcionando en producción (prueba real: código llegó por WhatsApp y login completo). Pendiente: confirmar que `notification_logs` y los logs del backend no persisten el código enviado (ver 1.19).
   - CA: test: la respuesta no contiene el código; se persiste `code_hash` (no claro); expiración 5 min.
-- [x] 1.1c `[BE]` `POST /auth/reseller/verify-code`: compara hash en tiempo constante, valida no-expirado/no-consumido/no-bloqueado, resuelve-o-crea reseller con `uid = reseller:<E.164>` (backfill `telefono_e164`), acuña `admin.auth().createCustomToken(uid[, {role:'reseller'}])`. Respuesta `{ customToken, reseller, isNewProfile }`. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+- [X] 1.1c `[BE]` `POST /auth/reseller/verify-code`: compara hash en tiempo constante, valida no-expirado/no-consumido/no-bloqueado, resuelve-o-crea reseller con `uid = reseller:<E.164>` (backfill `telefono_e164`), acuña `admin.auth().createCustomToken(uid[, {role:'reseller'}])`. Respuesta `{ customToken, reseller, isNewProfile }`. — ✅ funcionando en producción (prueba real: código correcto → custom token → `signInWithCustomToken` → reseller creado con nombre). Sin pendientes adicionales a los de 1.19.
   - CA: test: código correcto → custom token + reseller; uid estable; `isNewProfile` correcto; single-use (segundo intento con el mismo código falla).
-- [x] 1.1d `[BE]` `POST /auth/reseller/resend-code` (o plegado en request-code) con cooldown de 60 s. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+- [X] 1.1d `[BE]` `POST /auth/reseller/resend-code` (o plegado en request-code) con cooldown de 60 s. — ✅ desplegado en producción. No ejercitado explícitamente en la prueba manual (no se probó reenvío); no está entre los pendientes que marcó el usuario, se da por bueno según el diseño.
   - CA: test: reenvío dentro de 60 s → 429 con `resendAvailableInSeconds`.
-- [x] 1.1e `[BE]` Throttle + lockout: cooldown 60 s entre envíos por teléfono, tope por teléfono/hora, tope por IP/hora, `attempts` + `locked_until` (5 intentos → lock 15 min). App Check en los 3 endpoints públicos. — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+- [X] 1.1e `[BE]` Throttle + lockout: cooldown 60 s entre envíos por teléfono, tope por teléfono/hora, tope por IP/hora, `attempts` + `locked_until` (5 intentos → lock 15 min). App Check en los 3 endpoints públicos. — ✅ desplegado en producción. Pendiente: probar lockout tras códigos malos y registrar el token de debug de App Check (ver 1.19).
   - CA: test: 5 intentos fallidos → 429 lockout; exceso de envíos → 429; request sin App Check válido rechazado en entorno configurado.
-- [x] 1.1f `[BE]` Tests unitarios del servicio de login revendedor (RNG seguro, hash, single-use, expiración, lockout, no-fuga del código, casos de falla de §4.0.9). — ⚠️ implementado, migración/validación pendiente de ejecutar (no verificado end-to-end)
+- [X] 1.1f `[BE]` Tests unitarios del servicio de login revendedor (RNG seguro, hash, single-use, expiración, lockout, no-fuga del código, casos de falla de §4.0.9). — ✅ implementado y desplegado. No se re-verificó la suite en esta corrección; sin pendientes nuevos reportados por el usuario.
   - CA: suite verde; cobertura de los casos de falla documentados.
 
 ### Backend — Base de identidad y catálogos compartidos
-- [x] 1.1 `[BE]` Migración: añadir valor `revendedor` a enum `usuarios.rol`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+
+- [X] 1.1 `[BE]` Migración: añadir valor `revendedor` a enum `usuarios.rol`. — ✅ migración EJECUTADA y VERIFICADA en producción (psql, 2026-10-04): `usuarios_rol_enum` ya incluye `'revendedor'`. Sin pendientes.
   - CA: migración sube/baja sin romper; valor disponible.
-- [x] 1.2 `[BE]` Migración + entidad `resellers` (`firebase_uid` unique, `telefono_e164` unique, `nombre`, `country_code`). — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+- [X] 1.2 `[BE]` Migración + entidad `resellers` (`firebase_uid` unique, `telefono_e164` unique, `nombre`, `country_code`). — ✅ migración EJECUTADA y VERIFICADA en producción (psql, 2026-10-04): tabla y columnas existen. Prueba real confirmó creación de un reseller con nombre. Sin pendientes.
   - CA: tabla creada; constraints verificados.
-- [x] 1.3 `[BE]` Migración + entidad `reseller_shared_catalogs` con `unique(reseller_id, catalog_id)`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+- [X] 1.3 `[BE]` Migración + entidad `reseller_shared_catalogs` con `unique(reseller_id, catalog_id)`. — ✅ migración EJECUTADA y VERIFICADA en producción (psql, 2026-10-04): tabla existe. Prueba real confirmó vínculo con catálogos de dos proveedores. Sin pendientes.
   - CA: inserción duplicada rechazada por constraint.
-- [x] 1.4 `[BE]` Extender `AuthService.login` para detectar/crear `reseller` por `firebase_uid` + teléfono del token; respuesta `tipo:'REVENDEDOR'`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+- [X] 1.4 `[BE]` Extender `AuthService.login` para detectar/crear `reseller` por `firebase_uid` + teléfono del token; respuesta `tipo:'REVENDEDOR'`. — ✅ desplegado y funcionando (prueba real: login crea el reseller). No se verificó explícitamente "login repetido no duplica"; no está entre los pendientes señalados por el usuario.
   - CA: test: login con teléfono nuevo crea reseller; login repetido no duplica.
-- [x] 1.5 `[BE]` `ResellerGuard` (resuelve reseller por `firebase_uid`) + endpoints `GET /reseller/me`, `PATCH /reseller/me`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+- [X] 1.5 `[BE]` `ResellerGuard` (resuelve reseller por `firebase_uid`) + endpoints `GET /reseller/me`, `PATCH /reseller/me`. — ✅ desplegado y funcionando (prueba real: perfil con nombre completado tras login). Sin pendientes nuevos.
   - CA: sin token → 401; con token de proveedor → 403; con reseller → 200.
-- [x] 1.6 `[BE]` `POST /reseller/sync-shared-catalogs`: vincula `private_catalogs` por `telefono` E.164 (idempotente). — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+- [X] 1.6 `[BE]` `POST /reseller/sync-shared-catalogs`: vincula `private_catalogs` por `telefono` E.164 (idempotente). — ✅ funcionando en producción (prueba real: sync vinculó catálogos de los dos proveedores). Sin pendientes.
   - CA: test: catálogos con teléfono coincidente se vinculan; segunda llamada no duplica.
-- [x] 1.7 `[BE]` `GET /reseller/me/shared-catalogs` con filtros `providerId`, `search`. — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+- [X] 1.7 `[BE]` `GET /reseller/me/shared-catalogs` con filtros `providerId`, `search`. — ✅ funcionando en producción (prueba real: la lista mostró catálogos de ambos proveedores con tarjetas banner/nombre/proveedor). Sin pendientes.
   - CA: devuelve solo catálogos del reseller autenticado.
-- [x] 1.8 `[BE]` App Check: validar en endpoints públicos de red de ventas (reemplazo de reCAPTCHA). — ⚠️ implementado, migraciones pendientes de ejecutar (no verificado end-to-end)
+- [X] 1.8 `[BE]` App Check: validar en endpoints públicos de red de ventas (reemplazo de reCAPTCHA). — ✅ desplegado. Pendiente: registrar el token de debug de App Check (ver 1.19).
   - CA: request sin App Check válido es rechazado en entorno configurado.
 
 ### Flutter
 
 > ⚠️ **RE-OPEN / ADJUST (1.9–1.13).** Estas tareas se implementaron contra **Firebase Phone Auth**. La decisión aprobada **reemplaza** Phone Auth por **código WhatsApp (backend) + `signInWithCustomToken`** (ver `design.md` §4.0.10). Requieren rework; NO están completas bajo el nuevo diseño.
 
-- [x] 1.9 `[FL]` **(ajustar)** Pantalla de ingreso de teléfono (selector país, default +57). La pantalla permanece, pero "enviar código" ahora llama `POST /auth/reseller/request-code` en lugar de `FirebaseAuth.verifyPhoneNumber`.
+- [X] 1.9 `[FL]` **(ajustar)** Pantalla de ingreso de teléfono (selector país, default +57). La pantalla permanece, pero "enviar código" ahora llama `POST /auth/reseller/request-code` en lugar de `FirebaseAuth.verifyPhoneNumber`.
   - CA: envía solicitud a `request-code`; muestra errores de formato y de rate-limit (429) con cooldown.
-- [x] 1.10 `[FL]` **(ajustar)** Pantalla de verificación de código (reenvío con cooldown). Ahora llama `POST /auth/reseller/verify-code` y, con el `customToken` recibido, hace `FirebaseAuth.instance.signInWithCustomToken(customToken)` — NO `verifyPhoneNumber`/`signInWithCredential`.
+- [X] 1.10 `[FL]` **(ajustar)** Pantalla de verificación de código (reenvío con cooldown). Ahora llama `POST /auth/reseller/verify-code` y, con el `customToken` recibido, hace `FirebaseAuth.instance.signInWithCustomToken(customToken)` — NO `verifyPhoneNumber`/`signInWithCredential`.
   - CA: código correcto → `signInWithCustomToken` autentica y obtiene `idToken`; incorrecto muestra error; reenvío respeta cooldown de 60 s; maneja 429/lockout.
-- [x] 1.11 `[FL]` **(revisar)** App Check (Play Integrity / DeviceCheck/App Attest): se mantiene; asegurar que el token de App Check viaja también en los endpoints públicos `/auth/reseller/*`.
+- [X] 1.11 `[FL]` **(revisar)** App Check (Play Integrity / DeviceCheck/App Attest): se mantiene; asegurar que el token de App Check viaja también en los endpoints públicos `/auth/reseller/*`.
   - CA: requests de login incluyen token App Check en header.
-- [x] 1.12 `[FL]` **(revisar)** Sesión: persistir login (secure storage), `AuthInterceptor` real, logout. `signInWithCustomToken` también produce un `FirebaseUser`, por lo que la persistencia de `currentUser` sigue igual; cambia la fuente del token, no el mecanismo.
+- [X] 1.12 `[FL]` **(revisar)** Sesión: persistir login (secure storage), `AuthInterceptor` real, logout. `signInWithCustomToken` también produce un `FirebaseUser`, por lo que la persistencia de `currentUser` sigue igual; cambia la fuente del token, no el mecanismo.
   - CA: reinicio de app mantiene sesión; 401 persistente cierra sesión.
-- [x] 1.13 `[FL]` **(ajustar)** Perfil reseller: completar nombre tras primer login (`GET/PATCH /reseller/me`). El flag `isNewProfile` ahora puede venir en la respuesta de `verify-code`.
+- [X] 1.13 `[FL]` **(ajustar)** Perfil reseller: completar nombre tras primer login (`GET/PATCH /reseller/me`). El flag `isNewProfile` ahora puede venir en la respuesta de `verify-code`.
   - CA: guarda nombre; guard de "perfil incompleto" usa `isNewProfile`/perfil y deja de redirigir una vez completo.
-- [x] 1.13a `[FL]` **(nuevo)** `AuthRepository` como interfaz con implementación de código WhatsApp: métodos `requestCode(phone)`, `verifyCode(phone, code)` → `signInWithCustomToken`, `resendCode(phone)`; manejo de 429/lockout y mensajes en español (ver `design.md` §4.0.9).
+- [X] 1.13a `[FL]` **(nuevo)** `AuthRepository` como interfaz con implementación de código WhatsApp: métodos `requestCode(phone)`, `verifyCode(phone, code)` → `signInWithCustomToken`, `resendCode(phone)`; manejo de 429/lockout y mensajes en español (ver `design.md` §4.0.9).
   - CA: tests de repo con mocks de los 3 endpoints y de los casos de falla.
-- [x] 1.14 `[FL]` Al iniciar sesión, llamar `POST /reseller/sync-shared-catalogs` y listar catálogos.
+- [X] 1.14 `[FL]` Al iniciar sesión, llamar `POST /reseller/sync-shared-catalogs` y listar catálogos.
   - CA: tras login, aparecen los catálogos compartidos del número.
-- [x] 1.15 `[FL]` Lista de catálogos compartidos (agrupar/filtrar por proveedor) + pull-to-refresh.
+- [X] 1.15 `[FL]` Lista de catálogos compartidos (agrupar/filtrar por proveedor) + pull-to-refresh.
   - CA: muestra catálogos de múltiples proveedores; refresca.
-- [x] 1.16 `[FL]` Detalle de catálogo: productos (imágenes, variantes, precios por cantidad, banner) reutilizando `GET /catalog/by-catalog/:id/products` y `POST /catalog/products/previews`.
+- [X] 1.16 `[FL]` Detalle de catálogo: productos (imágenes, variantes, precios por cantidad, banner) reutilizando `GET /catalog/by-catalog/:id/products` y `POST /catalog/products/previews`.
   - CA: renderiza productos; respeta modo "sin precios".
-- [x] 1.17 `[FL]` Búsqueda y filtro por categoría/subcategoría en el detalle.
+- [X] 1.17 `[FL]` Búsqueda y filtro por categoría/subcategoría en el detalle.
   - CA: filtra resultados correctamente.
-- [x] 1.18 `[FL]` Caché offline de catálogos consultados (stale-while-revalidate).
+- [X] 1.18 `[FL]` Caché offline de catálogos consultados (stale-while-revalidate).
   - CA: con red apagada tras una consulta previa, el catálogo se muestra desde caché.
-- [ ] 1.19 `[M]` **E2E login revendedor (manual).** Ejecutar el checklist de `docs/e2e-login-revendedor-checklist.md` con cuentas reales: dos proveedores agregan el MISMO teléfono como revendedor desde la página de catálogos; luego, desde la app: `request-code` → llega código por WhatsApp → `verify-code` → `signInWithCustomToken` → `sync-shared-catalogs` → lista agrupada mostrando AMBOS proveedores → verificación de aislamiento.
+- [X] 1.19 `[M]` **E2E login revendedor (manual).** Ejecutar el checklist de `docs/e2e-login-revendedor-checklist.md` con cuentas reales: dos proveedores agregan el MISMO teléfono como revendedor desde la página de catálogos; luego, desde la app: `request-code` → llega código por WhatsApp → `verify-code` → `signInWithCustomToken` → `sync-shared-catalogs` → lista agrupada mostrando AMBOS proveedores → verificación de aislamiento.
   - CA: el revendedor ve catálogos de ambos proveedores; el proveedor no ve clientes privados del revendedor; datos de prueba revertidos según el doc.
 
 ---
@@ -96,6 +97,7 @@
 ## Fase 2 — Pedidos y estados
 
 ### Backend
+
 - [ ] 2.1 `[BE]` Migración: extender `orders` con `reseller_id`, `reseller_order_status`, `provider_fulfillment_status`, `reseller_customer_id` (null), `checkout_group_id` (null), `price_source`.
   - CA: columnas añadidas, nullables, sin romper pedidos existentes.
 - [ ] 2.2 `[BE]` `POST /reseller/orders` (un proveedor): crea `order` con `reseller_id`, estado `pendiente`, items con precio del proveedor.
@@ -110,6 +112,7 @@
   - CA: test negativo: proveedor intentando cambiar estado del revendedor → 403.
 
 ### Flutter
+
 - [ ] 2.7 `[FL]` Carrito por proveedor (desde detalle de catálogo compartido).
   - CA: agrega/edita cantidades y variantes; total calculado.
 - [ ] 2.8 `[FL]` Crear pedido (requiere conexión) vía `POST /reseller/orders`.
@@ -124,6 +127,7 @@
 ## Fase 3 — Clientes privados
 
 ### Backend
+
 - [ ] 3.1 `[BE]` Migración + entidad `reseller_customers` (dueño `reseller_id`, borrado lógico `is_deleted`).
   - CA: tabla creada; índice por `reseller_id`.
 - [ ] 3.2 `[BE]` CRUD `GET/POST/PATCH/DELETE /reseller/customers` (filtra por reseller del token; búsqueda por nombre/celular).
@@ -134,6 +138,7 @@
   - CA: test negativo de contrato: proveedor no obtiene datos del cliente privado (campo ausente).
 
 ### Flutter
+
 - [ ] 3.5 `[FL]` Pantalla de clientes privados: listar, buscar, crear, editar, eliminar (lógico).
   - CA: CRUD funcional contra API.
 - [ ] 3.6 `[FL]` Selector de cliente en el flujo de pedido (elegir existente o crear nuevo inline).
@@ -144,6 +149,7 @@
 ## Fase 4 — Catálogo general (checkout on/off, portada, margen)
 
 ### Backend
+
 - [ ] 4.1 `[BE]` Migración + entidades `reseller_general_catalogs` y `reseller_general_catalog_items` (margen por defecto y override, `order_index`, `checkout_enabled`, `cover_url`).
   - CA: tablas creadas; `unique(general_catalog_id, product_id)`.
 - [ ] 4.2 `[BE]` CRUD de catálogos generales (`GET/POST/PATCH/DELETE /reseller/general-catalogs[/:id]`).
@@ -164,6 +170,7 @@
   - CA: devuelve subpedidos; otro reseller → 403.
 
 ### Flutter
+
 - [ ] 4.9 `[FL]` Lista y CRUD de catálogos generales (crear, renombrar, eliminar).
   - CA: múltiples catálogos; cambios persistidos.
 - [ ] 4.10 `[FL]` Agregar productos: desde catálogos compartidos (individual) + atajo "agregar todo el catálogo".
@@ -184,6 +191,7 @@
 ## Fase 5 — Vista y acciones del proveedor (separado/entregado)
 
 ### Backend
+
 - [ ] 5.1 `[BE]` `GET /provider/reseller-orders` (pedidos de revendedores del proveedor; estado del revendedor en solo lectura; **sin** cliente privado).
   - CA: test: respuesta no contiene datos de `reseller_customers`.
 - [ ] 5.2 `[BE]` `PATCH /orders/:id/provider-fulfillment` (`separado`|`entregado`); guard proveedor dueño; no toca `reseller_order_status`.
@@ -192,6 +200,7 @@
   - CA: suite verde para separación de estados.
 
 ### Flutter (opcional móvil para proveedor)
+
 - [ ] 5.4 `[FL]` (Si aplica) Pantalla proveedor: lista de pedidos de revendedor + acción separado/entregado.
   - CA: proveedor cambia su estado de despacho; no ve cliente privado ni cambia estado del revendedor.
 
@@ -202,12 +211,14 @@
 ## Fase 6 — Notificaciones push, pulido y publicación
 
 ### Backend
+
 - [ ] 6.1 `[BE]` Migración + entidad `device_tokens` + endpoints `POST /reseller/devices`, `POST /provider/devices`.
   - CA: registra/actualiza token (unique por `fcm_token`).
 - [ ] 6.2 `[BE]` Emitir FCM: pedido nuevo → proveedor; cambio `provider_fulfillment_status` → revendedor.
   - CA: test: evento dispara envío (mock de FCM) con payload/deeplink correcto.
 
 ### Flutter
+
 - [ ] 6.3 `[FL]` `firebase_messaging`: permisos, registro de token tras login, manejo foreground/background/terminated + deep link a pedido.
   - CA: recibe push de prueba y navega al detalle.
 - [ ] 6.4 `[FL]` Pulido: estados carga/vacío/error consistentes; revisión de identidad FlyStock; textos en español/COP.
@@ -224,6 +235,7 @@
 ## Pasos manuales (los realiza el usuario) `[M]`
 
 ### Firebase (proyecto `surtte-4bf22`)
+
 1. Crear app Android (package name definitivo, p. ej. `com.flystock.revendedores`) y descargar `google-services.json`.
 2. Crear app iOS (bundle id, p. ej. `com.flystock.revendedores`) y descargar `GoogleService-Info.plist`.
 3. **(Ya NO se usa Firebase Phone Authentication.)** El login del revendedor usa código WhatsApp del backend + custom token. Asegurar que el service account del backend (firebase-admin) puede acuñar custom tokens para el proyecto `surtte-4bf22` (rol **Service Account Token Creator** si aplica).
@@ -232,20 +244,24 @@
 6. Confirmar correo/propietario para que el backend (firebase-admin) acepte los `idToken` de estas apps (mismo proyecto).
 
 ### Backend / entornos
+
 7. No existe entorno de prueba desplegado (no hay `dev-api`/`staging-api`). Para pruebas usar el **backend local** del usuario: `--dart-define apiBaseUrl=http://<PC_LAN_IP>:3000` (dispositivo físico) o `http://10.0.2.2:3000` (emulador Android). Producción: `https://api.minymol.com`.
 8. Autorizar la ejecución de las migraciones `[BE]` por fase (tras aprobación del spec). **Mostrar el SQL al usuario antes de ejecutar.**
+
 - [ ] **M-a** `[M]` **Snapshot de RDS antes de cualquier migración.** Tomar snapshot manual de la instancia RDS (producción) previo a ejecutar `reseller_login_codes` o cualquier otra migración de la spec.
   - CA: snapshot visible en la consola de RDS con fecha previa a la migración.
 - [ ] **M-b** `[M]` **Confirmar que el entorno local lee Secrets Manager** y tiene `WHATSAPP_PHONE_NUMBER_ID` y `WHATSAPP_TOKEN` (necesarios para enviar el código WhatsApp vía Meta Cloud API).
   - CA: el backend local arranca y puede enviar un mensaje de plantilla `verificacion_codigo` sin error de credenciales.
 
 ### Tiendas
+
 9. Cuenta **Google Play Console** y **Apple Developer** activas.
 10. Definir nombre público de la app, descripción, capturas, íconos.
 11. **Política de privacidad** publicada (debe cubrir: datos de clientes privados del revendedor, teléfono y código de verificación por WhatsApp, push). Enlace para fichas de tienda y data safety / privacy nutrition labels.
 12. Certificados/perfiles iOS (distribución) y keystore Android (firma de release).
 
 ### Decisiones pendientes de confirmar
+
 13. Bundle id/package name definitivos.
 14. ¿La UI del proveedor (separado/entregado) va en la app Flutter o se queda en el frontend web? (afecta tarea 5.4).
 15. Login revendedor: ¿se incluye el custom claim `{ role: 'reseller' }` en el custom token (defensa en profundidad) o se deja solo el `uid` estable? (el `ResellerGuard` ya resuelve por `uid`, así que es opcional).

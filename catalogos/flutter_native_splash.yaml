@@ -1,0 +1,17 @@
+# Config de flutter_native_splash para FLYmovil.
+# Fondo blanco (distinto del fondo navy del icono): el lockup de 17.png
+# incluye la palabra "movil" en el mismo navy #001634 del icono; sobre un
+# splash navy quedaria invisible (ver tool/branding/README.md). Verificado
+# comparando el render sobre navy vs. sobre blanco.
+# Regenerar tras cambiar los originales: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/branding/splash.png
+
+  android_12:
+    image: assets/branding/splash.png
+    color: "#FFFFFF"
+
+  android: true
+  ios: true
+  web: false

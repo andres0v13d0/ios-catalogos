@@ -15,10 +15,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  // Nota: en el entorno de test no hay red, por lo que `google_fonts` no puede
-  // descargar el .ttf de Poppins y recurre a su fuente de respaldo. Eso es
-  // esperado y no afecta a las aserciones: la familia tipográfica declarada en
-  // el estilo sigue siendo "Poppins", que es lo que verifican los tests.
   group('AppTheme (identidad FlyStock)', () {
     test('ColorScheme usa la paleta de marca', () {
       const ColorScheme scheme = AppTheme.colorScheme;

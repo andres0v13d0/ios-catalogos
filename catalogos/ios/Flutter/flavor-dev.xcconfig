@@ -1,5 +1,5 @@
 // Config del flavor DEV (ver diseño §2.7).
 // Nombre y bundle id distintos para instalar en paralelo.
 FLUTTER_FLAVOR = dev
-APP_DISPLAY_NAME = Revendedores Dev
+APP_DISPLAY_NAME = FLYmovil Dev
 PRODUCT_BUNDLE_IDENTIFIER = com.example.catalogos.dev

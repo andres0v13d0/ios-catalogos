@@ -1,4 +1,5 @@
-// Widget tests de la pantalla de verificación del código WhatsApp (tarea 1.10).
+// Widget tests de la pantalla de verificación del código WhatsApp (tarea 1.10,
+// rediseño "Código B" ver docs/design/codigo-b.html).
 //
 // Cubre:
 // - el botón "Reenviar código" está deshabilitado durante el cooldown
@@ -6,6 +7,11 @@
 // - un código correcto transiciona el estado de sesión a signedIn (vía
 //   verify-code → signInWithCustomToken fake);
 // - un código incorrecto muestra el error mapeado.
+//
+// El rediseño reemplazó el `TextField` por 6 casillas propias + un teclado
+// numérico propio (sin teclado del sistema): los tests ahora "escriben" el
+// código tocando las teclas del teclado (`find.text('<dígito>')`) en vez de
+// `tester.enterText`.
 //
 // Monta OtpPage dejando antes el controlador en estado "codeSent" (como si ya
 // se hubiera solicitado el código). Override de authRepositoryProvider +
@@ -69,38 +75,53 @@ Future<ProviderContainer> _pumpOtp(
   return container;
 }
 
+/// Toca, en orden, las teclas del teclado numérico propio de `OtpPage` para
+/// cada dígito de [code]. No usa `enterText`: esta pantalla no tiene ningún
+/// `TextField`/teclado del sistema detrás (rediseño "Código B").
+///
+/// Cada dígito puede aparecer más de una vez en el árbol (p. ej. una casilla
+/// ya llena también pinta ese dígito como texto), así que se ubica la tecla
+/// del teclado por ser la única instancia de ese texto envuelta en un
+/// `InkWell` (las casillas no lo son).
+Future<void> _typeCode(WidgetTester tester, String code) async {
+  for (final String digit in code.split('')) {
+    final Finder key = find.ancestor(
+      of: find.text(digit),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(key.first);
+    await tester.pump();
+  }
+}
+
 void main() {
   testWidgets('reenvío deshabilitado durante el cooldown y habilitado después',
       (WidgetTester tester) async {
     final repo = FakeAuthRepository();
     await _pumpOtp(tester, repo, FakeAuthUserService());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
-    // Durante el cooldown el botón muestra la cuenta regresiva y está disabled.
-    expect(find.textContaining('Reenviar código en'), findsOneWidget);
-    final TextButton button = tester.widget<TextButton>(
-      find.ancestor(
-        of: find.textContaining('Reenviar código'),
-        matching: find.byType(TextButton),
-      ),
-    );
-    expect(button.onPressed, isNull);
+    // Durante el cooldown se muestra la cuenta regresiva; el enlace
+    // "Reenviar código" (tappable) todavía no aparece.
+    expect(find.textContaining('Puedes pedir otro código en'), findsOneWidget);
+    expect(find.text('Reenviar código'), findsNothing);
 
     // Avanza más allá del cooldown (60s) para que se habilite.
     await tester.pump(const Duration(seconds: 61));
     await tester.pump();
 
     expect(find.text('Reenviar código'), findsOneWidget);
+    expect(find.textContaining('Puedes pedir otro código en'), findsNothing);
   });
 
   testWidgets('código correcto transiciona a sesión iniciada',
       (WidgetTester tester) async {
     final repo = FakeAuthRepository(validCode: '123456');
     final container = await _pumpOtp(tester, repo, FakeAuthUserService());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
-    await tester.enterText(find.byType(TextField), '123456');
-    await tester.tap(find.text('Verificar'));
+    // Al completar el 6º dígito en el teclado propio, se verifica solo.
+    await _typeCode(tester, '123456');
     await tester.pump();
     await tester.pump();
 
@@ -111,10 +132,9 @@ void main() {
       (WidgetTester tester) async {
     final repo = FakeAuthRepository(validCode: '123456');
     final container = await _pumpOtp(tester, repo, FakeAuthUserService());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
-    await tester.enterText(find.byType(TextField), '000000');
-    await tester.tap(find.text('Verificar'));
+    await _typeCode(tester, '000000');
     await tester.pump();
     await tester.pump();
 

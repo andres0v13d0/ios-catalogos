@@ -45,7 +45,7 @@ class Environment {
   static const String _flavorRaw =
       String.fromEnvironment('flavor', defaultValue: 'dev');
   static const String _appName =
-      String.fromEnvironment('appName', defaultValue: 'Revendedores Dev');
+      String.fromEnvironment('appName', defaultValue: 'FLYmovil Dev');
   // Fallback LOCAL para desarrollo: `10.0.2.2` es el alias del emulador de
   // Android hacia el `localhost` de la máquina anfitriona (el PC donde corre
   // el backend en el puerto 3000). No apuntamos a `dev-api.minymol.com` porque

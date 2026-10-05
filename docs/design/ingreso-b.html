@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLYmovil · Ingreso B (referencia de diseño)</title>
+<!--
+  REFERENCIA DE DISEÑO PARA FLUTTER.
+  Marco: 390x844 dp. Todas las posiciones (left/top/right/bottom), tamaños,
+  radios, sombras, rotaciones y colores están en estilos en línea:
+  replícalos 1:1 en Flutter. No es código de producción.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#0b0f19;display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
+  input::placeholder{color:#5F6E88}
+  input:focus{outline:2px solid #004aad;outline-offset:0}
+</style>
+</head>
+<body>
+<div style="position:relative;width:390px;height:844px;overflow:hidden;background:linear-gradient(180deg,#001634 0%,#003a85 60%,#004aad 100%);font-family:'Poppins',system-ui,sans-serif;color:#001634">
+
+  <!-- Brillo y círculo de fondo -->
+  <div style="position:absolute;left:-10px;top:60px;width:410px;height:410px;border-radius:50%;background:radial-gradient(circle,rgba(93,224,230,0.45) 0%,rgba(93,224,230,0) 68%)"></div>
+  <div style="position:absolute;right:-60px;top:250px;width:150px;height:150px;border-radius:50%;background:rgba(0,255,148,0.18)"></div>
+
+  <!-- Cabecera: cubo + FLYmovil, centrada, top 48 -->
+  <div style="position:absolute;left:0;right:0;top:48px;display:flex;align-items:center;justify-content:center;gap:10px">
+    <div style="width:38px;height:38px;border-radius:12px;background:#5de0e6;display:flex;align-items:center;justify-content:center">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#001634" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12L4 7.5M12 12v9"/></svg>
+    </div>
+    <div style="font-size:22px;line-height:1;color:#ffffff"><span style="font-weight:700">FLY</span><span style="font-weight:500;color:#5de0e6">movil</span></div>
+  </div>
+
+  <!-- Tarjeta izquierda (detrás), rotada -12° -->
+  <div style="position:absolute;left:52px;top:176px;width:150px;height:196px;box-sizing:border-box;padding:8px;background:#ffffff;border-radius:20px;box-shadow:0 18px 36px rgba(0,10,30,0.4);transform:rotate(-12deg)">
+    <div style="height:92px;border-radius:14px;background:linear-gradient(135deg,#004aad,#5de0e6)"></div>
+    <div style="margin-top:12px;height:9px;width:78%;border-radius:5px;background:#DCE6F3"></div>
+    <div style="margin-top:7px;height:9px;width:48%;border-radius:5px;background:#DCE6F3"></div>
+  </div>
+  <!-- Tarjeta derecha (detrás), rotada +12° -->
+  <div style="position:absolute;left:188px;top:176px;width:150px;height:196px;box-sizing:border-box;padding:8px;background:#ffffff;border-radius:20px;box-shadow:0 18px 36px rgba(0,10,30,0.4);transform:rotate(12deg)">
+    <div style="height:92px;border-radius:14px;background:linear-gradient(135deg,#00ff94,#5de0e6)"></div>
+    <div style="margin-top:12px;height:9px;width:70%;border-radius:5px;background:#DCE6F3"></div>
+    <div style="margin-top:7px;height:9px;width:55%;border-radius:5px;background:#DCE6F3"></div>
+  </div>
+  <!-- Tarjeta central (al frente) -->
+  <div style="position:absolute;left:120px;top:140px;width:150px;height:206px;box-sizing:border-box;padding:8px;background:#ffffff;border-radius:20px;box-shadow:0 24px 44px rgba(0,10,30,0.5)">
+    <div style="height:100px;border-radius:14px;background:linear-gradient(135deg,#001634,#004aad)"></div>
+    <div style="margin-top:12px;height:9px;width:82%;border-radius:5px;background:#DCE6F3"></div>
+    <div style="margin-top:7px;height:9px;width:52%;border-radius:5px;background:#DCE6F3"></div>
+    <div style="margin-top:12px;display:inline-block;padding:4px 12px;border-radius:999px;background:#001634;color:#00ff94;font-size:13px;font-weight:600">$130.000</div>
+  </div>
+
+  <!-- Etiquetas flotantes -->
+  <div style="position:absolute;left:22px;top:352px;padding:8px 14px;border-radius:999px;background:#00ff94;color:#001634;font-size:13px;font-weight:600;box-shadow:0 10px 22px rgba(0,255,148,0.35);transform:rotate(-4deg)">+20% tu ganancia</div>
+  <div style="position:absolute;right:34px;top:332px;width:52px;height:52px;border-radius:50%;background:#ffffff;box-shadow:0 12px 26px rgba(0,10,30,0.4);display:flex;align-items:center;justify-content:center">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#001634" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 4h2.5l2.2 11h10.6l2-8H6.4"/></svg>
+  </div>
+
+  <!-- Hoja inferior: anclada abajo, alto ~392 -->
+  <div style="position:absolute;left:0;right:0;bottom:0;height:392px;box-sizing:border-box;padding:14px 24px 24px;background:#ffffff;border-radius:36px 36px 0 0;box-shadow:0 -20px 50px rgba(0,10,30,0.35)">
+    <div style="width:44px;height:5px;margin:0 auto 18px;border-radius:3px;background:#D5E0F0"></div>
+    <h2 style="margin:0;font-size:22px;line-height:1.3;font-weight:600;color:#001634">Entra y empieza a vender</h2>
+    <p style="margin:6px 0 16px;font-size:13px;line-height:1.5;color:#4A5A75">Te enviaremos un código de 6 dígitos por WhatsApp.</p>
+    <label for="tel" style="display:block;margin-bottom:6px;font-size:12px;font-weight:500;color:#001634">Número de celular</label>
+    <div style="display:flex;gap:10px">
+      <button type="button" aria-label="Cambiar país" style="display:flex;align-items:center;gap:6px;height:52px;padding:0 12px;border:1.5px solid #D5E0F0;border-radius:14px;background:#F4F8FC;font-family:inherit;font-size:15px;font-weight:600;color:#001634">
+        CO +57
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#001634" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <input id="tel" type="tel" placeholder="300 123 4567" style="flex:1;min-width:0;height:52px;box-sizing:border-box;padding:0 14px;border:1.5px solid #D5E0F0;border-radius:14px;background:#ffffff;font-family:inherit;font-size:16px;font-weight:500;color:#001634">
+    </div>
+    <button type="button" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:54px;margin-top:16px;border:none;border-radius:16px;background:linear-gradient(90deg,#5de0e6,#00ff94);box-shadow:0 10px 24px rgba(0,255,148,0.3);font-family:inherit;font-size:16px;font-weight:600;color:#001634">
+      Enviar código
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#001634" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+    </button>
+    <p style="margin:16px 0 0;text-align:center;font-size:12px;line-height:1.5;color:#4A5A75">Al continuar aceptas los Términos y la Política de privacidad</p>
+  </div>
+</div>
+</body>
+</html>

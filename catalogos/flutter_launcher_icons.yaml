@@ -1,0 +1,15 @@
+# Config de flutter_launcher_icons para FLYmovil.
+# Fuente de las imagenes: tool/branding/prepare_branding.py (ver su README).
+# Regenerar tras cambiar los originales: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/branding/icon.png"
+  adaptive_icon_background: "#001634"
+  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/branding/icon.png"
+    background_color: "#001634"
+    theme_color: "#001634"

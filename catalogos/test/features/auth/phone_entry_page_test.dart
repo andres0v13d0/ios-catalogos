@@ -49,6 +49,9 @@ void main() {
       (WidgetTester tester) async {
     final repo = FakeAuthRepository();
     await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
+    // Deja asentar la animación de entrada (rediseño "B", máx. 600ms) antes
+    // de interactuar, para que la hoja inferior esté en su posición final.
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField), '123');
     await tester.tap(find.text('Enviar código'));
@@ -62,6 +65,7 @@ void main() {
       (WidgetTester tester) async {
     final repo = FakeAuthRepository();
     await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField), '300 123 4567');
     await tester.tap(find.text('Enviar código'));
