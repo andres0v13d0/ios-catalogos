@@ -1,16 +1,51 @@
 # Config de flutter_native_splash para FLYmovil.
-# Fondo blanco (distinto del fondo navy del icono): el lockup de 17.png
-# incluye la palabra "movil" en el mismo navy #001634 del icono; sobre un
-# splash navy quedaria invisible (ver tool/branding/README.md). Verificado
-# comparando el render sobre navy vs. sobre blanco.
-# Regenerar tras cambiar los originales: dart run flutter_native_splash:create
+#
+# Fondo BLANCO PURO #FFFFFF, SIEMPRE: en modo claro y oscuro del telefono
+# (color_dark = #FFFFFF tambien), en Android (todas las versiones, incluida
+# la API de Android 12+: windowSplashScreenBackground) e iOS (LaunchScreen y
+# LaunchBackground). Nunca navy.
+#
+# Imagen (Android < 12 e iOS): el lockup completo "FLYmovil" (logo + nombre),
+# `assets/branding/splash.png`, generado desde el original 17.png por
+# tool/branding/prepare_branding.py (centrado al 60% del lienzo). Sobre fondo
+# blanco el texto "movil" (navy) es legible.
+#
+# Imagen (Android 12+): SOLO el cubo, `assets/branding/icon_foreground.png`.
+# Android 12+ recorta el icono del splash dentro de un circulo (safe zone:
+# debe caber en un circulo de 768px de diametro en un lienzo de 1152px, o
+# sea ~66.7% de diametro). Se verifico en pixeles: el lockup completo con
+# texto NO cabe sin recortarse (su punto mas lejano del centro queda a
+# ~417px sobre un radio seguro de ~341px en un lienzo de 1024), porque el
+# wordmark es ancho y su bbox llega a las esquinas del circulo. El cubo solo
+# si cabe (queda a ~340px del centro, justo dentro del radio seguro de
+# ~341px). Por eso Android 12+ usa el cubo solo, centrado. `icon_background_color`
+# se deja en blanco explicito (igual que el fondo de la ventana) para que no
+# aparezca ningun circulo de color detras del icono.
+#
+# `branding` (Android 12+): el wordmark "FLYmovil" solo (sin el cubo, ya
+# mostrado como icono) en `assets/branding/android12_branding.png`, generado
+# por tool/branding/prepare_branding.py a partir de 17.png, en el lienzo fijo
+# de 800x320 que exige `windowSplashScreenBrandingImage`, sin deformar y sin
+# recortarse (ocupa como maximo 85% del lienzo).
+#
+# Regenerar tras cambiar los originales (16.png/17.png) o este archivo:
+#   python3 tool/branding/prepare_branding.py   (si cambiaron 16.png/17.png)
+#   dart run flutter_native_splash:create
 flutter_native_splash:
   color: "#FFFFFF"
+  color_dark: "#FFFFFF"
   image: assets/branding/splash.png
+  image_dark: assets/branding/splash.png
 
   android_12:
-    image: assets/branding/splash.png
+    image: assets/branding/icon_foreground.png
+    image_dark: assets/branding/icon_foreground.png
     color: "#FFFFFF"
+    color_dark: "#FFFFFF"
+    icon_background_color: "#FFFFFF"
+    icon_background_color_dark: "#FFFFFF"
+    branding: assets/branding/android12_branding.png
+    branding_dark: assets/branding/android12_branding.png
 
   android: true
   ios: true

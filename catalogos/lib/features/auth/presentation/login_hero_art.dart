@@ -170,18 +170,26 @@ class _HeroHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
+        // Logo REAL de la app (el mismo cubo del launcher/splash). Antes había
+        // un `IsoCubePainter` que era solo un marcador de posición del HTML.
+        // Caja 38x38 radio 12 (igual que el diseño); la imagen se escala con
+        // `BoxFit.contain` para no deformarse.
         Container(
           width: 38,
           height: 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.accent,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const SizedBox(
-            width: 22,
-            height: 22,
-            child: CustomPaint(painter: IsoCubePainter(color: AppColors.primary)),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.all(3),
+            child: Image.asset(
+              'assets/branding/icon_foreground.png',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+            ),
           ),
         ),
         const SizedBox(width: 10),

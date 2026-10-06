@@ -68,5 +68,17 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Selector de fotos del sistema (image_picker/PHPicker). En iOS 14+ el
+		     PHPicker NO requiere acceso a la biblioteca; esta descripción solo la
+		     exigen versiones antiguas al abrir el selector. No se pide acceso
+		     total a la biblioteca ni se usa la cámara. -->
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>FLYmovil usa una foto de tu galería para el banner de tu catálogo. Solo se usa la imagen que tú elijas.</string>
+		<!-- Esquemas consultados por url_launcher (canLaunchUrl) para compartir. -->
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>https</string>
+			<string>whatsapp</string>
+		</array>
 	</dict>
 </plist>

@@ -11,9 +11,11 @@ import '../../../core/storage/local_cache.dart';
 import '../../../core/utils/money.dart';
 import '../../auth/presentation/auth_gradient_button.dart';
 import '../../auth/presentation/auth_vector_icons.dart';
+import '../domain/catalog.dart';
 import '../domain/catalog_detail.dart';
 import '../domain/price_rule_calculator.dart';
 import '../domain/price_rules_contract.dart';
+import '../domain/reseller_banner.dart';
 import 'catalog_design_tokens.dart';
 import 'catalog_detail_controller.dart';
 import 'catalog_detail_filter.dart';
@@ -21,6 +23,8 @@ import 'catalog_price_overlay_controller.dart';
 import 'catalog_products_header.dart';
 import 'price_adjustment_controller.dart';
 import 'product_grid_card.dart';
+import 'reseller_share_sheet.dart';
+import 'shared_catalogs_controller.dart';
 
 /// Pantalla "Productos del catálogo" (diseño A, ver
 /// `docs/design/productos-a.html`) — reemplaza el detalle de catálogo
@@ -112,10 +116,54 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
     }
   }
 
-  Future<void> _showComingSoon(BuildContext context, String feature) {
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) => _ComingSoonDialog(feature: feature),
+  /// Busca el [Catalog] de este detalle en la lista de catálogos compartidos
+  /// (fuente del `enlace`, `ogImageUrl` propio y la imagen del proveedor).
+  /// Devuelve `null` si aún no está en la lista (p. ej. apertura por deep link
+  /// antes de cargar el home).
+  Catalog? _catalogFromList() {
+    final listState = ref.read(sharedCatalogsControllerProvider).value;
+    final catalogs = listState?.catalogs ?? const <Catalog>[];
+    for (final c in catalogs) {
+      if (c.id == widget.catalogId) return c;
+    }
+    return null;
+  }
+
+  /// Arma el estado para las pantallas de banner/compartir a partir del detalle
+  /// cargado, el [Catalog] de la lista y el overlay de reglas de precio.
+  ResellerBannerState _bannerStateFor(CatalogDetail detail, CatalogPriceOverlayState overlay) {
+    final Catalog? c = _catalogFromList();
+    // Banner PROPIO del revendedor = ogImageUrl de su fila hija (null si no subió).
+    final String? ownBanner = c?.ogImageUrl;
+    // Imagen del proveedor para la vista previa cuando no hay banner propio.
+    final String? providerImage = c?.bannerUrl ?? c?.providerBannerUrl ?? detail.bannerUrl ?? c?.providerLogoUrl;
+    // Hay reglas de precio si el overlay trae regla de catálogo o de producto.
+    final bool hasRules = overlay.catalogRule != null || overlay.byProductId.isNotEmpty;
+
+    return ResellerBannerState(
+      catalogId: widget.catalogId,
+      shareLink: (c?.enlace ?? '').trim(),
+      publicName: detail.displayName,
+      hasPriceRules: hasRules,
+      ownBannerUrl: (ownBanner ?? '').trim().isEmpty ? null : ownBanner,
+      providerImageUrl: (providerImage ?? '').trim().isEmpty ? null : providerImage,
+    );
+  }
+
+  Future<void> _openBanner(CatalogDetail detail, CatalogPriceOverlayState overlay) async {
+    await context.push<void>(
+      AppRoutes.bannerPath(widget.catalogId),
+      extra: _bannerStateFor(detail, overlay),
+    );
+    // Al volver, refrescar la lista para reflejar el banner nuevo/quitado.
+    ref.invalidate(sharedCatalogsControllerProvider);
+  }
+
+  void _openShareSheet(CatalogDetail detail, CatalogPriceOverlayState overlay) {
+    showResellerShareSheet(
+      context,
+      banner: _bannerStateFor(detail, overlay),
+      onChangeBanner: () => _openBanner(detail, overlay),
     );
   }
 
@@ -135,16 +183,19 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
     // `home_page.dart` (Riverpod 3.x reintenta un `build()` fallido
     // manteniendo `isLoading == true`; comprobar `hasError` primero muestra
     // el error de inmediato).
+    // Cabecera para los estados de carga/error: aún no hay detalle ni overlay,
+    // así que las acciones de banner/compartir no hacen nada todavía (los
+    // accesos apenas se ven en esos estados). Se activan con el detalle cargado.
     Widget hero({required String title, required String subtitle}) => CatalogProductsHero(
       title: title,
       subtitle: subtitle,
       onBack: _goBack,
-      onShare: () => _showComingSoon(context, 'Compartir enlace'),
+      onShare: () {},
       showAdjustPrices: false,
       adjustPricesBadge: null,
       onAdjustPrices: () {},
-      onImageLink: () => _showComingSoon(context, 'Imagen del enlace'),
-      onShareLink: () => _showComingSoon(context, 'Compartir enlace'),
+      onImageLink: () {},
+      onShareLink: () {},
     );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -191,12 +242,12 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
                   title: detail.displayName,
                   subtitle: '$total producto${total == 1 ? '' : 's'}',
                   onBack: _goBack,
-                  onShare: () => _showComingSoon(context, 'Compartir enlace'),
+                  onShare: () => _openShareSheet(detail, overlay),
                   showAdjustPrices: !detail.priceHidden,
                   adjustPricesBadge: overlay.catalogRule == null ? null : _ruleBadgeLabel(overlay.catalogRule!),
                   onAdjustPrices: () => _openCatalogWideAdjust(total),
-                  onImageLink: () => _showComingSoon(context, 'Imagen del enlace'),
-                  onShareLink: () => _showComingSoon(context, 'Compartir enlace'),
+                  onImageLink: () => _openBanner(detail, overlay),
+                  onShareLink: () => _openShareSheet(detail, overlay),
                 ),
                 offlineNotice: state.fromCache,
                 searchController: _searchController,
@@ -221,72 +272,6 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
               );
             },
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Aviso "Próximamente" para accesos sin backend todavía ("Imagen del
-/// enlace"/"Compartir enlace"): nunca deja la pantalla rota ni navega a un
-/// lugar vacío.
-class _ComingSoonDialog extends StatelessWidget {
-  const _ComingSoonDialog({required this.feature});
-
-  final String feature;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const <BoxShadow>[
-            BoxShadow(color: Color(0x33001634), offset: Offset(0, 18), blurRadius: 40),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: 56,
-              height: 56,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(color: Color(0x1F5DE0E6), shape: BoxShape.circle),
-              child: const Icon(Icons.schedule_rounded, color: AppColors.secondary, size: 28),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              feature,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Próximamente',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: CatalogTokens.textMuted),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFFF4F8FC),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text(
-                  'Entendido',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

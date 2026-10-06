@@ -155,6 +155,75 @@ def make_splash() -> Image.Image:
     return _center_on_canvas(content, ICON_SIZE, SAFE_RATIO)
 
 
+ANDROID12_BRANDING_SIZE = (800, 320)  # tamano fijo exigido por flutter_native_splash
+ANDROID12_BRANDING_SAFE_RATIO = 0.85  # margen de seguridad dentro del lienzo 800x320
+
+
+def _split_icon_and_wordmark(content: Image.Image) -> tuple[Image.Image, Image.Image]:
+    """Divide el contenido (ya recortado a su bbox) del lockup de 17.png en dos
+    bloques verticales -- el cubo (arriba) y el wordmark "FLYmovil" (abajo) --
+    ubicando el hueco horizontal sin contenido que los separa. No asume
+    coordenadas fijas: vuelve a detectar el hueco cada vez, asi que sigue
+    funcionando si cambia el original."""
+    w, h = content.size
+    px = content.load()
+    row_has_content = []
+    for y in range(h):
+        has = any(px[x, y][3] > ALPHA_THRESHOLD for x in range(w))
+        row_has_content.append(has)
+    segments: list[tuple[int, int]] = []
+    start = None
+    for y, has in enumerate(row_has_content):
+        if has and start is None:
+            start = y
+        if not has and start is not None:
+            segments.append((start, y - 1))
+            start = None
+    if start is not None:
+        segments.append((start, h - 1))
+    if len(segments) < 2:
+        _fail(
+            "17.png: se esperaban 2 bloques (cubo + wordmark) separados por un "
+            "hueco vertical y se encontro(n) "
+            f"{len(segments)}; no se puede generar el branding de Android 12+"
+        )
+    icon_seg, wordmark_seg = segments[0], segments[-1]
+    icon = content.crop((0, icon_seg[0], w, icon_seg[1] + 1))
+    wordmark = content.crop((0, wordmark_seg[0], w, wordmark_seg[1] + 1))
+    icon = icon.crop(icon.split()[-1].point(lambda a: 255 if a > ALPHA_THRESHOLD else 0).getbbox())
+    wordmark = wordmark.crop(
+        wordmark.split()[-1].point(lambda a: 255 if a > ALPHA_THRESHOLD else 0).getbbox()
+    )
+    return icon, wordmark
+
+
+def make_android12_branding() -> Image.Image:
+    """android12_branding.png: SOLO el wordmark "FLYmovil" (sin el cubo, que ya
+    se muestra como icono animado) centrado sin deformar en el lienzo fijo de
+    800x320 que exige `windowSplashScreenBrandingImage`, ocupando como maximo
+    el 85% del lienzo (margen de seguridad, igual criterio que el resto de
+    assets: nunca se recorta)."""
+    im = Image.open(SRC_SPLASH).convert("RGBA")
+    alpha_mask = im.split()[-1].point(lambda a: 255 if a > ALPHA_THRESHOLD else 0)
+    bbox = alpha_mask.getbbox()
+    if bbox is None:
+        _fail("17.png: la imagen no tiene contenido con alpha (todo transparente)")
+    content = im.crop(bbox)
+    _icon, wordmark = _split_icon_and_wordmark(content)
+
+    canvas_w, canvas_h = ANDROID12_BRANDING_SIZE
+    canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+    ww, wh = wordmark.size
+    target_w = canvas_w * ANDROID12_BRANDING_SAFE_RATIO
+    target_h = canvas_h * ANDROID12_BRANDING_SAFE_RATIO
+    scale = min(target_w / ww, target_h / wh)
+    new_w, new_h = max(1, round(ww * scale)), max(1, round(wh * scale))
+    resized = wordmark.resize((new_w, new_h), Image.LANCZOS)
+    offset = ((canvas_w - new_w) // 2, (canvas_h - new_h) // 2)
+    canvas.paste(resized, offset, resized)
+    return canvas
+
+
 def _save_optimized(img: Image.Image, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     img.save(path, format="PNG", optimize=True)
@@ -181,6 +250,14 @@ def main() -> None:
     splash_path = OUT_DIR / "splash.png"
     _save_optimized(splash, splash_path)
     print(f"  splash.png          {splash.size[0]}x{splash.size[1]}  -> {splash_path}  ({splash_path.stat().st_size} bytes)")
+
+    android12_branding = make_android12_branding()
+    android12_branding_path = OUT_DIR / "android12_branding.png"
+    _save_optimized(android12_branding, android12_branding_path)
+    print(
+        f"  android12_branding.png {android12_branding.size[0]}x{android12_branding.size[1]}  "
+        f"-> {android12_branding_path}  ({android12_branding_path.stat().st_size} bytes)"
+    )
 
     print("\nListo. Originales en la raiz del repo intactos (16.png, 17.png).")
 

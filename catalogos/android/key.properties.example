@@ -1,0 +1,4 @@
+storePassword=TU_CONTRASEÑA_AQUI
+keyPassword=TU_CONTRASEÑA_AQUI
+keyAlias=upload
+storeFile=/home/andres-oviedo/flymovil-upload.jks

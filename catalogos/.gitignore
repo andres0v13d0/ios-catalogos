@@ -55,3 +55,10 @@ app.*.map.json
 env/*.local.json
 env/secrets*.json
 lib/app/env/firebase_options_*.dart
+
+# Firma de release Android (contraseñas + ruta local del keystore): nunca se
+# commitea. android/key.properties.example SÍ se commitea (documenta el
+# formato, sin contraseñas reales).
+android/key.properties
+*.jks
+*.keystore

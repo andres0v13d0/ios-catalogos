@@ -43,6 +43,7 @@ class Catalog {
     this.providerBannerUrl,
     this.bannerUrl,
     this.ogImageUrl,
+    this.enlace,
     this.priceField,
     this.isReseller,
   });
@@ -77,6 +78,11 @@ class Catalog {
   /// Se usa como segundo candidato de imagen de la tarjeta cuando no hay
   /// [bannerUrl] propio del catálogo.
   final String? ogImageUrl;
+
+  /// Enlace compartible del catálogo (`catalog.enlace`,
+  /// `https://share.minymol.com/<id>`); puede ser `null` si aún no se generó.
+  /// Para una fila hija del revendedor es SU enlace propio.
+  final String? enlace;
 
   /// Campo de precio del catálogo. `'none'` ⇒ modo "sin precios".
   final String? priceField;
@@ -215,6 +221,12 @@ class Catalog {
           _pick(json, const <String>['ogImageUrl', 'og_image_url']),
     );
 
+    // --- enlace (enlace compartible del catálogo): catalog.enlace | top-level.
+    final String? enlace = _asString(
+      _pick(catalog, const <String>['enlace', 'shareLink', 'share_link']) ??
+          _pick(json, const <String>['enlace', 'shareLink', 'share_link']),
+    );
+
     // --- priceField: catalog.priceField | ... | top-level.
     final String? priceField = _asString(
       _pick(catalog, const <String>['priceField', 'price_field']) ??
@@ -237,6 +249,7 @@ class Catalog {
       providerBannerUrl: providerBannerUrl,
       bannerUrl: bannerUrl,
       ogImageUrl: ogImageUrl,
+      enlace: enlace,
       priceField: priceField,
       isReseller: isReseller,
     );
@@ -254,6 +267,7 @@ class Catalog {
     'providerBannerUrl': providerBannerUrl,
     'bannerUrl': bannerUrl,
     'ogImageUrl': ogImageUrl,
+    'enlace': enlace,
     'priceField': priceField,
     'isReseller': isReseller,
   };
@@ -322,6 +336,7 @@ class Catalog {
           other.providerBannerUrl == providerBannerUrl &&
           other.bannerUrl == bannerUrl &&
           other.ogImageUrl == ogImageUrl &&
+          other.enlace == enlace &&
           other.priceField == priceField &&
           other.isReseller == isReseller;
 
@@ -336,6 +351,7 @@ class Catalog {
     providerBannerUrl,
     bannerUrl,
     ogImageUrl,
+    enlace,
     priceField,
     isReseller,
   );

@@ -36,4 +36,11 @@ abstract final class AppRoutes {
 
   /// Construye el path concreto de "Ajustar precios" para un [catalogId].
   static String adjustPricesPath(String catalogId) => '/catalog/$catalogId/adjust-prices';
+
+  /// Ruta de "Banner del catálogo" del revendedor (recibe un
+  /// `ResellerBannerState` vía `extra`).
+  static const String banner = '/catalog/:id/banner';
+
+  /// Construye el path concreto de "Banner del catálogo" para un [catalogId].
+  static String bannerPath(String catalogId) => '/catalog/$catalogId/banner';
 }

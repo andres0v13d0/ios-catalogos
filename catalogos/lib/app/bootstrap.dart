@@ -64,12 +64,10 @@ Future<BootstrapResult> bootstrapFirebase() async {
 
 /// Activa App Check tras `Firebase.initializeApp` (tarea 1.11).
 ///
-/// - En DEV usa proveedores DEBUG (Android `debug`, Apple `debug`, web
-///   `ReCaptchaV3` no es necesario en dev → se usa `debug` en móvil y en web
-///   solo se activa debug si procede).
-/// - En STAGING/PROD usa Play Integrity (Android) y App Attest (iOS/macOS).
-///
-/// La activación se gatea por [Environment.flavor].
+/// El proveedor se elige por MODO DE COMPILACIÓN ([kReleaseMode]), no por
+/// flavor: builds debug/profile (de cualquier flavor, típicamente dev) usan
+/// los proveedores DEBUG; cualquier build release (incluido el flavor prod)
+/// usa Play Integrity (Android) / App Attest (iOS/macOS).
 Future<void> _activateAppCheck() async {
   final bool isDev = Environment.current.isDev;
 
@@ -84,10 +82,11 @@ Future<void> _activateAppCheck() async {
   }
 
   await FirebaseAppCheck.instance.activate(
-    providerAndroid: isDev
-        ? const AndroidDebugProvider()
-        : const AndroidPlayIntegrityProvider(),
-    providerApple:
-        isDev ? const AppleDebugProvider() : const AppleAppAttestProvider(),
+    providerAndroid: kReleaseMode
+        ? const AndroidPlayIntegrityProvider()
+        : const AndroidDebugProvider(),
+    providerApple: kReleaseMode
+        ? const AppleAppAttestProvider()
+        : const AppleDebugProvider(),
   );
 }

@@ -11,6 +11,8 @@ import '../../features/shared_catalogs/presentation/catalog_detail_page.dart';
 import '../../features/shared_catalogs/presentation/home_page.dart';
 import '../../features/shared_catalogs/presentation/price_adjustment_controller.dart';
 import '../../features/shared_catalogs/presentation/price_adjustment_page.dart';
+import '../../features/shared_catalogs/domain/reseller_banner.dart';
+import '../../features/shared_catalogs/presentation/reseller_banner_page.dart';
 import 'app_routes.dart';
 
 /// Configuración de `go_router` con guard de autenticación (diseño §2.3).
@@ -109,6 +111,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         builder: (BuildContext context, GoRouterState state) {
           final PriceAdjustmentArgs args = state.extra! as PriceAdjustmentArgs;
           return PriceAdjustmentPage(args: args);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.banner,
+        name: 'banner',
+        builder: (BuildContext context, GoRouterState state) {
+          final ResellerBannerState args = state.extra! as ResellerBannerState;
+          return ResellerBannerPage(args: args);
         },
       ),
     ],

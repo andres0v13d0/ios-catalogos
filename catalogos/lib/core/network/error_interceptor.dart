@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:dio/dio.dart';
 
 import '../result/failure.dart';
@@ -21,9 +23,44 @@ class ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     final failure = mapDioExceptionToFailure(err);
+    _logDiagnostic(err, failure);
     // Reemplaza el error crudo por el Failure mapeado conservando el resto del
     // contexto de la excepción.
     handler.next(err.copyWith(error: failure));
+  }
+
+  /// Registra SIEMPRE (también en release) la CAUSA REAL del fallo para
+  /// diagnóstico vía `adb logcat` / Xcode, SIN exponerla al usuario (el
+  /// mensaje visible lo decide la UI a partir del `Failure` tipado).
+  ///
+  /// Usa `dart:developer.log` en vez de `debugPrint`/`print`: `debugPrint`
+  /// queda en no-op fuera de debug y por eso en los APK de release el error
+  /// real era invisible y todo "parecía" falta de conexión. Distingue sin red
+  /// vs. 401/403 (App Check/token) vs. timeout vs. 5xx.
+  void _logDiagnostic(DioException err, Failure failure) {
+    final int? status = err.response?.statusCode;
+    final String category = switch (err.type) {
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout ||
+      DioExceptionType.transformTimeout =>
+        'TIMEOUT',
+      DioExceptionType.connectionError => 'SIN_RED/CONEXION',
+      DioExceptionType.badCertificate => 'TLS',
+      DioExceptionType.cancel => 'CANCELADA',
+      DioExceptionType.badResponse => 'HTTP $status',
+      DioExceptionType.unknown => err.response == null ? 'SIN_RED/TRANSPORTE' : 'HTTP $status',
+    };
+    // 401/403 suelen ser App Check (Play Integrity en release) o token.
+    final String hint = (status == 401 || status == 403)
+        ? ' (posible App Check/token: verifica Play Integrity y el SHA de firma en Firebase)'
+        : '';
+    developer.log(
+      '[NET-ERR] $category ${err.requestOptions.method} ${err.requestOptions.uri} '
+      '-> ${failure.runtimeType}$hint',
+      name: 'net',
+      error: err.error ?? err,
+    );
   }
 }
 
