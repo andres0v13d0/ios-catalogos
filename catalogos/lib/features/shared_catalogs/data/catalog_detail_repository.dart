@@ -22,8 +22,8 @@ import '../domain/catalog_detail.dart';
 /// cabeceras; el `ErrorInterceptor` adjunta el [Failure]).
 class CatalogDetailRepository {
   const CatalogDetailRepository(this._dio, {NetLogSink? logSink})
-      // ignore: prefer_initializing_formals -- `logSink` es el nombre público.
-      : _logSink = logSink;
+    // ignore: prefer_initializing_formals -- `logSink` es el nombre público.
+    : _logSink = logSink;
 
   final Dio _dio;
 
@@ -63,10 +63,7 @@ class CatalogDetailRepository {
     List<String> ids, {
     String? catalogId,
   }) async {
-    final body = <String, dynamic>{
-      'ids': ids,
-      'catalogId': ?catalogId,
-    };
+    final body = <String, dynamic>{'ids': ids, 'catalogId': ?catalogId};
     dynamic rawBody;
     try {
       final response = await _dio.post<dynamic>(_previewsPath, data: body);
@@ -90,9 +87,7 @@ class CatalogDetailRepository {
         fallbackId: fallbackId,
       );
     }
-    throw const FormatException(
-      'Respuesta inesperada del detalle de catálogo',
-    );
+    throw const FormatException('Respuesta inesperada del detalle de catálogo');
   }
 
   /// Recupera el [Failure] que el `ErrorInterceptor` adjuntó a `error`, o lo
@@ -107,5 +102,5 @@ class CatalogDetailRepository {
 /// Provider del [CatalogDetailRepository], construido con el [Dio] de la app.
 final Provider<CatalogDetailRepository> catalogDetailRepositoryProvider =
     Provider<CatalogDetailRepository>(
-  (Ref ref) => CatalogDetailRepository(ref.watch(dioProvider)),
-);
+      (Ref ref) => CatalogDetailRepository(ref.watch(dioProvider)),
+    );

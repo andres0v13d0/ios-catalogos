@@ -10,13 +10,19 @@ import 'auth_palette.dart';
 // opacidad de los brillos (cada pantalla los posiciona con su propio
 // `Positioned`).
 
-/// Degradado vertical navy → [AuthPalette.heroGradientMid] → azul, a pantalla
-/// completa. [midStop] es el punto (0..1) del color intermedio: 0.6 en
-/// ingreso, 0.55 en código.
+/// Degradado vertical navy → color intermedio → azul, a pantalla completa.
+/// [midStop] es el punto (0..1) del color intermedio: 0.6 en ingreso, 0.55 en
+/// código, 0.55 en el hero de inicio (`docs/design/inicio-a-carrusel.html`,
+/// que además usa un intermedio distinto, `#00306E`, vía [midColor]).
 class AuthGradientBackground extends StatelessWidget {
-  const AuthGradientBackground({super.key, required this.midStop});
+  const AuthGradientBackground({
+    super.key,
+    required this.midStop,
+    this.midColor = AuthPalette.heroGradientMid,
+  });
 
   final double midStop;
+  final Color midColor;
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +32,9 @@ class AuthGradientBackground extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           stops: <double>[0.0, midStop, 1.0],
-          colors: const <Color>[
+          colors: <Color>[
             AppColors.primary,
-            AuthPalette.heroGradientMid,
+            midColor,
             AppColors.secondary,
           ],
         ),

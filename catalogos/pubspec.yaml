@@ -90,6 +90,20 @@ dependencies:
   # Versión fija (pin) resuelta compatible con el SDK del proyecto.
   flutter_secure_storage: 11.2.0
 
+  # Imágenes de producto de la cuadrícula "Productos del catálogo" (tarea de
+  # rendimiento): `Image.network` de Flutter solo cachea en memoria durante la
+  # sesión (sin disco), así que reabrir un catálogo vuelve a descargar todo.
+  # Esta librería añade caché en disco configurable (vía
+  # `ProductImageCacheManager`, `core/images/product_image_cache_manager.dart`)
+  # y decodificación al tamaño de pantalla (`memCacheWidth`/`memCacheHeight`),
+  # sin los cuales cada imagen se decodifica a su resolución original (hasta
+  # 2000px) aunque se dibuje en ~150px. `flutter_cache_manager` es la base de
+  # `cached_network_image` (`CacheManager`/`Config`); se declara explícita
+  # porque `product_image_cache_manager.dart` la importa directamente.
+  # Versiones fijas (pin) para builds reproducibles.
+  cached_network_image: 4.0.4
+  flutter_cache_manager: 3.4.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -48,8 +48,9 @@ void main() {
     final c = ProviderContainer(
       overrides: [
         localCacheProvider.overrideWithValue(cache),
-        sharedCatalogsRepositoryProvider
-            .overrideWithValue(SharedCatalogsRepository(dio)),
+        sharedCatalogsRepositoryProvider.overrideWithValue(
+          SharedCatalogsRepository(dio),
+        ),
       ],
     );
     addTearDown(c.dispose);
@@ -108,8 +109,7 @@ void main() {
     stubListOk();
     final container = buildContainer();
 
-    final state =
-        await container.read(sharedCatalogsControllerProvider.future);
+    final state = await container.read(sharedCatalogsControllerProvider.future);
 
     expect(state.catalogs, hasLength(2));
     expect(state.catalogs.map((c) => c.displayName), <String>['Alfa', 'Beta']);
@@ -130,46 +130,52 @@ void main() {
     expect(raw, contains('Beta'));
   });
 
-  test('con red en fallo pero caché presente, devuelve la lista cacheada',
-      () async {
-    // 1) Primera carga exitosa que llena la caché.
-    stubSyncOk();
-    stubListOk();
-    final first = buildContainer();
-    await first.read(sharedCatalogsControllerProvider.future);
-    first.dispose();
+  test(
+    'con red en fallo pero caché presente, devuelve la lista cacheada',
+    () async {
+      // 1) Primera carga exitosa que llena la caché.
+      stubSyncOk();
+      stubListOk();
+      final first = buildContainer();
+      await first.read(sharedCatalogsControllerProvider.future);
+      first.dispose();
 
-    // 2) Segunda carga con la red en fallo (sync falla). La caché ya existe.
-    final failDio = Dio(BaseOptions(baseUrl: 'https://api.test'));
-    failDio.interceptors.add(const ErrorInterceptor());
-    final failAdapter = DioAdapter(dio: failDio);
-    failAdapter.onPost(
-      '/reseller/sync-shared-catalogs',
-      (server) => server.throws(
-        0,
-        DioException(
-          requestOptions:
-              RequestOptions(path: '/reseller/sync-shared-catalogs'),
-          type: DioExceptionType.connectionError,
+      // 2) Segunda carga con la red en fallo (sync falla). La caché ya existe.
+      final failDio = Dio(BaseOptions(baseUrl: 'https://api.test'));
+      failDio.interceptors.add(const ErrorInterceptor());
+      final failAdapter = DioAdapter(dio: failDio);
+      failAdapter.onPost(
+        '/reseller/sync-shared-catalogs',
+        (server) => server.throws(
+          0,
+          DioException(
+            requestOptions: RequestOptions(
+              path: '/reseller/sync-shared-catalogs',
+            ),
+            type: DioExceptionType.connectionError,
+          ),
         ),
-      ),
-      data: <String, dynamic>{},
-    );
+        data: <String, dynamic>{},
+      );
 
-    final offline = ProviderContainer(
-      overrides: [
-        localCacheProvider.overrideWithValue(cache),
-        sharedCatalogsRepositoryProvider
-            .overrideWithValue(SharedCatalogsRepository(failDio)),
-      ],
-    );
-    addTearDown(offline.dispose);
+      final offline = ProviderContainer(
+        overrides: [
+          localCacheProvider.overrideWithValue(cache),
+          sharedCatalogsRepositoryProvider.overrideWithValue(
+            SharedCatalogsRepository(failDio),
+          ),
+        ],
+      );
+      addTearDown(offline.dispose);
 
-    final state =
-        await offline.read(sharedCatalogsControllerProvider.future);
+      final state = await offline.read(sharedCatalogsControllerProvider.future);
 
-    expect(state.catalogs, hasLength(2),
-        reason: 'debe venir de la caché offline');
-    expect(state.fromCache, isTrue);
-  });
+      expect(
+        state.catalogs,
+        hasLength(2),
+        reason: 'debe venir de la caché offline',
+      );
+      expect(state.fromCache, isTrue);
+    },
+  );
 }

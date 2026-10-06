@@ -26,8 +26,7 @@ void main() {
       expect(detail.displayName, 'Catálogo Público');
     });
 
-    test(
-        'NUNCA cae a internalName: usa el nombre del proveedor cuando falta '
+    test('NUNCA cae a internalName: usa el nombre del proveedor cuando falta '
         'publicName', () {
       final detail = CatalogDetail.fromJson(<String, dynamic>{
         'nombre_empresa': 'Mi Empresa',
@@ -48,19 +47,20 @@ void main() {
     });
 
     test(
-        'sin publicName ni proveedor, displayName es "Catálogo" (no el interno)',
-        () {
-      final detail = CatalogDetail.fromJson(<String, dynamic>{
-        'catalog': <String, dynamic>{
-          'id': 'cat-1',
-          'internalName': 'NOMBRE INTERNO SECRETO',
-        },
-        'products': <dynamic>[],
-      });
+      'sin publicName ni proveedor, displayName es "Catálogo" (no el interno)',
+      () {
+        final detail = CatalogDetail.fromJson(<String, dynamic>{
+          'catalog': <String, dynamic>{
+            'id': 'cat-1',
+            'internalName': 'NOMBRE INTERNO SECRETO',
+          },
+          'products': <dynamic>[],
+        });
 
-      expect(detail.displayName, 'Catálogo');
-      expect(detail.displayName, isNot('NOMBRE INTERNO SECRETO'));
-    });
+        expect(detail.displayName, 'Catálogo');
+        expect(detail.displayName, isNot('NOMBRE INTERNO SECRETO'));
+      },
+    );
 
     test("'name' SÍ es un fallback aceptable (= publicName en el legado)", () {
       final detail = CatalogDetail.fromJson(<String, dynamic>{

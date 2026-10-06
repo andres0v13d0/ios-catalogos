@@ -40,7 +40,10 @@ class Variant {
       final name = _asString(map['name'] ?? map['nombre']) ?? '';
       final id = _asString(map['id']) ?? name;
       if (name.isEmpty && id.isEmpty) return null;
-      return Variant(id: id.isEmpty ? name : id, name: name.isEmpty ? id : name);
+      return Variant(
+        id: id.isEmpty ? name : id,
+        name: name.isEmpty ? id : name,
+      );
     }
     return null;
   }
@@ -70,6 +73,97 @@ class Variant {
   String toString() => 'Variant($id, $name)';
 }
 
+/// Una imagen de producto, con sus variantes de tamaño (tarea 2.1).
+///
+/// El contrato real de `GET /catalog/by-catalog/:id/products` /
+/// `POST /catalog/products/previews` envía cada imagen como un OBJETO
+/// `{ imageUrl, thumbnailUrl, mediumUrl, fullUrl }` (ver
+/// `private-catalogs.service.ts#getProductImages`, back-end). [ProductImage.parse]
+/// también tolera el formato legado de string suelto (una sola URL, sin
+/// variantes) para no romper payloads antiguos o la caché local previa.
+class ProductImage {
+  const ProductImage({
+    required this.imageUrl,
+    this.thumbnailUrl,
+    this.mediumUrl,
+    this.fullUrl,
+  });
+
+  /// URL original (siempre presente si la imagen es válida).
+  final String imageUrl;
+
+  /// Variante pequeña (miniatura); preferida para la cuadrícula.
+  final String? thumbnailUrl;
+
+  /// Variante mediana.
+  final String? mediumUrl;
+
+  /// Variante grande (detalle a pantalla completa).
+  final String? fullUrl;
+
+  /// URL más chica disponible, para listas/cuadrículas densas (menos datos).
+  String get gridUrl => thumbnailUrl ?? mediumUrl ?? imageUrl;
+
+  /// URL más grande disponible, para el detalle del producto.
+  String get detailUrl => fullUrl ?? mediumUrl ?? imageUrl;
+
+  static ProductImage? parse(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return null;
+      return ProductImage(imageUrl: trimmed);
+    }
+    if (raw is Map) {
+      final map = Map<String, dynamic>.from(raw);
+      final url = _asString(
+        _pick(map, const <String>['imageUrl', 'image_url', 'url']),
+      );
+      if (url == null || url.trim().isEmpty) return null;
+      return ProductImage(
+        imageUrl: url,
+        thumbnailUrl: _asString(
+          _pick(map, const <String>['thumbnailUrl', 'thumbnail_url']),
+        ),
+        mediumUrl: _asString(
+          _pick(map, const <String>['mediumUrl', 'medium_url']),
+        ),
+        fullUrl: _asString(_pick(map, const <String>['fullUrl', 'full_url'])),
+      );
+    }
+    return null;
+  }
+
+  static List<ProductImage> parseList(dynamic raw) {
+    if (raw is! List) return const <ProductImage>[];
+    final result = <ProductImage>[];
+    for (final item in raw) {
+      final img = parse(item);
+      if (img != null) result.add(img);
+    }
+    return result;
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'imageUrl': imageUrl,
+    'thumbnailUrl': thumbnailUrl,
+    'mediumUrl': mediumUrl,
+    'fullUrl': fullUrl,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProductImage &&
+          other.imageUrl == imageUrl &&
+          other.thumbnailUrl == thumbnailUrl &&
+          other.mediumUrl == mediumUrl &&
+          other.fullUrl == fullUrl;
+
+  @override
+  int get hashCode => Object.hash(imageUrl, thumbnailUrl, mediumUrl, fullUrl);
+}
+
 /// Un producto del catálogo (tarea 1.16).
 ///
 /// [precios] es un mapa `cantidad → precio por esa cantidad` (claves = las
@@ -81,7 +175,7 @@ class Product {
     required this.id,
     required this.nombre,
     this.descripcion,
-    this.imagenes = const <String>[],
+    this.imagenes = const <ProductImage>[],
     this.colores = const <Variant>[],
     this.tallas = const <Variant>[],
     this.precios = const <String, num>{},
@@ -93,8 +187,8 @@ class Product {
   final String nombre;
   final String? descripcion;
 
-  /// URLs de imágenes del producto (puede estar vacía).
-  final List<String> imagenes;
+  /// Imágenes del producto, con variantes de tamaño (puede estar vacía).
+  final List<ProductImage> imagenes;
 
   /// Colores disponibles (tolerante a objetos o strings).
   final List<Variant> colores;
@@ -110,8 +204,21 @@ class Product {
   /// Moneda del producto; por defecto `COP`.
   final String moneda;
 
-  /// Primera imagen disponible, o `null` si no hay ninguna.
-  String? get primaryImage => imagenes.isNotEmpty ? imagenes.first : null;
+  /// Primera imagen disponible (URL original), o `null` si no hay ninguna.
+  String? get primaryImage =>
+      imagenes.isNotEmpty ? imagenes.first.imageUrl : null;
+
+  /// URL de la primera imagen, en su variante más chica disponible — para
+  /// cuadrículas densas (tarjeta de producto). `null` si no hay ninguna.
+  String? get primaryThumbnail =>
+      imagenes.isNotEmpty ? imagenes.first.gridUrl : null;
+
+  /// Menor precio entre todos los disponibles (`precios.values`), o `null` si
+  /// no hay ninguno. Base de la etiqueta "Desde $X" en la cuadrícula.
+  num? get lowestPrice {
+    if (precios.isEmpty) return null;
+    return precios.values.reduce((a, b) => a < b ? a : b);
+  }
 
   /// Cantidades disponibles ordenadas numéricamente (claves de [precios]).
   List<String> get cantidades {
@@ -137,37 +244,35 @@ class Product {
       descripcion: _asString(
         _pick(json, const <String>['descripcion', 'description']),
       ),
-      imagenes: _asStringList(
+      imagenes: ProductImage.parseList(
         _pick(json, const <String>['imagenes', 'images', 'imagenes_url']),
       ),
       colores: Variant.parseList(
         _pick(json, const <String>['colores', 'colors']),
       ),
-      tallas: Variant.parseList(
-        _pick(json, const <String>['tallas', 'sizes']),
-      ),
+      tallas: Variant.parseList(_pick(json, const <String>['tallas', 'sizes'])),
       precios: _parsePrecios(_pick(json, const <String>['precios', 'prices'])),
       unidadMedida: _asString(
         _pick(json, const <String>['unidadMedida', 'unidad_medida']),
       ),
-      moneda: _asString(_pick(json, const <String>['moneda', 'currency'])) ??
-          'COP',
+      moneda:
+          _asString(_pick(json, const <String>['moneda', 'currency'])) ?? 'COP',
     );
   }
 
   /// Serializa a JSON tolerante (usado para la caché local Hive).
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'nombre': nombre,
-        'descripcion': descripcion,
-        'imagenes': imagenes,
-        'colores': colores.map((v) => v.toJson()).toList(),
-        'tallas': tallas.map((v) => v.toJson()).toList(),
-        // Los mapas de precios se serializan con claves string (ya lo son).
-        'precios': precios.map((k, v) => MapEntry(k, v)),
-        'unidadMedida': unidadMedida,
-        'moneda': moneda,
-      };
+    'id': id,
+    'nombre': nombre,
+    'descripcion': descripcion,
+    'imagenes': imagenes.map((img) => img.toJson()).toList(),
+    'colores': colores.map((v) => v.toJson()).toList(),
+    'tallas': tallas.map((v) => v.toJson()).toList(),
+    // Los mapas de precios se serializan con claves string (ya lo son).
+    'precios': precios.map((k, v) => MapEntry(k, v)),
+    'unidadMedida': unidadMedida,
+    'moneda': moneda,
+  };
 
   static Map<String, num> _parsePrecios(dynamic raw) {
     if (raw is! Map) return const <String, num>{};
@@ -249,10 +354,9 @@ class CatalogDetail {
   final bool? priceHiddenOverride;
 
   /// Nombre a mostrar en el encabezado del detalle.
-  String get displayName =>
-      (publicName ?? '').trim().isNotEmpty
-          ? publicName!.trim()
-          : (nombreEmpresa ?? 'Catálogo').trim();
+  String get displayName => (publicName ?? '').trim().isNotEmpty
+      ? publicName!.trim()
+      : (nombreEmpresa ?? 'Catálogo').trim();
 
   /// `true` si el catálogo está en modo "sin precios" (CA de 1.16):
   /// - `priceField == 'none'`, o
@@ -274,7 +378,8 @@ class CatalogDetail {
         : const <String, dynamic>{};
 
     return CatalogDetail(
-      id: _asString(_pick(catalog, const <String>['id'])) ??
+      id:
+          _asString(_pick(catalog, const <String>['id'])) ??
           _asString(_pick(json, const <String>['id'])) ??
           fallbackId ??
           '',
@@ -306,18 +411,12 @@ class CatalogDetail {
       // es un fallback aceptable.) Ver displayName: si publicName queda vacío,
       // cae al nombre del proveedor o a 'Catálogo', nunca al interno.
       publicName: _asString(
-        _pick(catalog, const <String>[
-          'publicName',
-          'public_name',
-          'name',
-        ]),
+        _pick(catalog, const <String>['publicName', 'public_name', 'name']),
       ),
       description: _asString(
         _pick(catalog, const <String>['description', 'descripcion']),
       ),
-      telefono: _asString(
-        _pick(catalog, const <String>['telefono', 'phone']),
-      ),
+      telefono: _asString(_pick(catalog, const <String>['telefono', 'phone'])),
       priceField: _asString(
         _pick(catalog, const <String>['priceField', 'price_field']),
       ),
@@ -336,22 +435,22 @@ class CatalogDetail {
   /// Serializa a JSON para la caché local Hive. Persiste [priceHidden] como
   /// override para no depender de recomputarlo tras deserializar.
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'catalog': <String, dynamic>{
-          'id': id,
-          'publicName': publicName,
-          'description': description,
-          'telefono': telefono,
-          'priceField': priceField,
-          'categoryId': categoryId,
-          'subcategoryId': subcategoryId,
-        },
-        'banner_url': bannerUrl,
-        'nombre_empresa': nombreEmpresa,
-        'provider_id': providerId,
-        'logo_url': logoUrl,
-        'products': products.map((p) => p.toJson()).toList(),
-        'priceHiddenOverride': priceHidden,
-      };
+    'catalog': <String, dynamic>{
+      'id': id,
+      'publicName': publicName,
+      'description': description,
+      'telefono': telefono,
+      'priceField': priceField,
+      'categoryId': categoryId,
+      'subcategoryId': subcategoryId,
+    },
+    'banner_url': bannerUrl,
+    'nombre_empresa': nombreEmpresa,
+    'provider_id': providerId,
+    'logo_url': logoUrl,
+    'products': products.map((p) => p.toJson()).toList(),
+    'priceHiddenOverride': priceHidden,
+  };
 
   static List<Product> _parseProducts(dynamic raw) {
     if (raw is! List) return const <Product>[];
@@ -403,14 +502,4 @@ bool? _asBool(dynamic value) {
   }
   if (value is num) return value != 0;
   return null;
-}
-
-List<String> _asStringList(dynamic value) {
-  if (value is! List) return const <String>[];
-  final result = <String>[];
-  for (final item in value) {
-    final s = _asString(item);
-    if (s != null && s.trim().isNotEmpty) result.add(s);
-  }
-  return result;
 }

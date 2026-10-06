@@ -135,23 +135,27 @@ class Catalog {
 
     // --- id del catálogo (UUID). Prioriza catalogId / catalog.id; el top-level
     // `id` solo se acepta si parece un UUID (nunca el id numérico del vínculo).
-    final String? catalogIdField =
-        _asString(_pick(json, const <String>['catalogId', 'catalog_id']));
+    final String? catalogIdField = _asString(
+      _pick(json, const <String>['catalogId', 'catalog_id']),
+    );
     final String? nestedCatalogId = _asString(catalog['id']);
     final dynamic topLevelId = json['id'];
-    final String? legacyUuid =
-        _looksLikeUuid(topLevelId) ? _asString(topLevelId) : null;
+    final String? legacyUuid = _looksLikeUuid(topLevelId)
+        ? _asString(topLevelId)
+        : null;
     final String id = catalogIdField ?? nestedCatalogId ?? legacyUuid ?? '';
 
     // --- linkId: clave explícita `linkId` (round-trip de la caché) o el
     // top-level `id` cuando es numérico (forma real del backend).
-    final int? linkId = _asInt(json['linkId']) ??
+    final int? linkId =
+        _asInt(json['linkId']) ??
         (legacyUuid == null ? _asInt(topLevelId) : null);
 
     // --- displayName: catalog.publicName | ... | top-level publicName | ''.
     // PRIVACIDAD: NUNCA se usa internalName/internal_name como fallback; el
     // nombre interno del catálogo jamás debe mostrarse al revendedor.
-    final String displayName = _asString(
+    final String displayName =
+        _asString(
           _pick(catalog, const <String>['publicName', 'public_name']) ??
               _pick(json, const <String>[
                 'publicName',
@@ -162,7 +166,8 @@ class Catalog {
         '';
 
     // --- providerId: top-level providerId | provider.id | provider_id.
-    final int providerId = _asInt(
+    final int providerId =
+        _asInt(
           _pick(json, const <String>['providerId', 'provider_id']) ??
               provider['id'],
         ) ??
@@ -186,10 +191,7 @@ class Catalog {
             'logoUrl',
             'logo_url',
           ]) ??
-          _pick(json, const <String>[
-            'providerLogoUrl',
-            'provider_logo_url',
-          ]),
+          _pick(json, const <String>['providerLogoUrl', 'provider_logo_url']),
     );
 
     // --- providerBannerUrl: provider.bannerUrl | banner_url.
@@ -243,18 +245,18 @@ class Catalog {
   /// Serializa a JSON plano con claves estables (usado para la caché local
   /// Hive). Diseñado para que `fromJson(toJson(x)) == x` (round-trip).
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'catalogId': id,
-        'linkId': linkId,
-        'publicName': displayName,
-        'providerId': providerId,
-        'providerName': providerName,
-        'providerLogoUrl': providerLogoUrl,
-        'providerBannerUrl': providerBannerUrl,
-        'bannerUrl': bannerUrl,
-        'ogImageUrl': ogImageUrl,
-        'priceField': priceField,
-        'isReseller': isReseller,
-      };
+    'catalogId': id,
+    'linkId': linkId,
+    'publicName': displayName,
+    'providerId': providerId,
+    'providerName': providerName,
+    'providerLogoUrl': providerLogoUrl,
+    'providerBannerUrl': providerBannerUrl,
+    'bannerUrl': bannerUrl,
+    'ogImageUrl': ogImageUrl,
+    'priceField': priceField,
+    'isReseller': isReseller,
+  };
 
   /// Devuelve el primer valor no nulo entre las [keys] candidatas.
   static dynamic _pick(Map<String, dynamic> json, List<String> keys) {
@@ -325,18 +327,18 @@ class Catalog {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        linkId,
-        displayName,
-        providerId,
-        providerName,
-        providerLogoUrl,
-        providerBannerUrl,
-        bannerUrl,
-        ogImageUrl,
-        priceField,
-        isReseller,
-      );
+    id,
+    linkId,
+    displayName,
+    providerId,
+    providerName,
+    providerLogoUrl,
+    providerBannerUrl,
+    bannerUrl,
+    ogImageUrl,
+    priceField,
+    isReseller,
+  );
 
   @override
   String toString() =>

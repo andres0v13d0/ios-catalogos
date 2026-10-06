@@ -1,346 +1,275 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../core/utils/money.dart';
+import '../../auth/presentation/auth_gradient_button.dart';
+import '../../auth/presentation/auth_palette.dart';
+import '../../auth/presentation/auth_vector_icons.dart';
 import '../domain/catalog_detail.dart';
 import 'catalog_detail_controller.dart';
 import 'catalog_detail_filter.dart';
+import 'catalog_products_header.dart';
+import 'home_palette.dart';
+import 'product_grid_card.dart';
 
-/// Pantalla de detalle de catálogo (tareas 1.16/1.17/1.18).
-///
-/// Muestra el banner, la búsqueda por nombre y facetas de variante (1.17), y la
-/// lista de productos con imagen(es), nombre, variantes (colores/tallas) y
-/// precios por cantidad (1.16). En el modo "sin precios" muestra las cantidades
-/// sin importes reales ("Precio a convenir"). Si la vista proviene de la caché
-/// (red caída) muestra un indicador sutil de "sin conexión" (1.18).
-class CatalogDetailPage extends ConsumerWidget {
-  const CatalogDetailPage({
-    super.key,
-    required this.catalogId,
-    this.title,
-  });
+/// Pantalla "Productos del catálogo" (diseño A, ver
+/// `docs/design/productos-a.html`) — reemplaza el detalle de catálogo
+/// anterior. Etapa 1 (ver `catalog_products_flags.dart`): solo ver
+/// productos con lo que el backend ya entrega vía
+/// `GET /catalog/by-catalog/:id/products` (mismo endpoint/caché/offline que
+/// ya usaba el detalle anterior, sin cambios de red ni caché).
+class CatalogDetailPage extends ConsumerStatefulWidget {
+  const CatalogDetailPage({super.key, required this.catalogId, this.title});
 
   /// Id del catálogo a mostrar (viene de la navegación desde el home).
   final String catalogId;
 
   /// Título opcional conocido de antemano (p. ej. el nombre que mostraba la
-  /// lista), usado en el AppBar mientras carga.
+  /// lista), usado en la cabecera mientras carga.
   final String? title;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<CatalogDetailState> asyncState =
-        ref.watch(catalogDetailControllerProvider(catalogId));
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          asyncState.value?.detail.displayName ?? (title ?? 'Catálogo'),
-        ),
-      ),
-      body: SafeArea(
-        child: asyncState.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (Object error, _) => _DetailError(
-            onRetry: () => ref
-                .read(catalogDetailControllerProvider(catalogId).notifier)
-                .refresh(),
-          ),
-          data: (CatalogDetailState state) =>
-              _DetailBody(catalogId: catalogId, state: state),
-        ),
-      ),
-    );
-  }
+  ConsumerState<CatalogDetailPage> createState() => _CatalogDetailPageState();
 }
 
-class _DetailBody extends ConsumerWidget {
-  const _DetailBody({required this.catalogId, required this.state});
-
-  final String catalogId;
-  final CatalogDetailState state;
+class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  String _search = '';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final CatalogDetail detail = state.detail;
-    final DetailFilter filter = ref.watch(detailFilterProvider);
-    final DetailFilterController filterCtrl =
-        ref.read(detailFilterProvider.notifier);
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
-    final List<String> colors = distinctColors(detail.products);
-    final List<String> sizes = distinctSizes(detail.products);
-    final List<Product> filtered = filterProducts(
-      detail.products,
-      search: filter.search,
-      color: filter.color,
-      size: filter.size,
+  /// Debounce de ~250ms: filtra sobre lo ya cargado, sin pedir nada a la red.
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      setState(() => _search = value);
+    });
+  }
+
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.home);
+    }
+  }
+
+  /// El detalle de producto se diseña en otra etapa; de momento no hace nada.
+  void _openProduct(Product product) {}
+
+  @override
+  Widget build(BuildContext context) {
+    final AsyncValue<CatalogDetailState> asyncState = ref.watch(
+      catalogDetailControllerProvider(widget.catalogId),
     );
 
     Future<void> onRefresh() => ref
-        .read(catalogDetailControllerProvider(catalogId).notifier)
+        .read(catalogDetailControllerProvider(widget.catalogId).notifier)
         .refresh();
 
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: CustomScrollView(
-        key: const Key('catalog_detail_scroll'),
-        slivers: <Widget>[
-          if (state.fromCache)
-            const SliverToBoxAdapter(child: _OfflineBanner()),
-          // Banner del detalle: usa la MISMA portada pública que la tarjeta de
-          // la lista. Si no hay bannerUrl del catálogo, cae al logo del
-          // proveedor y, en último término, a un gradiente de marca. Nunca el
-          // nombre interno (el título ya usa displayName = publicName).
-          SliverToBoxAdapter(
-            child: _Banner(
-              url: detail.bannerUrl ?? detail.logoUrl,
-            ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: HomePalette.screenBackground,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double t = ((constraints.maxHeight - 640) / (844 - 640))
+                  .clamp(0.0, 1.0);
+              final double headerHeight = 176 + (200 - 176) * t;
+              final String fallbackTitle = widget.title ?? 'Catálogo';
+
+              // No se usa `AsyncValue.when` directamente: ver la misma nota
+              // en `home_page.dart` (Riverpod 3.x reintenta un `build()`
+              // fallido manteniendo `isLoading == true`; comprobar `hasError`
+              // primero muestra el error de inmediato).
+              if (asyncState.hasError) {
+                return _Scaffold(
+                  headerHeight: headerHeight,
+                  title: fallbackTitle,
+                  subtitle: '',
+                  onBack: _goBack,
+                  body: _ErrorBody(onRetry: onRefresh),
+                  onRefresh: onRefresh,
+                );
+              }
+
+              final CatalogDetailState? state = asyncState.value;
+              if (asyncState.isLoading || state == null) {
+                return _Scaffold(
+                  headerHeight: headerHeight,
+                  title: fallbackTitle,
+                  subtitle: '',
+                  onBack: _goBack,
+                  body: const _SkeletonGrid(),
+                  onRefresh: null,
+                );
+              }
+
+              final CatalogDetail detail = state.detail;
+              final int total = detail.products.length;
+              final List<Product> filtered = filterProducts(
+                detail.products,
+                search: _search,
+              );
+
+              return _Scaffold(
+                headerHeight: headerHeight,
+                title: detail.displayName,
+                subtitle: '$total producto${total == 1 ? '' : 's'}',
+                onBack: _goBack,
+                offlineNotice: state.fromCache,
+                searchController: _searchController,
+                onSearchChanged: _onSearchChanged,
+                body: total == 0
+                    ? const _EmptyBody(
+                        message: 'Este catálogo aún no tiene productos.',
+                      )
+                    : (filtered.isEmpty
+                          ? const _EmptyBody(
+                              message: 'Sin resultados para tu búsqueda.',
+                            )
+                          : _ProductsGrid(
+                              products: filtered,
+                              priceHidden: detail.priceHidden,
+                              onTap: _openProduct,
+                            )),
+                onRefresh: onRefresh,
+              );
+            },
           ),
-          if ((detail.nombreEmpresa ?? '').trim().isNotEmpty)
-            SliverToBoxAdapter(child: _ProviderHeader(detail: detail)),
-          if (detail.priceHidden)
-            const SliverToBoxAdapter(child: _PriceHiddenNotice()),
+        ),
+      ),
+    );
+  }
+}
+
+/// Composición común a todos los estados: cabecera curva + aviso offline
+/// (opcional) + buscador (opcional, oculto en carga/error) + cuerpo (sliver).
+/// Un único `CustomScrollView` para toda la pantalla (sin scroll anidado).
+class _Scaffold extends StatelessWidget {
+  const _Scaffold({
+    required this.headerHeight,
+    required this.title,
+    required this.subtitle,
+    required this.onBack,
+    required this.body,
+    required this.onRefresh,
+    this.offlineNotice = false,
+    this.searchController,
+    this.onSearchChanged,
+  });
+
+  final double headerHeight;
+  final String title;
+  final String subtitle;
+  final VoidCallback onBack;
+
+  /// Sliver de contenido (grilla, esqueleto, error o vacío).
+  final Widget body;
+
+  final Future<void> Function()? onRefresh;
+  final bool offlineNotice;
+  final TextEditingController? searchController;
+  final ValueChanged<String>? onSearchChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget scrollView = CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      // Colchón moderado para que la cuadrícula construya (y por tanto
+      // empiece a descargar) unas pocas filas más allá de lo visible, sin
+      // llegar a inflar de golpe media pantalla extra de imágenes.
+      //
+      // `cacheExtent` está deprecado a favor de `scrollCacheExtent`, pero
+      // `ScrollCacheExtent` (rendering/viewport.dart) todavía no se reexporta
+      // desde ningún barrel público (`material.dart`/`widgets.dart`/
+      // `rendering.dart`) en este SDK — es inalcanzable sin un import
+      // `src/` interno, así que se mantiene `cacheExtent` hasta que el SDK
+      // exponga el reemplazo.
+      // ignore: deprecated_member_use
+      cacheExtent: 400,
+      slivers: <Widget>[
+        SliverToBoxAdapter(
+          child: CatalogProductsHeader(
+            height: headerHeight,
+            title: title,
+            subtitle: subtitle,
+            onBack: onBack,
+          ),
+        ),
+        if (offlineNotice) const SliverToBoxAdapter(child: _OfflineBanner()),
+        if (searchController != null && onSearchChanged != null)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: TextField(
-                key: const Key('catalog_detail_search_field'),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Buscar producto por nombre',
-                  isDense: true,
-                ),
-                onChanged: filterCtrl.setSearch,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+              child: _SearchField(
+                controller: searchController!,
+                onChanged: onSearchChanged!,
               ),
             ),
           ),
-          if (colors.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _FacetBar(
-                keyPrefix: 'color',
-                label: 'Color',
-                options: colors,
-                selected: filter.color,
-                onSelected: filterCtrl.selectColor,
-              ),
-            ),
-          if (sizes.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _FacetBar(
-                keyPrefix: 'size',
-                label: 'Talla',
-                options: sizes,
-                selected: filter.size,
-                onSelected: filterCtrl.selectSize,
-              ),
-            ),
-          if (filtered.isEmpty)
-            const SliverToBoxAdapter(child: _EmptyProducts())
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-              sliver: SliverList.separated(
-                itemCount: filtered.length,
-                separatorBuilder: (BuildContext context, int index) =>
-                    const SizedBox(height: 12),
-                itemBuilder: (BuildContext context, int index) =>
-                    _ProductCard(
-                  product: filtered[index],
-                  priceHidden: detail.priceHidden,
-                ),
-              ),
-            ),
-        ],
-      ),
+        body,
+      ],
     );
+
+    if (onRefresh == null) return scrollView;
+    return RefreshIndicator(onRefresh: onRefresh!, child: scrollView);
   }
 }
 
-/// Banner superior del catálogo. Si [url] es nulo o la imagen falla, muestra el
-/// gradiente de marca FlyStock (`#004AAD → #5DE0E6 → #00FF94`), igual que la
-/// portada de respaldo de la tarjeta en la lista.
-class _Banner extends StatelessWidget {
-  const _Banner({required this.url});
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onChanged});
 
-  final String? url;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final String? src = (url ?? '').trim().isEmpty ? null : url;
-    return AspectRatio(
-      key: const Key('catalog_detail_banner'),
-      aspectRatio: 16 / 6,
-      child: src == null
-          ? const _GradientBanner()
-          : Image.network(
-              src,
-              fit: BoxFit.cover,
-              errorBuilder: (
-                BuildContext context,
-                Object error,
-                StackTrace? stack,
-              ) =>
-                  const _GradientBanner(),
-            ),
-    );
-  }
-}
-
-/// Fondo con el gradiente de marca para el banner del detalle sin imagen.
-class _GradientBanner extends StatelessWidget {
-  const _GradientBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: AppColors.primaryGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Semantics(
+      textField: true,
+      label: 'Buscar producto',
+      child: Container(
+        key: const Key('catalog_products_search_field'),
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: AuthPalette.countryFieldBackground,
+          border: Border.all(color: HomePalette.cardBorder, width: 1.5),
+          borderRadius: BorderRadius.circular(999),
         ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.collections_bookmark_outlined,
-          color: AppColors.onDark,
-          size: 40,
-        ),
-      ),
-    );
-  }
-}
-
-/// Fila con el proveedor (logo + nombre) bajo el banner del detalle. Reutiliza
-/// un avatar circular con iniciales de respaldo.
-class _ProviderHeader extends StatelessWidget {
-  const _ProviderHeader({required this.detail});
-
-  final CatalogDetail detail;
-
-  String get _initials {
-    final name = (detail.nombreEmpresa ?? '').trim();
-    if (name.isEmpty) return 'PR';
-    final words =
-        name.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (words.isEmpty) return 'PR';
-    if (words.length == 1) {
-      final w = words.first;
-      return (w.length >= 2 ? w.substring(0, 2) : w).toUpperCase();
-    }
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
-    final String? logo = detail.logoUrl;
-    final Widget initials = Text(
-      _initials,
-      style: Theme.of(context)
-          .textTheme
-          .labelSmall
-          ?.copyWith(color: colors.onSecondaryContainer),
-    );
-
-    return Padding(
-      key: const Key('catalog_detail_provider'),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: <Widget>[
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: colors.secondaryContainer,
-            child: (logo == null || logo.trim().isEmpty)
-                ? initials
-                : ClipOval(
-                    child: Image.network(
-                      logo,
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.cover,
-                      errorBuilder: (
-                        BuildContext context,
-                        Object error,
-                        StackTrace? stack,
-                      ) =>
-                          initials,
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              detail.nombreEmpresa!.trim(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Tarjeta de producto: imagen, nombre, descripción, variantes y precios.
-class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product, required this.priceHidden});
-
-  final Product product;
-  final bool priceHidden;
-
-  @override
-  Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    return Card(
-      key: Key('product_${product.id}'),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _ProductImage(url: product.primaryImage),
-            const SizedBox(width: 12),
+            const Icon(Icons.search, size: 20, color: AuthPalette.textMuted),
+            const SizedBox(width: 10),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    product.nombre,
-                    style: textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  if ((product.descripcion ?? '').trim().isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 4),
-                    Text(
-                      product.descripcion!.trim(),
-                      style: textTheme.bodySmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  if (product.colores.isNotEmpty)
-                    _VariantLine(
-                      label: 'Colores',
-                      values:
-                          product.colores.map((v) => v.name).toList(),
-                    ),
-                  if (product.tallas.isNotEmpty)
-                    _VariantLine(
-                      label: 'Tallas',
-                      values: product.tallas.map((v) => v.name).toList(),
-                    ),
-                  const SizedBox(height: 8),
-                  _PriceByQuantity(
-                    product: product,
-                    priceHidden: priceHidden,
-                  ),
-                ],
+              child: TextField(
+                controller: controller,
+                onChanged: onChanged,
+                textAlignVertical: TextAlignVertical.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary,
+                ),
+                decoration: const InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: 'Buscar producto',
+                  hintStyle: TextStyle(color: AuthPalette.hint),
+                ),
               ),
             ),
           ],
@@ -350,186 +279,226 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-class _ProductImage extends StatelessWidget {
-  const _ProductImage({required this.url});
+/// Geometría de la cuadrícula: columnas (2 en móvil, más en pantallas
+/// anchas), proporción de la tarjeta (imagen 1:1 + bloque de texto a su alto
+/// natural, calculado — no fijo, ver cabecera del archivo), el relleno
+/// horizontal que centra el contenido con un ancho máximo razonable en
+/// tablet/horizontal, y el tamaño (px físicos) al que decodificar la imagen
+/// de cada tarjeta — el de la celda real, no el original de la imagen
+/// (tarea de rendimiento: evita decodificar a 2000px algo que se pinta en
+/// ~150px). Se calcula UNA sola vez aquí, nunca por tarjeta, para que todas
+/// pidan el mismo tamaño y compartan la misma entrada de caché decodificada.
+({
+  int columns,
+  double aspectRatio,
+  double horizontalPadding,
+  int memCachePixels,
+})
+_gridGeometry(BuildContext context, {required bool priceHidden}) {
+  const double basePadding = 20;
+  const double gridGap = 14;
+  const double maxContentWidth = 900;
+  const double cardPadding = 8;
+  const double imageAspect = 1; // 1:1, ver docs/design/productos-a.html
 
-  final String? url;
+  final double screenWidth = MediaQuery.sizeOf(context).width;
+  final int columns = screenWidth >= 900 ? 4 : (screenWidth >= 600 ? 3 : 2);
+  final double contentWidth = screenWidth < maxContentWidth
+      ? screenWidth
+      : maxContentWidth;
+  final double horizontalPadding =
+      basePadding + (screenWidth - contentWidth) / 2;
+  final double gridAreaWidth = contentWidth - basePadding * 2;
+  final double columnWidth =
+      (gridAreaWidth - gridGap * (columns - 1)) / columns;
 
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        width: 84,
-        height: 84,
-        child: url == null
-            ? Container(
-                color: colors.surfaceContainerHighest,
-                alignment: Alignment.center,
-                child: const Icon(Icons.inventory_2_outlined),
-              )
-            : Image.network(
-                url!,
-                fit: BoxFit.cover,
-                errorBuilder:
-                    (BuildContext context, Object error, StackTrace? stack) =>
-                        Container(
-                  color: colors.surfaceContainerHighest,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.inventory_2_outlined),
-                ),
-              ),
-      ),
-    );
-  }
+  // Alto del bloque de texto a partir del propio contenido (nombre de hasta
+  // 2 líneas + "Desde $X"), con el mismo tope de textScaler (1.3x) que el
+  // resto de la app — nunca una altura de tarjeta fija.
+  final double textScale = MediaQuery.textScalerOf(context)
+      .scale(1.0)
+      .clamp(1.0, 1.3);
+  final double innerWidth = columnWidth - cardPadding * 2;
+  final double imageHeight = innerWidth * imageAspect;
+  final double nameBlockHeight = 34.0 * textScale;
+  final double priceBlockHeight = priceHidden ? 0.0 : (6.0 + 24.0 * textScale);
+  final double textBlockHeight = 10 + nameBlockHeight + priceBlockHeight + 4;
+  // +10: margen de seguridad (métricas reales de fuente/plataforma varían
+  // un poco respecto a esta estimación; mejor un pelín de aire de más que
+  // arriesgar un overflow de 1-2px).
+  final double cardHeight =
+      cardPadding * 2 + imageHeight + textBlockHeight + 10;
+
+  // Tamaño físico de decodificación: el ancho de la imagen (cuadrada, 1:1)
+  // en dp × devicePixelRatio, redondeado. Así una imagen de 2000px se
+  // decodifica a, p. ej., ~340px físicos en vez de su tamaño completo.
+  final double devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+  final int memCachePixels = (innerWidth * devicePixelRatio).round();
+
+  return (
+    columns: columns,
+    aspectRatio: columnWidth / cardHeight,
+    horizontalPadding: horizontalPadding,
+    memCachePixels: memCachePixels,
+  );
 }
 
-/// Línea de variantes (colores o tallas) como texto compacto.
-class _VariantLine extends StatelessWidget {
-  const _VariantLine({required this.label, required this.values});
-
-  final String label;
-  final List<String> values;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(
-        '$label: ${values.join(', ')}',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-    );
-  }
-}
-
-/// Precios por cantidad. En modo "sin precios" muestra solo las cantidades con
-/// un marcador "a convenir" (CA de 1.16).
-class _PriceByQuantity extends StatelessWidget {
-  const _PriceByQuantity({required this.product, required this.priceHidden});
-
-  final Product product;
-  final bool priceHidden;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<String> cantidades = product.cantidades;
-    if (cantidades.isEmpty) {
-      return priceHidden
-          ? const Text('Precio a convenir')
-          : const SizedBox.shrink();
-    }
-
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        for (final String qty in cantidades)
-          Padding(
-            key: Key('price_${product.id}_$qty'),
-            padding: const EdgeInsets.only(top: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text('x$qty  ', style: textTheme.bodySmall),
-                if (priceHidden)
-                  Text(
-                    'Precio a convenir',
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  )
-                else
-                  Text(
-                    formatCop(product.precios[qty] ?? 0),
-                    style: textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// Barra horizontal de chips para una faceta (color o talla).
-class _FacetBar extends StatelessWidget {
-  const _FacetBar({
-    required this.keyPrefix,
-    required this.label,
-    required this.options,
-    required this.selected,
-    required this.onSelected,
+class _ProductsGrid extends StatelessWidget {
+  const _ProductsGrid({
+    required this.products,
+    required this.priceHidden,
+    required this.onTap,
   });
 
-  final String keyPrefix;
-  final String label;
-  final List<String> options;
-  final String? selected;
-  final ValueChanged<String?> onSelected;
+  final List<Product> products;
+  final bool priceHidden;
+  final ValueChanged<Product> onTap;
+
+  /// Cuántas imágenes más allá de la que se está construyendo se precargan
+  /// (disco + memoria) mientras el usuario hace scroll.
+  static const int _precacheLookahead = 6;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Center(child: Text('$label:')),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              key: Key('${keyPrefix}_todos'),
-              label: const Text('Todos'),
-              selected: selected == null,
-              onSelected: (_) => onSelected(null),
-            ),
-          ),
-          for (final String option in options)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                key: Key('${keyPrefix}_$option'),
-                label: Text(option),
-                selected: selected == option,
-                onSelected: (_) => onSelected(option),
-              ),
-            ),
-        ],
+    final geometry = _gridGeometry(context, priceHidden: priceHidden);
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        geometry.horizontalPadding,
+        8,
+        geometry.horizontalPadding,
+        24,
+      ),
+      sliver: SliverGrid(
+        key: const Key('catalog_products_grid'),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: geometry.columns,
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 14,
+          childAspectRatio: geometry.aspectRatio,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (BuildContext context, int index) {
+            final Product product = products[index];
+            _precacheUpcoming(context, index);
+            return ProductGridCard(
+              key: ValueKey<String>(product.id),
+              product: product,
+              priceHidden: priceHidden,
+              memCachePixels: geometry.memCachePixels,
+              onTap: () => onTap(product),
+            );
+          },
+          childCount: products.length,
+          // Permite a Flutter reubicar una tarjeta por su `Key` cuando su
+          // índice cambia (p. ej. al filtrar por búsqueda) en vez de
+          // destruirla y reconstruirla: el debounce de búsqueda reordena
+          // las tarjetas que siguen visibles en vez de recargar su imagen.
+          findChildIndexCallback: (Key key) {
+            final String id = (key as ValueKey<String>).value;
+            final int index = products.indexWhere((Product p) => p.id == id);
+            return index == -1 ? null : index;
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Precarga (disco + memoria) las próximas [_precacheLookahead] imágenes a
+  /// partir de [index], mientras esa tarjeta entra en construcción (scroll
+  /// hacia abajo): para cuando el usuario llegue a verlas, ya están listas.
+  /// `precacheImage` resuelve al instante si la URL ya está cacheada, así
+  /// que repetir la llamada en cada build no tiene costo real.
+  void _precacheUpcoming(BuildContext context, int index) {
+    final int end = (index + _precacheLookahead + 1).clamp(0, products.length);
+    for (int i = index + 1; i < end; i++) {
+      final String? url = products[i].primaryThumbnail;
+      if (url != null && url.trim().isNotEmpty) {
+        unawaited(precacheProductImage(context, url));
+      }
+    }
+  }
+}
+
+/// Esqueleto con la forma de la cuadrícula mientras carga.
+class _SkeletonGrid extends StatelessWidget {
+  const _SkeletonGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    final geometry = _gridGeometry(context, priceHidden: false);
+    return SliverPadding(
+      key: const Key('catalog_products_skeleton'),
+      padding: EdgeInsets.fromLTRB(
+        geometry.horizontalPadding,
+        8,
+        geometry.horizontalPadding,
+        24,
+      ),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: geometry.columns,
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 14,
+          childAspectRatio: geometry.aspectRatio,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (BuildContext context, int index) => const _SkeletonCard(),
+          childCount: geometry.columns * 3,
+        ),
       ),
     );
   }
 }
 
-/// Aviso de modo "sin precios" en el encabezado del detalle.
-class _PriceHiddenNotice extends StatelessWidget {
-  const _PriceHiddenNotice();
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
     return Container(
-      key: const Key('catalog_detail_price_hidden'),
-      width: double.infinity,
-      color: colors.secondaryContainer,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: HomePalette.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.info_outline, size: 16, color: colors.onSecondaryContainer),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Este catálogo no muestra precios. Consúltalos con el proveedor.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSecondaryContainer,
-                  ),
+          AspectRatio(
+            aspectRatio: 1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F8FC),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  height: 13,
+                  width: double.infinity,
+                  color: const Color(0xFFF4F8FC),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  height: 13,
+                  width: 80,
+                  color: const Color(0xFFF4F8FC),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  height: 17,
+                  width: 70,
+                  color: const Color(0xFFF4F8FC),
+                ),
+              ],
             ),
           ),
         ],
@@ -544,23 +513,19 @@ class _OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
     return Container(
-      key: const Key('catalog_detail_offline_banner'),
+      key: const Key('catalog_products_offline_banner'),
       width: double.infinity,
-      color: colors.surfaceContainerHighest,
+      color: const Color(0xFFF4F8FC),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
+      child: const Row(
         children: <Widget>[
-          Icon(Icons.cloud_off, size: 16, color: colors.onSurfaceVariant),
-          const SizedBox(width: 8),
+          Icon(Icons.cloud_off, size: 16, color: AuthPalette.textMuted),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Sin conexión: mostrando datos guardados.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: colors.onSurfaceVariant),
+              'Sin conexión: mostrando catálogo guardado.',
+              style: TextStyle(fontSize: 12, color: AuthPalette.textMuted),
             ),
           ),
         ],
@@ -569,19 +534,40 @@ class _OfflineBanner extends StatelessWidget {
   }
 }
 
-/// Estado vacío (sin productos tras aplicar el filtro).
-class _EmptyProducts extends StatelessWidget {
-  const _EmptyProducts();
+/// Estado vacío: catálogo sin productos, o sin resultados de búsqueda.
+class _EmptyBody extends StatelessWidget {
+  const _EmptyBody({required this.message});
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
+    return SliverFillRemaining(
+      key: const Key('catalog_products_empty'),
+      hasScrollBody: false,
       child: Center(
-        child: Text(
-          'No hay productos para mostrar.',
-          style: Theme.of(context).textTheme.bodyMedium,
-          textAlign: TextAlign.center,
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(
+                Icons.inventory_2_outlined,
+                size: 40,
+                color: AuthPalette.textMuted,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -589,32 +575,48 @@ class _EmptyProducts extends StatelessWidget {
 }
 
 /// Estado de error con reintento.
-class _DetailError extends StatelessWidget {
-  const _DetailError({required this.onRetry});
+class _ErrorBody extends StatelessWidget {
+  const _ErrorBody({required this.onRetry});
 
   final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(Icons.error_outline, size: 40),
-            const SizedBox(height: 12),
-            Text(
-              'No pudimos cargar el catálogo.',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => onRetry(),
-              child: const Text('Reintentar'),
-            ),
-          ],
+    return SliverFillRemaining(
+      key: const Key('catalog_products_error'),
+      hasScrollBody: false,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(
+                Icons.error_outline,
+                size: 40,
+                color: AuthPalette.textMuted,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'No pudimos cargar los productos.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, color: AppColors.primary),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 200,
+                child: AuthGradientButton(
+                  label: 'Reintentar',
+                  iconPainter: const ArrowForwardPainter(
+                    color: AppColors.primary,
+                  ),
+                  enabled: true,
+                  loading: false,
+                  onPressed: () => onRetry(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

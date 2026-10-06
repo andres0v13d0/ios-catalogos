@@ -29,6 +29,16 @@ import 'features/profile/presentation/profile_controller.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Caché de imágenes EN MEMORIA acotada (tarea de rendimiento): el default
+  // de Flutter es 100MB / 1000 imágenes decodificadas, demasiado para los
+  // celulares de gama baja que usan los revendedores (p. ej. el Xiaomi
+  // Redmi 9 de prueba). Con las imágenes de producto ya decodificadas al
+  // tamaño de pantalla (`memCacheWidth`/`memCacheHeight`, ver
+  // `ProductGridCard`), 40MB / 200 imágenes alcanza de sobra para varias
+  // pantallas de cuadrícula sin arriesgar un OOM en segundo plano.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 40 * 1024 * 1024;
+  PaintingBinding.instance.imageCache.maximumSize = 200;
+
   // Log del entorno activo al arrancar (CA tarea 0.2).
   Environment.current.logStartup();
 

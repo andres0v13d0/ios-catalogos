@@ -150,8 +150,7 @@ void main() {
   });
 
   group('getSharedCatalogs (tarea 1.14/1.15)', () {
-    test('parsea { catalogs } (forma anidada real) y usa el UUID como id',
-        () async {
+    test('parsea { catalogs } (forma anidada real) y usa el UUID como id', () async {
       adapter.onGet(
         '/reseller/me/shared-catalogs',
         (server) => server.reply(200, <String, dynamic>{
@@ -176,8 +175,10 @@ void main() {
       final c = list.first;
       // id = UUID → el path del detalle es /catalog/by-catalog/<uuid>/products.
       expect(c.id, uuid1);
-      expect('/catalog/by-catalog/${c.id}/products',
-          '/catalog/by-catalog/$uuid1/products');
+      expect(
+        '/catalog/by-catalog/${c.id}/products',
+        '/catalog/by-catalog/$uuid1/products',
+      );
       expect(c.displayName, 'Alfa');
       expect(c.providerName, 'Proveedor A');
       expect(c.providerLogoUrl, 'https://cdn/logo-10.webp');
@@ -237,8 +238,10 @@ void main() {
         queryParameters: <String, dynamic>{'providerId': 10, 'search': 'alfa'},
       );
 
-      final result =
-          await repo.getSharedCatalogs(providerId: 10, search: 'alfa');
+      final result = await repo.getSharedCatalogs(
+        providerId: 10,
+        search: 'alfa',
+      );
 
       // Si el stub no coincidiera con los query params, el adapter lanzaría.
       expect(result, isA<Ok<List<Catalog>>>());
@@ -250,7 +253,9 @@ void main() {
         (server) => server.throws(
           0,
           DioException(
-            requestOptions: RequestOptions(path: '/reseller/me/shared-catalogs'),
+            requestOptions: RequestOptions(
+              path: '/reseller/me/shared-catalogs',
+            ),
             type: DioExceptionType.connectionError,
           ),
         ),

@@ -149,7 +149,7 @@ class SharedCatalogsController extends AsyncNotifier<SharedCatalogsState> {
 
 /// Provider del controlador de catálogos compartidos.
 final AsyncNotifierProvider<SharedCatalogsController, SharedCatalogsState>
-    sharedCatalogsControllerProvider =
+sharedCatalogsControllerProvider =
     AsyncNotifierProvider<SharedCatalogsController, SharedCatalogsState>(
-  SharedCatalogsController.new,
-);
+      SharedCatalogsController.new,
+    );

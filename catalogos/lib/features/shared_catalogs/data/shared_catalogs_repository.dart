@@ -22,8 +22,8 @@ import '../domain/catalog.dart';
 /// lanzar: mapea errores de Dio a [Failure] (mismo patrón que `ResellerRepository`).
 class SharedCatalogsRepository {
   const SharedCatalogsRepository(this._dio, {NetLogSink? logSink})
-      // ignore: prefer_initializing_formals -- `logSink` es el nombre público.
-      : _logSink = logSink;
+    // ignore: prefer_initializing_formals -- `logSink` es el nombre público.
+    : _logSink = logSink;
 
   final Dio _dio;
 
@@ -125,5 +125,5 @@ class SharedCatalogsRepository {
 /// Provider del [SharedCatalogsRepository], construido con el [Dio] de la app.
 final Provider<SharedCatalogsRepository> sharedCatalogsRepositoryProvider =
     Provider<SharedCatalogsRepository>(
-  (Ref ref) => SharedCatalogsRepository(ref.watch(dioProvider)),
-);
+      (Ref ref) => SharedCatalogsRepository(ref.watch(dioProvider)),
+    );

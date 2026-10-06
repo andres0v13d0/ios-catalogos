@@ -133,11 +133,14 @@ class CatalogDetailController extends AsyncNotifier<CatalogDetailState> {
 /// La función de creación recibe el `catalogId` (argumento de la familia) y lo
 /// inyecta en el constructor del controlador.
 final catalogDetailControllerProvider =
-    AsyncNotifierProvider.family<CatalogDetailController, CatalogDetailState,
-        String>(
-  CatalogDetailController.new,
-  // Desactiva el reintento automático de Riverpod: la política de reintento la
-  // gobierna la UI (botón "Reintentar"/pull-to-refresh → `refresh`) y la caché
-  // offline. Sin esto, un fallo de red sin caché reintentaría en bucle.
-  retry: (int retryCount, Object error) => null,
-);
+    AsyncNotifierProvider.family<
+      CatalogDetailController,
+      CatalogDetailState,
+      String
+    >(
+      CatalogDetailController.new,
+      // Desactiva el reintento automático de Riverpod: la política de reintento la
+      // gobierna la UI (botón "Reintentar"/pull-to-refresh → `refresh`) y la caché
+      // offline. Sin esto, un fallo de red sin caché reintentaría en bucle.
+      retry: (int retryCount, Object error) => null,
+    );

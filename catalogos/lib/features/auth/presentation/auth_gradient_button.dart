@@ -21,6 +21,7 @@ class AuthGradientButton extends StatelessWidget {
     required this.enabled,
     required this.loading,
     required this.onPressed,
+    this.height = 54,
   });
 
   final String label;
@@ -28,6 +29,11 @@ class AuthGradientButton extends StatelessWidget {
   final bool enabled;
   final bool loading;
   final VoidCallback onPressed;
+
+  /// Alto del botón; 54dp en el mockup. El carrusel de inicio lo reduce a
+  /// 48dp (mínimo táctil accesible) en pantallas cortas — las pantallas de
+  /// login siguen usando el valor por defecto.
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +45,7 @@ class AuthGradientButton extends StatelessWidget {
       child: Opacity(
         opacity: enabled ? 1.0 : 0.5,
         child: Container(
-          height: 54,
+          height: height,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: const LinearGradient(
@@ -67,18 +73,28 @@ class AuthGradientButton extends StatelessWidget {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.4,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
                         ),
                       )
                     : Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          Text(
-                            label,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                          // `Flexible` + `Expanded`: en tarjetas angostas con
+                          // `textScaler` grande, la etiqueta se achica con
+                          // ellipsis en vez de desbordar el botón.
+                          Flexible(
+                            child: Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),

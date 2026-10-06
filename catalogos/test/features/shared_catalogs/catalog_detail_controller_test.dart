@@ -85,8 +85,9 @@ void main() {
       (server) => server.throws(
         0,
         DioException(
-          requestOptions:
-              RequestOptions(path: '/catalog/by-catalog/$_catalogId/products'),
+          requestOptions: RequestOptions(
+            path: '/catalog/by-catalog/$_catalogId/products',
+          ),
           type: DioExceptionType.connectionError,
         ),
       ),
@@ -98,8 +99,9 @@ void main() {
     final c = ProviderContainer(
       overrides: [
         localCacheProvider.overrideWithValue(cache),
-        catalogDetailRepositoryProvider
-            .overrideWithValue(CatalogDetailRepository(dio)),
+        catalogDetailRepositoryProvider.overrideWithValue(
+          CatalogDetailRepository(dio),
+        ),
       ],
     );
     addTearDown(c.dispose);
@@ -109,8 +111,9 @@ void main() {
   test('carga productos → AsyncData con el detalle', () async {
     final container = buildContainer(buildDioOk());
 
-    final state = await container
-        .read(catalogDetailControllerProvider(_catalogId).future);
+    final state = await container.read(
+      catalogDetailControllerProvider(_catalogId).future,
+    );
 
     expect(state.detail.products, hasLength(1));
     expect(state.detail.products.first.nombre, 'Camiseta');
@@ -121,27 +124,29 @@ void main() {
   test('expone la bandera "sin precios" correctamente', () async {
     final container = buildContainer(buildDioOk(sinPrecios: true));
 
-    final state = await container
-        .read(catalogDetailControllerProvider(_catalogId).future);
+    final state = await container.read(
+      catalogDetailControllerProvider(_catalogId).future,
+    );
 
     expect(state.detail.priceHidden, isTrue);
     // Cantidades preservadas pese a precios ocultos.
     expect(state.detail.products.first.cantidades, <String>['1', '6']);
   });
 
-  test('una carga exitosa persiste el detalle en la caché por id (1.18)',
-      () async {
-    final container = buildContainer(buildDioOk());
-
-    await container.read(catalogDetailControllerProvider(_catalogId).future);
-
-    final raw = cache.get(catalogDetailCacheKey(_catalogId));
-    expect(raw, isNotNull);
-    expect(raw, contains('Camiseta'));
-  });
-
   test(
-      'con la red en fallo pero caché presente, devuelve el detalle cacheado '
+    'una carga exitosa persiste el detalle en la caché por id (1.18)',
+    () async {
+      final container = buildContainer(buildDioOk());
+
+      await container.read(catalogDetailControllerProvider(_catalogId).future);
+
+      final raw = cache.get(catalogDetailCacheKey(_catalogId));
+      expect(raw, isNotNull);
+      expect(raw, contains('Camiseta'));
+    },
+  );
+
+  test('con la red en fallo pero caché presente, devuelve el detalle cacheado '
       '(offline, CA de 1.18)', () async {
     // 1) Carga exitosa que llena la caché.
     final first = buildContainer(buildDioOk());
@@ -151,11 +156,15 @@ void main() {
     // 2) Apertura posterior con la red mockeada en fallo. La caché ya existe.
     final offline = buildContainer(buildDioFail());
 
-    final state = await offline
-        .read(catalogDetailControllerProvider(_catalogId).future);
+    final state = await offline.read(
+      catalogDetailControllerProvider(_catalogId).future,
+    );
 
-    expect(state.detail.products, hasLength(1),
-        reason: 'debe venir de la caché offline');
+    expect(
+      state.detail.products,
+      hasLength(1),
+      reason: 'debe venir de la caché offline',
+    );
     expect(state.detail.products.first.nombre, 'Camiseta');
     expect(state.fromCache, isTrue);
   });

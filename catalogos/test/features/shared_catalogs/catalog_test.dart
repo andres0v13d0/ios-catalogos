@@ -11,29 +11,29 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Fixture con la forma EXACTA que devuelve serializeSharedCatalog.
 Map<String, dynamic> realNestedFixture() => <String, dynamic>{
-      'id': 3, // id del vínculo (INT) — NO es el id del catálogo
-      'catalogId': '11111111-2222-3333-4444-555555555555',
-      'providerId': 5,
-      'linkedAt': '2025-01-01T00:00:00.000Z',
-      'catalog': <String, dynamic>{
-        'id': '11111111-2222-3333-4444-555555555555',
-        'publicName': 'Catálogo Público',
-        'description': 'desc',
-        'bannerUrl': 'https://cdn/catalog-banner.jpg',
-        'ogImageUrl': 'https://cdn/catalog-og.jpg',
-        'enlace': 'mi-enlace',
-        'priceField': 'none',
-      },
-      'provider': <String, dynamic>{
-        'id': 5,
-        'nombreEmpresa': 'Mi Empresa',
-        'logoUrl': 'https://cdn/logo.png',
-        'logoOptimizedUrl': 'https://cdn/logo.webp',
-        'bannerUrl': 'https://cdn/provider-banner.jpg',
-        'bannerDesktopUrl': null,
-        'bannerMobileUrl': null,
-      },
-    };
+  'id': 3, // id del vínculo (INT) — NO es el id del catálogo
+  'catalogId': '11111111-2222-3333-4444-555555555555',
+  'providerId': 5,
+  'linkedAt': '2025-01-01T00:00:00.000Z',
+  'catalog': <String, dynamic>{
+    'id': '11111111-2222-3333-4444-555555555555',
+    'publicName': 'Catálogo Público',
+    'description': 'desc',
+    'bannerUrl': 'https://cdn/catalog-banner.jpg',
+    'ogImageUrl': 'https://cdn/catalog-og.jpg',
+    'enlace': 'mi-enlace',
+    'priceField': 'none',
+  },
+  'provider': <String, dynamic>{
+    'id': 5,
+    'nombreEmpresa': 'Mi Empresa',
+    'logoUrl': 'https://cdn/logo.png',
+    'logoOptimizedUrl': 'https://cdn/logo.webp',
+    'bannerUrl': 'https://cdn/provider-banner.jpg',
+    'bannerDesktopUrl': null,
+    'bannerMobileUrl': null,
+  },
+};
 
 void main() {
   group('Catalog.fromJson (forma anidada real)', () {
