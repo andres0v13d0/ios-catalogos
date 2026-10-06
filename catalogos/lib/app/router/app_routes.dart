@@ -29,4 +29,11 @@ abstract final class AppRoutes {
 
   /// Construye el path concreto del detalle para un [catalogId].
   static String catalogDetailPath(String catalogId) => '/catalog/$catalogId';
+
+  /// Ruta de "Ajustar precios" (catálogo completo o un solo producto, ver
+  /// `PriceAdjustmentArgs`, pasado vía `extra`).
+  static const String adjustPrices = '/catalog/:id/adjust-prices';
+
+  /// Construye el path concreto de "Ajustar precios" para un [catalogId].
+  static String adjustPricesPath(String catalogId) => '/catalog/$catalogId/adjust-prices';
 }

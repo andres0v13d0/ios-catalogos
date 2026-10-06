@@ -10,6 +10,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:catalogos/features/shared_catalogs/domain/catalog_detail.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_controller.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_page.dart';
+import 'package:catalogos/features/shared_catalogs/presentation/catalog_price_overlay_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,6 +50,15 @@ class _FakeDetailController extends CatalogDetailController {
   Future<void> refresh() async {}
 }
 
+/// Overlay de "Ajustar precios" fijo en vacío: estos tests no ejercitan esa
+/// función y no deben depender de Dio/Firebase reales.
+class _FakeOverlayController extends CatalogPriceOverlayController {
+  _FakeOverlayController() : super(_catalogId);
+
+  @override
+  Future<CatalogPriceOverlayState> build() async => CatalogPriceOverlayState.empty;
+}
+
 Widget _wrap(List<Product> products) {
   final GoRouter router = GoRouter(
     initialLocation: '/catalog/$_catalogId',
@@ -70,6 +80,7 @@ Widget _wrap(List<Product> products) {
       catalogDetailControllerProvider(_catalogId).overrideWith(
         () => _FakeDetailController(CatalogDetailState(detail: detail)),
       ),
+      catalogPriceOverlayControllerProvider(_catalogId).overrideWith(() => _FakeOverlayController()),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -80,8 +91,11 @@ void main() {
     'la imagen se decodifica al tamaño de la celda (memCacheWidth/Height), '
     'no al tamaño original',
     (WidgetTester tester) async {
-      const Size size = Size(390, 844);
-      tester.view.physicalSize = size;
+      // Pantalla lógica de 390x844 a densidad 2x: `physicalSize` va en
+      // píxeles FÍSICOS (de ahí el ×2), para que `MediaQuery.size` (lógico)
+      // sea realmente 390x844 — el tamaño que asume el comentario de abajo.
+      const Size logicalSize = Size(390, 844);
+      tester.view.physicalSize = logicalSize * 2.0;
       tester.view.devicePixelRatio = 2.0;
       addTearDown(tester.view.reset);
 
@@ -97,12 +111,16 @@ void main() {
       // separación) × dpr 2.0 ≈ 320-340px físicos — muy por debajo de los
       // hasta 2000px que puede medir la imagen original. El valor exacto
       // depende del cálculo de `_gridGeometry`; lo importante es que NO sea
-      // ni nulo (decodificaría al tamaño completo) ni el tamaño original.
+      // nulo (decodificaría al tamaño completo) ni el tamaño original.
+      //
+      // IMPORTANTE: se decodifica pasando SOLO el ancho. Dar también el alto
+      // obliga a `ResizeImage` a la política "exact" (ancho×alto fijos), que
+      // deforma las fotos cuya proporción no sea 1:1. Con solo el ancho, el
+      // alto se deriva manteniendo la proporción; `BoxFit.cover` recorta.
       expect(firstImage.memCacheWidth, isNotNull);
-      expect(firstImage.memCacheHeight, isNotNull);
+      expect(firstImage.memCacheHeight, isNull);
       expect(firstImage.memCacheWidth, lessThan(500));
       expect(firstImage.memCacheWidth, greaterThan(50));
-      expect(firstImage.memCacheWidth, firstImage.memCacheHeight);
     },
   );
 

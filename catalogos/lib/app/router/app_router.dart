@@ -9,6 +9,8 @@ import '../../features/profile/presentation/complete_profile_page.dart';
 import '../../features/profile/presentation/profile_controller.dart';
 import '../../features/shared_catalogs/presentation/catalog_detail_page.dart';
 import '../../features/shared_catalogs/presentation/home_page.dart';
+import '../../features/shared_catalogs/presentation/price_adjustment_controller.dart';
+import '../../features/shared_catalogs/presentation/price_adjustment_page.dart';
 import 'app_routes.dart';
 
 /// Configuración de `go_router` con guard de autenticación (diseño §2.3).
@@ -99,6 +101,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               ? state.extra! as String
               : null;
           return CatalogDetailPage(catalogId: id, title: title);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.adjustPrices,
+        name: 'adjustPrices',
+        builder: (BuildContext context, GoRouterState state) {
+          final PriceAdjustmentArgs args = state.extra! as PriceAdjustmentArgs;
+          return PriceAdjustmentPage(args: args);
         },
       ),
     ],

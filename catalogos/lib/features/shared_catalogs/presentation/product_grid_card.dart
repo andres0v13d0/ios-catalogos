@@ -6,8 +6,10 @@ import '../../../core/images/product_image_cache_manager.dart';
 import '../../../core/utils/money.dart';
 import '../../auth/presentation/auth_palette.dart';
 import '../domain/catalog_detail.dart';
+import 'catalog_products_icons.dart';
 import 'catalog_products_palette.dart';
 import 'home_palette.dart';
+import 'product_thumbnail.dart';
 
 /// Precarga la imagen de un producto (disco + memoria) sin montar ningún
 /// widget — usado por [ProductGridCard]'s grid para adelantar la descarga de
@@ -24,10 +26,11 @@ Future<void> precacheProductImage(BuildContext context, String url) {
 /// Tarjeta de producto de la cuadrícula "Productos del catálogo" (diseño A,
 /// ver `docs/design/productos-a.html`).
 ///
-/// Etapa 1 (ver `catalog_products_flags.dart`): solo imagen + nombre +
-/// "Desde $X". El lápiz de ajuste, la etiqueta "+30%" y "Proveedor $X" quedan
-/// detrás de sus flags — sin UI propia todavía, así que no se dibuja nada en
-/// su lugar (ver comentarios en el punto de uso).
+/// La etiqueta de ajuste, el precio del proveedor y el lápiz (etapa 2, ver
+/// `catalog_products_flags.dart`) son opcionales: `null` = no se dibujan
+/// (catálogo "sin precios", overlay aún no cargado, o producto sin regla
+/// aplicable). La página decide cuándo pasarlos; esta tarjeta no conoce los
+/// flags.
 class ProductGridCard extends StatelessWidget {
   const ProductGridCard({
     super.key,
@@ -35,6 +38,9 @@ class ProductGridCard extends StatelessWidget {
     required this.priceHidden,
     required this.onTap,
     required this.memCachePixels,
+    this.markupBadgeLabel,
+    this.providerPriceLowest,
+    this.onEditPrice,
   });
 
   final Product product;
@@ -51,6 +57,17 @@ class ProductGridCard extends StatelessWidget {
   /// decodificación con un tamaño distinto cada vez). Ver
   /// `catalog_detail_page.dart`.
   final int memCachePixels;
+
+  /// Etiqueta de la insignia verde (p. ej. "+30%" o "+\$5.000"). `null` = sin
+  /// regla aplicable a este producto → no se dibuja.
+  final String? markupBadgeLabel;
+
+  /// Menor precio del PROVEEDOR (sin ajustar), para "Proveedor \$X". `null` =
+  /// no se dibuja esa línea.
+  final num? providerPriceLowest;
+
+  /// `null` = no se dibuja el lápiz (p. ej. overlay aún no cargado).
+  final VoidCallback? onEditPrice;
 
   @override
   Widget build(BuildContext context) {
@@ -97,19 +114,19 @@ class ProductGridCard extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: <Widget>[
                       Positioned.fill(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: _ProductThumbnail(
-                            url: product.primaryThumbnail,
-                            memCachePixels: memCachePixels,
-                          ),
+                        child: ProductThumbnail(
+                          url: product.primaryThumbnail,
+                          memCachePixels: memCachePixels,
                         ),
                       ),
-                      // Etapa 2: etiqueta "+30%" (bottom-left) y botón lápiz
-                      // "Ajustar el precio de este producto" (top-right) van
-                      // aquí, sobre la imagen, detrás de
-                      // CatalogProductsFlags.showMarkupBadge /
-                      // .showPerProductEdit.
+                      if (markupBadgeLabel != null)
+                        Positioned(
+                          left: 8,
+                          bottom: 8,
+                          child: _MarkupBadge(label: markupBadgeLabel!),
+                        ),
+                      if (onEditPrice != null)
+                        Positioned(right: 6, top: 6, child: _EditPriceButton(onTap: onEditPrice!)),
                     ],
                   ),
                 ),
@@ -157,8 +174,16 @@ class ProductGridCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      // Etapa 2: "Proveedor $X" va aquí, detrás de
-                      // CatalogProductsFlags.showProviderPrice.
+                      if (providerPriceLowest != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'Proveedor \$${formatCopPlain(providerPriceLowest!)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, height: 1.4, color: AuthPalette.textMuted),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -172,69 +197,67 @@ class ProductGridCard extends StatelessWidget {
   }
 }
 
-/// Imagen principal del producto (cover, sin deformarse). Si no hay imagen o
-/// falla la carga, cae a un cuadro con ícono — nunca al gradiente de marca
-/// (ese es solo el respaldo de banners, no de fotos de producto).
-class _ProductThumbnail extends StatelessWidget {
-  const _ProductThumbnail({required this.url, required this.memCachePixels});
+/// Insignia verde de ajuste (p. ej. "+30%"), esquina inferior izquierda de la
+/// imagen (ver `docs/design/productos-a.html`).
+class _MarkupBadge extends StatelessWidget {
+  const _MarkupBadge({required this.label});
 
-  final String? url;
-  final int memCachePixels;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    if (url == null || url!.trim().isEmpty) {
-      return const _ProductImageFallback();
-    }
-    return CachedNetworkImage(
-      imageUrl: url!,
-      cacheManager: ProductImageCacheManager.instance,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      // Decodifica al tamaño real de la celda (no al tamaño original de la
-      // imagen, que puede llegar a 2000px) — calculado una sola vez por
-      // `_gridGeometry`, nunca recalculado por build para no invalidar la
-      // caché de decodificación.
-      memCacheWidth: memCachePixels,
-      memCacheHeight: memCachePixels,
-      fadeInDuration: const Duration(milliseconds: 150),
-      // Al reciclar la tarjeta (p. ej. tras filtrar la búsqueda) sigue
-      // mostrando la imagen anterior mientras llega la nueva, en vez de un
-      // parpadeo al marcador.
-      useOldImageOnUrlChange: true,
-      placeholder: (BuildContext context, String url) =>
-          const _ProductImagePlaceholder(),
-      errorWidget:
-          (BuildContext context, String url, Object error) =>
-              const _ProductImageFallback(),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.brand,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(color: Color(0x5900FF94), offset: Offset(0, 6), blurRadius: 14),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
+      ),
     );
   }
 }
 
-class _ProductImagePlaceholder extends StatelessWidget {
-  const _ProductImagePlaceholder();
+/// Botón lápiz "Ajustar el precio de este producto", esquina superior
+/// derecha de la imagen (ver `docs/design/productos-a.html`).
+class _EditPriceButton extends StatelessWidget {
+  const _EditPriceButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(color: Color(0xFFF4F8FC)),
-    );
-  }
-}
-
-class _ProductImageFallback extends StatelessWidget {
-  const _ProductImageFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(color: Color(0xFFF4F8FC)),
-      child: Center(
-        child: Icon(
-          Icons.inventory_2_outlined,
-          color: AuthPalette.textMuted,
-          size: 36,
+    return Semantics(
+      button: true,
+      label: 'Ajustar el precio de este producto',
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 0,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: <BoxShadow>[
+                BoxShadow(color: Color(0x33001634), offset: Offset(0, 8), blurRadius: 18),
+              ],
+            ),
+            child: const SizedBox(
+              width: 18,
+              height: 18,
+              child: CustomPaint(painter: PencilPainter(color: AppColors.primary)),
+            ),
+          ),
         ),
       ),
     );

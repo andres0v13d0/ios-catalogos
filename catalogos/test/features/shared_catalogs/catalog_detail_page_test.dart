@@ -17,6 +17,7 @@
 import 'package:catalogos/features/shared_catalogs/domain/catalog_detail.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_controller.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_page.dart';
+import 'package:catalogos/features/shared_catalogs/presentation/catalog_price_overlay_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,6 +66,15 @@ class _FakeDetailController extends CatalogDetailController {
   Future<void> refresh() async => onRefreshCalled?.call();
 }
 
+/// Overlay de "Ajustar precios" fijo en vacío: estos tests no ejercitan esa
+/// función y no deben depender de Dio/Firebase reales.
+class _FakeOverlayController extends CatalogPriceOverlayController {
+  _FakeOverlayController() : super(_catalogId);
+
+  @override
+  Future<CatalogPriceOverlayState> build() async => CatalogPriceOverlayState.empty;
+}
+
 void main() {
   Widget wrap({
     CatalogDetailState? state,
@@ -93,6 +103,7 @@ void main() {
             onRefreshCalled: onRefreshCalled,
           ),
         ),
+        catalogPriceOverlayControllerProvider(_catalogId).overrideWith(() => _FakeOverlayController()),
       ],
       child: MaterialApp.router(routerConfig: router),
     );

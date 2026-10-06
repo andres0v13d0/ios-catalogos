@@ -8,8 +8,11 @@
 // columnas (3+).
 
 import 'package:catalogos/features/shared_catalogs/domain/catalog_detail.dart';
+import 'package:catalogos/features/shared_catalogs/domain/price_rule_calculator.dart';
+import 'package:catalogos/features/shared_catalogs/domain/price_rules_contract.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_controller.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_page.dart';
+import 'package:catalogos/features/shared_catalogs/presentation/catalog_price_overlay_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,7 +48,40 @@ class _FakeDetailController extends CatalogDetailController {
   Future<void> refresh() async {}
 }
 
-Widget _wrap(CatalogDetailState state) {
+/// Overlay de "Ajustar precios" fijo en vacío: estos tests no ejercitan esa
+/// función y no deben depender de Dio/Firebase reales.
+class _FakeOverlayController extends CatalogPriceOverlayController {
+  _FakeOverlayController() : super(_catalogId);
+
+  @override
+  Future<CatalogPriceOverlayState> build() async => CatalogPriceOverlayState.empty;
+}
+
+/// Overlay POBLADO: cada producto tiene precio del proveedor Y ajustado
+/// (ajuste real), de modo que la tarjeta dibuja además la etiqueta "+X%" y la
+/// línea "Proveedor $X". Reproduce el caso que antes desbordaba la tarjeta
+/// (el alto de esa 3ª línea no se reservaba): aquí sirve de regresión.
+class _FakeOverlayWithRules extends CatalogPriceOverlayController {
+  _FakeOverlayWithRules() : super(_catalogId);
+
+  @override
+  Future<CatalogPriceOverlayState> build() async => CatalogPriceOverlayState(
+    catalogRule: const PriceRule(mode: PriceRuleMode.percent, value: 30),
+    byProductId: <String, CatalogPriceRuleProduct>{
+      for (final Product p in _products)
+        p.id: CatalogPriceRuleProduct(
+          id: p.id,
+          nombre: p.nombre,
+          imagen: null,
+          precioProveedor: <String, num>{'1': 20000},
+          precioAjustado: <String, num>{'1': 26000}, // +30%, distinto del proveedor
+          reglaOrigen: RuleOrigin.catalog,
+        ),
+    },
+  );
+}
+
+Widget _wrap(CatalogDetailState state, {bool withRules = false}) {
   final GoRouter router = GoRouter(
     initialLocation: '/catalog/$_catalogId',
     routes: <RouteBase>[
@@ -59,6 +95,9 @@ Widget _wrap(CatalogDetailState state) {
     overrides: [
       catalogDetailControllerProvider(_catalogId)
           .overrideWith(() => _FakeDetailController(state)),
+      catalogPriceOverlayControllerProvider(_catalogId).overrideWith(
+        () => withRules ? _FakeOverlayWithRules() : _FakeOverlayController(),
+      ),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -80,6 +119,7 @@ void main() {
     required Size size,
     required CatalogDetailState state,
     double textScale = 1.0,
+    bool withRules = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -90,7 +130,7 @@ void main() {
           size: size,
           textScaler: TextScaler.linear(textScale),
         ),
-        child: _wrap(state),
+        child: _wrap(state, withRules: withRules),
       ),
     );
     await tester.pump();
@@ -147,6 +187,25 @@ void main() {
 
           expect(tester.takeException(), isNull);
           expect(find.textContaining(r'$'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        '${size.width.toInt()}x${size.height.toInt()} · textScale $scale: '
+        'cabe sin overflow, con ajuste (línea "Proveedor \$X" visible)',
+        (WidgetTester tester) async {
+          await pumpAt(
+            tester,
+            size: size,
+            state: CatalogDetailState(detail: _detail()),
+            textScale: scale,
+            withRules: true,
+          );
+
+          // La 3ª línea "Proveedor $X" se dibuja Y su alto está reservado: no
+          // debe haber ningún overflow en toda la matriz de tamaños/escala.
+          expect(tester.takeException(), isNull);
+          expect(find.textContaining('Proveedor'), findsWidgets);
         },
       );
     }
