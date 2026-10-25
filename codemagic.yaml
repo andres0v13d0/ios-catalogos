@@ -15,8 +15,6 @@ workflows:
     scripts:
       - name: Dependencias
         script: flutter pub get
-      - name: Pods
-        script: cd ios && pod install
       - name: Preparar firma
         script: |
           keychain initialize
