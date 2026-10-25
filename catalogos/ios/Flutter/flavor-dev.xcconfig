@@ -2,4 +2,4 @@
 // Nombre y bundle id distintos para instalar en paralelo.
 FLUTTER_FLAVOR = dev
 APP_DISPLAY_NAME = FLY+ Dev
-PRODUCT_BUNDLE_IDENTIFIER = com.example.catalogos.dev
+PRODUCT_BUNDLE_IDENTIFIER = com.flystock.revendedores.dev

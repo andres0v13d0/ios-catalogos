@@ -59,24 +59,24 @@ class DefaultFirebaseOptions {
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDcj18TxEnWBOfO3eIopBTUGeTV1X--YkA',
-    appId: '1:876719111475:ios:1f5a0dd9275f7185fb5246',
+    appId: '1:876719111475:ios:2d9811388d609f54fb5246',
     messagingSenderId: '876719111475',
     projectId: 'surtte-4bf22',
     storageBucket: 'surtte-4bf22.firebasestorage.app',
     androidClientId: '876719111475-btv5apdrp2n8l7960q5jqnqbqnthas5k.apps.googleusercontent.com',
-    iosClientId: '876719111475-csvj9ah24e5fs9om1ha1gbs5i97nbokn.apps.googleusercontent.com',
-    iosBundleId: 'com.example.catalogos',
+    iosClientId: '876719111475-vpq2fvgkmj9t7arg4udcll99ktrb0kpe.apps.googleusercontent.com',
+    iosBundleId: 'com.flystock.revendedores',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDcj18TxEnWBOfO3eIopBTUGeTV1X--YkA',
-    appId: '1:876719111475:ios:1f5a0dd9275f7185fb5246',
+    appId: '1:876719111475:ios:2d9811388d609f54fb5246',
     messagingSenderId: '876719111475',
     projectId: 'surtte-4bf22',
     storageBucket: 'surtte-4bf22.firebasestorage.app',
     androidClientId: '876719111475-btv5apdrp2n8l7960q5jqnqbqnthas5k.apps.googleusercontent.com',
-    iosClientId: '876719111475-csvj9ah24e5fs9om1ha1gbs5i97nbokn.apps.googleusercontent.com',
-    iosBundleId: 'com.example.catalogos',
+    iosClientId: '876719111475-vpq2fvgkmj9t7arg4udcll99ktrb0kpe.apps.googleusercontent.com',
+    iosBundleId: 'com.flystock.revendedores',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
