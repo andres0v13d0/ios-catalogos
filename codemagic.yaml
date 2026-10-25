@@ -20,7 +20,13 @@ workflows:
         script: flutter pub get
       - name: Pods
         script: cd ios && pod install
-      - name: Firma
+      - name: Preparar firma
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "com.flystock.revendedores" \
+            --type IOS_APP_STORE --create
+          keychain add-certificates
+      - name: Aplicar perfiles
         script: xcode-project use-profiles
       - name: Número de build
         script: |
