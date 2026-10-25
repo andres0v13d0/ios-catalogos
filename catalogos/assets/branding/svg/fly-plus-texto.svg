@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="140 750 980 300" width="980" height="300" role="img" aria-label="FLY+">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0.25">
+      <stop offset="0" stop-color="#0206F4"/>
+      <stop offset="0.3" stop-color="#012FFE"/>
+      <stop offset="0.55" stop-color="#0175FF"/>
+      <stop offset="0.8" stop-color="#02C0FD"/>
+      <stop offset="1" stop-color="#03FBFC"/>
+    </linearGradient>
+    <linearGradient id="txt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03FCFE"/>
+      <stop offset="0.55" stop-color="#02F2FE"/>
+      <stop offset="1" stop-color="#02A8FD"/>
+    </linearGradient>
+    <linearGradient id="yg" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0" stop-color="#2EFBC0"/>
+      <stop offset="1" stop-color="#9AFB52"/>
+    </linearGradient>
+    <linearGradient id="ystem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16FBD6"/>
+      <stop offset="1" stop-color="#02FDF4"/>
+    </linearGradient>
+    <linearGradient id="spd" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#03D8FE"/>
+      <stop offset="0.55" stop-color="#7CF3FE"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="c1L" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0230FE"/>
+      <stop offset="1" stop-color="#0222F4"/>
+    </linearGradient>
+    <linearGradient id="c1R" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0224F8"/>
+      <stop offset="1" stop-color="#0118D8"/>
+    </linearGradient>
+    <radialGradient id="glowTop" cx="0.5" cy="0.55" r="0.65">
+      <stop offset="0" stop-color="#E6FFFF" stop-opacity="0.95"/>
+      <stop offset="0.35" stop-color="#4DF8FE" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#02E3FD" stop-opacity="0.95"/>
+    </radialGradient>
+    <linearGradient id="c2L" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00C8FC" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#03B0FC" stop-opacity="0.65"/>
+    </linearGradient>
+    <linearGradient id="c2R" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#029CFC" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#0182FC" stop-opacity="0.6"/>
+    </linearGradient>
+    <linearGradient id="c3top" x1="0" y1="0.5" x2="1" y2="0.5">
+      <stop offset="0" stop-color="#7DFBC8"/>
+      <stop offset="0.5" stop-color="#B2FDFE"/>
+      <stop offset="1" stop-color="#05FDFE"/>
+    </linearGradient>
+    <radialGradient id="c3glow" cx="0.5" cy="0.62" r="0.45">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="c3L" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7CFB28"/>
+      <stop offset="0.35" stop-color="#18F878"/>
+      <stop offset="1" stop-color="#05E9A8"/>
+    </linearGradient>
+    <linearGradient id="c3R" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#03C06A"/>
+      <stop offset="1" stop-color="#03D888"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="9" flood-color="#00239C" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+    <!-- texto -->
+  <g filter="url(#shadow)">
+    <path fill="url(#txt)" d="M163 772H380V835H247V868H375V940H247V1028H163Z"/>
+    <path fill="url(#txt)" d="M405 772H487V950H621V1028H405Z"/>
+    <path fill="url(#yg)" d="M540 772H640L698 858L754 772H855L742 938V1028H655V938Z"/>
+    <path fill="#FFFFFF" d="M927 769H1010V853H1098V938H1010V1028H927V938H838V853H927Z"/>
+  </g>
+</svg>

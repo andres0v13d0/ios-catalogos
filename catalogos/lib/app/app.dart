@@ -20,7 +20,7 @@ class RevendedoresApp extends ConsumerWidget {
     final GoRouter router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'FLYmovil',
+      title: 'FLY+',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.themeData,
       routerConfig: router,

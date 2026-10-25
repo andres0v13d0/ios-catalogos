@@ -93,7 +93,7 @@ class ResellerBannerController extends Notifier<ResellerBannerUiState> {
       state = state.copyWith(
         phase: ResellerBannerPhase.error,
         permissionDenied: true,
-        errorMessage: 'No pudimos abrir tus fotos. Revisa los permisos de FLYmovil en Ajustes.',
+        errorMessage: 'No pudimos abrir tus fotos. Revisa los permisos de FLY+ en Ajustes.',
       );
       return;
     }

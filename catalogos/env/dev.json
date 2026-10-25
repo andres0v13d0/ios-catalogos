@@ -1,6 +1,6 @@
 {
   "flavor": "dev",
-  "appName": "FLYmovil Dev",
+  "appName": "FLY+ Dev",
   "apiBaseUrl": "http://10.0.2.2:3000",
   "firebaseOptions": "dev",
   "enableLogging": true

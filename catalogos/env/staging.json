@@ -1,6 +1,6 @@
 {
   "flavor": "staging",
-  "appName": "FLYmovil Staging",
+  "appName": "FLY+ Staging",
   "apiBaseUrl": "https://staging-api.minymol.com",
   "firebaseOptions": "staging",
   "enableLogging": true

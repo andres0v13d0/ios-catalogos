@@ -1,6 +1,6 @@
 {
   "flavor": "prod",
-  "appName": "FLYmovil",
+  "appName": "FLY+",
   "apiBaseUrl": "https://api.minymol.com",
   "firebaseOptions": "prod",
   "enableLogging": false

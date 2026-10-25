@@ -202,7 +202,7 @@ class _HeroHeader extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
               ),
               TextSpan(
-                text: 'movil',
+                text: '+',
                 style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.accent),
               ),
             ],

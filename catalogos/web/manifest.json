@@ -1,11 +1,11 @@
 {
-    "name": "FLYmovil",
-    "short_name": "FLYmovil",
+    "name": "FLY+",
+    "short_name": "FLY+",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#001634",
     "theme_color": "#001634",
-    "description": "FLYmovil: catálogos y pedidos para revendedores.",
+    "description": "FLY+: catálogos y pedidos para revendedores.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

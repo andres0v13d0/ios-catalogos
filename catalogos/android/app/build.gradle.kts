@@ -90,18 +90,18 @@ android {
             dimension = "env"
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            resValue("string", "app_name", "FLYmovil Dev")
+            resValue("string", "app_name", "FLY+ Dev")
         }
         create("staging") {
             dimension = "env"
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
-            resValue("string", "app_name", "FLYmovil Staging")
+            resValue("string", "app_name", "FLY+ Staging")
         }
         create("prod") {
             dimension = "env"
             // Sin sufijo: applicationId productivo.
-            resValue("string", "app_name", "FLYmovil")
+            resValue("string", "app_name", "FLY+")
         }
     }
 }

@@ -15,7 +15,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>FLYmovil</string>
+		<string>FLY+</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -73,7 +73,7 @@
 		     exigen versiones antiguas al abrir el selector. No se pide acceso
 		     total a la biblioteca ni se usa la cámara. -->
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>FLYmovil usa una foto de tu galería para el banner de tu catálogo. Solo se usa la imagen que tú elijas.</string>
+		<string>FLY+ usa una foto de tu galería para el banner de tu catálogo. Solo se usa la imagen que tú elijas.</string>
 		<!-- Esquemas consultados por url_launcher (canLaunchUrl) para compartir. -->
 		<key>LSApplicationQueriesSchemes</key>
 		<array>

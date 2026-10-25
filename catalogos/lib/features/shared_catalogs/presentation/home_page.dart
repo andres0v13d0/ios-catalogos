@@ -323,7 +323,7 @@ class _LogoutDialog extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Vas a salir de tu cuenta de FLYmovil en este dispositivo.',
+                'Vas a salir de tu cuenta de FLY+ en este dispositivo.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
