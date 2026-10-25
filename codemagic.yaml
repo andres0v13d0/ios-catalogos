@@ -37,7 +37,9 @@ workflows:
             --build-name=1.0.1 --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
+      - build/ios/ipa/*.ipa
       - catalogos/build/ios/ipa/*.ipa
+      - /Users/builder/clone/catalogos/build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
         auth: integration
