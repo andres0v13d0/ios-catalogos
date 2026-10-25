@@ -7,6 +7,8 @@ workflows:
     integrations:
       app_store_connect: codemagic
     environment:
+      groups:
+        - signing
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -19,7 +21,8 @@ workflows:
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "com.flystock.revendedores" \
-            --type IOS_APP_STORE --create
+            --type IOS_APP_STORE --create \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY
           keychain add-certificates
       - name: Aplicar perfiles
         script: xcode-project use-profiles
