@@ -179,6 +179,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
             // hoja inferior, igual que en docs/design/ingreso-b.html).
             const Positioned.fill(child: AuthGradientBackground(midStop: 0.6)),
             SafeArea(
+              // La hoja blanca pinta su propio margen inferior (ver
+              // `_BottomSheet`) para llegar hasta el borde real de la
+              // pantalla en vez de cortarse antes de la barra de gestos:
+              // el degradado de fondo quedaba visible ahí como un corte.
+              bottom: false,
               // `LayoutBuilder` da la altura total disponible (ya descuenta
               // el teclado): se usa para que la hoja NUNCA pida más que eso
               // (si su contenido natural no entra, se desplaza internamente
@@ -272,7 +277,12 @@ class _BottomSheet extends StatelessWidget {
       position: slide,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          14,
+          24,
+          24 + MediaQuery.paddingOf(context).bottom,
+        ),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(36)),

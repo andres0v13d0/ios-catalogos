@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +35,33 @@ class _HomePageState extends ConsumerState<HomePage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _introController;
 
+  // Evita el parpadeo de "sin conexión" en cada entrada a la pantalla: la
+  // caché se muestra de inmediato (stale-while-revalidate) y casi siempre se
+  // revalida en pocos cientos de ms; solo se avisa si sigue en caché pasado
+  // este margen (offline real o red lenta).
+  // shortcut: umbral fijo de 600ms sin medir latencia real de red; subir si
+  // hay quejas de falsos "sin conexión" en redes lentas.
+  bool _showOfflineBanner = false;
+  Timer? _offlineDebounce;
+
+  /// Actualiza el debounce del aviso offline a partir del `fromCache` más
+  /// reciente. Se llama en cada `build()` (no vía `ref.listen`: esta versión
+  /// de Riverpod no admite `fireImmediately` en `WidgetRef.listen`, y
+  /// `ref.watch` ya reconstruye en cada cambio del provider). Mutar el campo
+  /// directamente es seguro aquí porque se lee en el mismo `build()`; el
+  /// `setState` solo ocurre de forma diferida, desde el callback del Timer.
+  void _syncOfflineBanner(bool fromCache) {
+    if (fromCache) {
+      _offlineDebounce ??= Timer(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _showOfflineBanner = true);
+      });
+    } else {
+      _offlineDebounce?.cancel();
+      _offlineDebounce = null;
+      _showOfflineBanner = false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +74,7 @@ class _HomePageState extends ConsumerState<HomePage>
   @override
   void dispose() {
     _introController.dispose();
+    _offlineDebounce?.cancel();
     super.dispose();
   }
 
@@ -58,6 +88,10 @@ class _HomePageState extends ConsumerState<HomePage>
     );
     if (confirmed ?? false) {
       await ref.read(authStateProvider.notifier).logout();
+      // El guard del router reacciona a `authStateProvider`, pero se navega
+      // explícito aquí también: sin esto, en algunos dispositivos la pantalla
+      // se quedaba en "Tus catálogos" hasta reabrir la app.
+      if (context.mounted) context.go(AppRoutes.login);
     }
   }
 
@@ -73,6 +107,7 @@ class _HomePageState extends ConsumerState<HomePage>
     final AsyncValue<SharedCatalogsState> asyncState = ref.watch(
       sharedCatalogsControllerProvider,
     );
+    _syncOfflineBanner(asyncState.value?.fromCache ?? false);
 
     final MediaQueryData mediaQuery = MediaQuery.of(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -85,7 +120,20 @@ class _HomePageState extends ConsumerState<HomePage>
         ),
         child: Scaffold(
           backgroundColor: HomePalette.screenBackground,
-          body: SafeArea(
+          body: Stack(
+            children: <Widget>[
+              // El hero degradado arranca justo debajo de la barra de
+              // estado (dentro del SafeArea); esta franja repite su color
+              // inicial detrás de la barra de estado para que no quede un
+              // hueco blanco (iconos claros ilegibles sobre blanco).
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: mediaQuery.padding.top,
+                child: const ColoredBox(color: AppColors.primary),
+              ),
+              SafeArea(
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final double t = ((constraints.maxHeight - 640) / (844 - 640))
@@ -158,7 +206,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     compact: compact,
                     intro: _introController,
                     onLogout: () => _confirmLogout(context, ref),
-                    offlineNotice: state.fromCache,
+                    offlineNotice: _showOfflineBanner,
                     body: total == 0
                         ? const _EmptyBody()
                         : CatalogCarousel(
@@ -174,6 +222,8 @@ class _HomePageState extends ConsumerState<HomePage>
                 }
               },
             ),
+              ),
+            ],
           ),
         ),
       ),

@@ -51,9 +51,37 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
   Timer? _debounce;
   String _search = '';
 
+  // Evita el parpadeo de "sin conexión" en cada entrada a la pantalla: la
+  // caché se muestra de inmediato (stale-while-revalidate) y casi siempre se
+  // revalida en pocos cientos de ms; solo se avisa si sigue en caché pasado
+  // este margen (offline real o red lenta).
+  // shortcut: umbral fijo de 600ms sin medir latencia real de red; subir si
+  // hay quejas de falsos "sin conexión" en redes lentas.
+  bool _showOfflineBanner = false;
+  Timer? _offlineDebounce;
+
+  /// Actualiza el debounce del aviso offline a partir del `fromCache` más
+  /// reciente. Se llama en cada `build()` (no vía `ref.listen`: esta versión
+  /// de Riverpod no admite `fireImmediately` en `WidgetRef.listen`, y
+  /// `ref.watch` ya reconstruye en cada cambio del provider). Mutar el campo
+  /// directamente es seguro aquí porque se lee en el mismo `build()`; el
+  /// `setState` solo ocurre de forma diferida, desde el callback del Timer.
+  void _syncOfflineBanner(bool fromCache) {
+    if (fromCache) {
+      _offlineDebounce ??= Timer(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _showOfflineBanner = true);
+      });
+    } else {
+      _offlineDebounce?.cancel();
+      _offlineDebounce = null;
+      _showOfflineBanner = false;
+    }
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
+    _offlineDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -172,6 +200,7 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
     final AsyncValue<CatalogDetailState> asyncState = ref.watch(
       catalogDetailControllerProvider(widget.catalogId),
     );
+    _syncOfflineBanner(asyncState.value?.fromCache ?? false);
 
     Future<void> onRefresh() => ref
         .read(catalogDetailControllerProvider(widget.catalogId).notifier)
@@ -202,7 +231,20 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: SafeArea(
+        body: Stack(
+          children: <Widget>[
+            // La cabecera degradada arranca justo debajo de la barra de
+            // estado (dentro del SafeArea); esta franja repite su color
+            // inicial detrás de la barra de estado para que no quede un
+            // hueco blanco (iconos claros ilegibles sobre blanco).
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: MediaQuery.paddingOf(context).top,
+              child: const ColoredBox(color: AppColors.primary),
+            ),
+            SafeArea(
           child: Builder(
             builder: (BuildContext context) {
               if (asyncState.hasError) {
@@ -249,7 +291,7 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
                   onImageLink: () => _openBanner(detail, overlay),
                   onShareLink: () => _openShareSheet(detail, overlay),
                 ),
-                offlineNotice: state.fromCache,
+                offlineNotice: _showOfflineBanner,
                 searchController: _searchController,
                 onSearchChanged: _onSearchChanged,
                 body: total == 0
@@ -272,6 +314,8 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
               );
             },
           ),
+            ),
+          ],
         ),
       ),
     );

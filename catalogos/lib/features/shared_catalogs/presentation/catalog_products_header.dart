@@ -179,11 +179,11 @@ class CatalogProductsHero extends StatelessWidget {
                 BoxShadow(color: CatalogTokens.greenGlowShadow, offset: Offset(0, 10 * s), blurRadius: 22 * s),
               ],
               onTap: onShare,
-              semanticLabel: 'Compartir enlace',
+              semanticLabel: 'Compartir catálogo',
               child: SizedBox(
                 width: 20 * s,
                 height: 20 * s,
-                child: CustomPaint(painter: ShareNodesPainter(color: AppColors.primary)),
+                child: CustomPaint(painter: WhatsAppPainter(color: AppColors.primary)),
               ),
             ),
           ),
@@ -218,7 +218,7 @@ class CatalogProductsHero extends StatelessWidget {
                 Expanded(
                   child: _QuickActionCard(
                     scale: s,
-                    label: 'Imagen del enlace',
+                    label: 'Imagen del catálogo',
                     iconBackground: AppColors.brand,
                     iconColor: AppColors.primary,
                     icon: ImageIconPainter(color: AppColors.primary),
@@ -229,7 +229,7 @@ class CatalogProductsHero extends StatelessWidget {
                 Expanded(
                   child: _QuickActionCard(
                     scale: s,
-                    label: 'Compartir enlace',
+                    label: 'Compartir catálogo',
                     iconBackground: AppColors.primary,
                     iconColor: AppColors.brand,
                     icon: WhatsAppPainter(color: AppColors.brand),

@@ -241,6 +241,11 @@ void main() {
         fromCache: true,
       ),
     );
+    // Por encima del debounce de 600ms del aviso (ver `_syncOfflineBanner`
+    // en `catalog_detail_page.dart`), más un pump extra para que el
+    // `setState` del Timer construya el frame.
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump();
 
     expect(
       find.byKey(const Key('catalog_products_offline_banner')),

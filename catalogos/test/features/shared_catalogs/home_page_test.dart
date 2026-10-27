@@ -129,7 +129,13 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(wrap(state: state, error: error));
-    await tester.pump(const Duration(milliseconds: 600));
+    // Asienta el `AsyncNotifier.build()` (resuelve en un microtask aunque no
+    // haga await real) ANTES de avanzar el reloj: si no, el debounce de 600ms
+    // del aviso "sin conexión" (`_syncOfflineBanner`) arranca recién al final
+    // de la ventana ya avanzada, en vez de desde el inicio.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump();
   }
 
   testWidgets(
