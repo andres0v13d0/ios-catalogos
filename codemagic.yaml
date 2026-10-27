@@ -34,7 +34,7 @@ workflows:
         script: |
           flutter build ipa --release --flavor prod \
             --dart-define-from-file=env/prod.json \
-            --build-name=1.0.1 --build-number=$BUILD_NUMBER \
+            --build-name=1.0.2 --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
