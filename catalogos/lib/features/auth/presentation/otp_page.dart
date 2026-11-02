@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/phone.dart';
 import 'auth_background.dart';
 import 'auth_controller.dart';
 import 'auth_gradient_button.dart';
@@ -21,20 +22,6 @@ import 'otp_keypad.dart';
 const Duration kResendCooldown = Duration(seconds: 60);
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
-
-/// Formatea un E.164 para mostrarlo al usuario. Puramente de presentación: no
-/// toca la normalización/validación real (`core/utils/phone.dart`). Conoce el
-/// agrupamiento 3-3-4 de Colombia (`+57`, mercado por defecto de la app); para
-/// cualquier otro país muestra el E.164 tal cual, sin inventar un agrupamiento
-/// que podría ser incorrecto.
-String _formatPhoneForDisplay(String e164) {
-  final String digits = e164.startsWith('+') ? e164.substring(1) : e164;
-  if (digits.startsWith('57') && digits.length == 12) {
-    final String national = digits.substring(2);
-    return '+57 ${national.substring(0, 3)} ${national.substring(3, 6)} ${national.substring(6)}';
-  }
-  return e164;
-}
 
 /// Pantalla de verificación del código WhatsApp (tarea 1.10).
 ///
@@ -272,7 +259,7 @@ class _OtpPageState extends ConsumerState<OtpPage>
                           titleFontSize: _lerp(20, 28, t),
                           titleTopMargin: _lerp(6, 22, t),
                           subtitleFontSize: _lerp(12, 14, t),
-                          phoneDisplay: _formatPhoneForDisplay(phone),
+                          phoneDisplay: formatPhoneForDisplay(phone),
                           entrance: _introController,
                           onChangeNumber: _goBack,
                         ),

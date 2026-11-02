@@ -22,6 +22,9 @@ abstract final class AppRoutes {
   /// Ruta principal (autenticada).
   static const String home = '/home';
 
+  /// Ruta "Cuenta": número del revendedor, cerrar sesión, eliminar cuenta.
+  static const String accountSettings = '/account-settings';
+
   /// Ruta del detalle de catálogo (tareas 1.16/1.17/1.18). Recibe el id del
   /// catálogo como parámetro de path (`/catalog/:id`) y, opcionalmente, el
   /// nombre conocido vía `extra` para mostrarlo en el AppBar mientras carga.
@@ -43,4 +46,11 @@ abstract final class AppRoutes {
 
   /// Construye el path concreto de "Banner del catálogo" para un [catalogId].
   static String bannerPath(String catalogId) => '/catalog/$catalogId/banner';
+
+  /// Ruta de "Detalle del producto" (fotos, tallas, colores, precios; solo el
+  /// precio es editable). Recibe un `ProductDetailArgs` vía `extra`.
+  static const String productDetail = '/catalog/:id/product';
+
+  /// Construye el path concreto del detalle de producto para un [catalogId].
+  static String productDetailPath(String catalogId) => '/catalog/$catalogId/product';
 }

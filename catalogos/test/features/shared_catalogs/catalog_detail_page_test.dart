@@ -263,6 +263,47 @@ void main() {
   });
 
   testWidgets(
+    'el botón "volver arriba" aparece tras bajar y vuelve a subir la lista',
+    (WidgetTester tester) async {
+      final List<Product> manyProducts = List<Product>.generate(
+        40,
+        (int i) => Product(
+          id: 'p$i',
+          nombre: 'Producto $i',
+          precios: <String, num>{'1': 1000 + i},
+        ),
+      );
+      await pumpPage(
+        tester,
+        state: CatalogDetailState(
+          detail: _detail(sinPrecios: false, products: manyProducts),
+        ),
+      );
+
+      AnimatedOpacity opacityOf() => tester.widget<AnimatedOpacity>(
+        find.ancestor(
+          of: find.byIcon(Icons.keyboard_arrow_up_rounded),
+          matching: find.byType(AnimatedOpacity),
+        ),
+      );
+
+      // Al inicio (sin scroll) el botón está oculto.
+      expect(opacityOf().opacity, 0);
+
+      // Baja bastante la lista: el botón aparece.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -2000));
+      await tester.pump();
+      expect(opacityOf().opacity, 1);
+
+      // Tocarlo vuelve arriba (el scroll baja del umbral y el botón se oculta
+      // de nuevo al terminar la animación).
+      await tester.tap(find.byIcon(Icons.keyboard_arrow_up_rounded));
+      await tester.pumpAndSettle();
+      expect(opacityOf().opacity, 0);
+    },
+  );
+
+  testWidgets(
     'estado de error muestra mensaje y Reintentar llama a refresh()',
     (WidgetTester tester) async {
       int refreshCount = 0;

@@ -9,12 +9,14 @@
 // - tocar "Ver catálogo" navega al detalle con el UUID del catálogo;
 // - pull-to-refresh invoca refresh();
 // - estados vacío, error (con Reintentar) y "sin conexión" (fromCache);
-// - el botón "Salir" pide confirmación antes de cerrar sesión.
+// - el ícono de ajustes navega a la pantalla "Cuenta" (cerrar sesión/eliminar
+//   cuenta viven ahí, ver account_settings_page_test.dart).
 //
 // Se sobreescribe el controlador de catálogos con un fake en memoria (sin
 // Hive ni red) y las dependencias de auth con los fakes ya existentes de
 // `test/features/auth/fake_auth_dependencies.dart` (sin Firebase real).
 
+import 'package:catalogos/app/router/app_routes.dart';
 import 'package:catalogos/features/auth/data/session_store.dart';
 import 'package:catalogos/features/auth/presentation/auth_state_provider.dart';
 import 'package:catalogos/features/shared_catalogs/domain/catalog.dart';
@@ -102,11 +104,15 @@ void main() {
     final GoRouter router = GoRouter(
       initialLocation: '/home',
       routes: <RouteBase>[
-        GoRoute(path: '/home', builder: (context, _) => const HomePage()),
+        GoRoute(path: AppRoutes.home, builder: (context, _) => const HomePage()),
         GoRoute(
           path: '/catalog/:id',
           builder: (context, state) =>
               Scaffold(body: Text('detail-${state.pathParameters['id']}')),
+        ),
+        GoRoute(
+          path: AppRoutes.accountSettings,
+          builder: (context, _) => const Scaffold(body: Text('account-settings-stub')),
         ),
       ],
     );
@@ -243,65 +249,14 @@ void main() {
     expect(find.textContaining('Sin conexión'), findsOneWidget);
   });
 
-  testWidgets(
-    '"Salir" pide confirmación; "Cancelar" no cierra sesión; confirmar sí',
-    (WidgetTester tester) async {
-      final authUser = FakeAuthUserService();
-      final sessionStore = _FakeSessionStore();
-      final container = ProviderContainer(
-        overrides: [
-          sharedCatalogsControllerProvider.overrideWith(
-            () => _FakeController(
-              stateOverride: const SharedCatalogsState(
-                catalogs: _FakeController.twoCatalogs,
-              ),
-            ),
-          ),
-          authUserServiceProvider.overrideWithValue(authUser),
-          sessionStoreProvider.overrideWithValue(sessionStore),
-        ],
-      );
-      addTearDown(container.dispose);
+  testWidgets('el ícono de ajustes navega a la pantalla "Cuenta"', (
+    WidgetTester tester,
+  ) async {
+    await pumpHome(tester);
 
-      final GoRouter router = GoRouter(
-        initialLocation: '/home',
-        routes: <RouteBase>[
-          GoRoute(path: '/home', builder: (context, _) => const HomePage()),
-        ],
-      );
+    await tester.tap(find.bySemanticsLabel('Ajustes de cuenta'));
+    await tester.pumpAndSettle();
 
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(routerConfig: router),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 600));
-
-      // Abre el diálogo y cancela: no cierra sesión.
-      await tester.tap(find.text('Salir'));
-      await tester.pumpAndSettle();
-      expect(find.text('¿Cerrar sesión?'), findsOneWidget);
-
-      await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
-      expect(find.text('¿Cerrar sesión?'), findsNothing);
-      expect(sessionStore.cleared, isFalse);
-      expect(authUser.signedOut, isFalse);
-
-      // Reabre y confirma: sí cierra sesión.
-      await tester.tap(find.text('Salir'));
-      await tester.pumpAndSettle();
-      // Dos coincidencias ahora: el botón de la cabecera y el del diálogo.
-      await tester.tap(find.text('Salir').last);
-      await tester.pumpAndSettle();
-
-      expect(authUser.signedOut, isTrue);
-      expect(sessionStore.cleared, isTrue);
-      expect(container.read(authStateProvider), AuthStatus.signedOut);
-    },
-  );
+    expect(find.text('account-settings-stub'), findsOneWidget);
+  });
 }

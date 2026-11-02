@@ -88,3 +88,17 @@ bool isValidE164(String? value) {
   if (value == null) return false;
   return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(value);
 }
+
+/// Formatea un E.164 para mostrarlo al usuario. Puramente de presentación: no
+/// toca la normalización/validación real de arriba. Conoce el agrupamiento
+/// 3-3-4 de Colombia (`+57`, mercado por defecto de la app); para cualquier
+/// otro país muestra el E.164 tal cual, sin inventar un agrupamiento que
+/// podría ser incorrecto.
+String formatPhoneForDisplay(String e164) {
+  final String digits = e164.startsWith('+') ? e164.substring(1) : e164;
+  if (digits.startsWith('57') && digits.length == 12) {
+    final String national = digits.substring(2);
+    return '+57 ${national.substring(0, 3)} ${national.substring(3, 6)} ${national.substring(6)}';
+  }
+  return e164;
+}

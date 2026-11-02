@@ -122,6 +122,21 @@ class ProfileController extends Notifier<ProfileState> {
     }
   }
 
+  /// Borra la cuenta del revendedor (`DELETE /reseller/me`, Apple/Google
+  /// guideline 5.1.1(v)). Devuelve `true` si el backend confirmó el borrado;
+  /// el llamador sigue siendo responsable de cerrar la sesión local
+  /// (Firebase + almacenamiento) tras un `true`.
+  Future<bool> deleteAccount() async {
+    final Result<void> result = await _repo.deleteMe();
+    switch (result) {
+      case Ok<void>():
+        return true;
+      case Err<void>(:final failure):
+        state = state.copyWith(errorMessage: failure.message);
+        return false;
+    }
+  }
+
   /// Reinicia el estado (p. ej. tras un logout).
   void reset() => state = const ProfileState();
 

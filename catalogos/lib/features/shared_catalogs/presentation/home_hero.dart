@@ -7,23 +7,23 @@ import 'home_palette.dart';
 
 /// Cabecera curva de "Tus catálogos" (ver
 /// `docs/design/inicio-a-carrusel.html`): degradado de marca, 2 círculos
-/// decorativos, la onda blanca inferior, la marca "FLYmovil", el botón
-/// "Salir" y el título/subtítulo.
+/// decorativos, la onda blanca inferior, la marca "FLYmovil", el ícono de
+/// ajustes de cuenta y el título/subtítulo.
 ///
-/// Puramente visual + el callback de logout; no conoce el estado de los
-/// catálogos.
+/// Puramente visual + el callback de abrir ajustes; no conoce el estado de
+/// los catálogos.
 class HomeHero extends StatelessWidget {
   const HomeHero({
     super.key,
     required this.height,
     required this.subtitle,
-    required this.onLogout,
+    required this.onOpenSettings,
     this.compact = false,
   });
 
   final double height;
   final String subtitle;
-  final VoidCallback onLogout;
+  final VoidCallback onOpenSettings;
 
   /// Pantallas cortas (≤640dp de alto): título más pequeño y subtítulo en
   /// una sola línea, para que la cabecera siga cabiendo sin desbordarse.
@@ -92,8 +92,9 @@ class HomeHero extends StatelessWidget {
           // Marca "FLYmovil".
           const Positioned(left: 24, top: 16, child: _WordmarkSmall()),
 
-          // Botón "Salir".
-          Positioned(right: 20, top: 2, child: _LogoutPill(onTap: onLogout)),
+          // Ícono de ajustes: abre la pantalla "Cuenta" (número, cerrar
+          // sesión, eliminar cuenta).
+          Positioned(right: 20, top: 2, child: _SettingsButton(onTap: onOpenSettings)),
 
           // Título + subtítulo.
           Positioned(
@@ -162,8 +163,11 @@ class _WordmarkSmall extends StatelessWidget {
   }
 }
 
-class _LogoutPill extends StatelessWidget {
-  const _LogoutPill({required this.onTap});
+/// Botón circular de ajustes: abre la pantalla "Cuenta" (número del
+/// revendedor, cerrar sesión, eliminar cuenta — Apple/Google guideline
+/// 5.1.1(v): el borrado debe estar accesible desde la app).
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -171,40 +175,20 @@ class _LogoutPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Cerrar sesión',
+      label: 'Ajustes de cuenta',
       child: Material(
-        color: Colors.transparent,
+        color: const Color(0x24FFFFFF), // rgba(255,255,255,0.14)
+        shape: const CircleBorder(
+          side: BorderSide(color: Color(0x47FFFFFF), width: 1), // rgba(255,255,255,0.28)
+        ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(999),
-          child: Container(
-            // 48dp de alto (accesibilidad: áreas táctiles ≥48dp; el mockup
-            // pide 44dp, diferencia mínima e imperceptible).
+          customBorder: const CircleBorder(),
+          child: const SizedBox(
+            // 48dp (accesibilidad: áreas táctiles ≥48dp).
+            width: 48,
             height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0x24FFFFFF), // rgba(255,255,255,0.14)
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: const Color(0x47FFFFFF),
-                width: 1,
-              ), // rgba(255,255,255,0.28)
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'Salir',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
+            child: Icon(Icons.settings_outlined, size: 22, color: Colors.white),
           ),
         ),
       ),

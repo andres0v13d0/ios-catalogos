@@ -10,8 +10,9 @@ import '../../../shared/models/reseller.dart';
 /// Repositorio del perfil del revendedor (tarea 1.13).
 ///
 /// Habla con el backend real (contratos camelCase):
-/// - `GET /reseller/me`   → [getMe]      → `Result<Reseller>`
-/// - `PATCH /reseller/me` → [updateMe]   → `Result<Reseller>` (body camelCase)
+/// - `GET /reseller/me`    → [getMe]      → `Result<Reseller>`
+/// - `PATCH /reseller/me`  → [updateMe]   → `Result<Reseller>` (body camelCase)
+/// - `DELETE /reseller/me` → [deleteMe]   → `Result<void>` (borrado de cuenta)
 ///
 /// La cabecera `Authorization: Bearer <idToken>` la adjunta el `AuthInterceptor`
 /// del [Dio] inyectado (ver `dioProvider`); el repositorio no gestiona tokens.
@@ -55,6 +56,20 @@ class ResellerRepository {
       return Err<Reseller>(_failureOf(e));
     } catch (e) {
       return Err<Reseller>(UnknownFailure(cause: e));
+    }
+  }
+
+  /// `DELETE /reseller/me` — borra la cuenta del revendedor (Apple/Google
+  /// guideline 5.1.1(v)). Deja la sesión de Firebase sin usuario en el
+  /// backend; el llamador sigue siendo responsable de cerrar sesión local.
+  Future<Result<void>> deleteMe() async {
+    try {
+      await _dio.delete<void>(_path);
+      return const Ok<void>(null);
+    } on DioException catch (e) {
+      return Err<void>(_failureOf(e));
+    } catch (e) {
+      return Err<void>(UnknownFailure(cause: e));
     }
   }
 

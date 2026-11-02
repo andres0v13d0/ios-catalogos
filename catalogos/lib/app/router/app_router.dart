@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/auth_state_provider.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/otp_page.dart';
+import '../../features/profile/presentation/account_settings_page.dart';
 import '../../features/profile/presentation/complete_profile_page.dart';
 import '../../features/profile/presentation/profile_controller.dart';
 import '../../features/shared_catalogs/presentation/catalog_detail_page.dart';
 import '../../features/shared_catalogs/presentation/home_page.dart';
 import '../../features/shared_catalogs/presentation/price_adjustment_controller.dart';
 import '../../features/shared_catalogs/presentation/price_adjustment_page.dart';
+import '../../features/shared_catalogs/presentation/product_detail_page.dart';
 import '../../features/shared_catalogs/domain/reseller_banner.dart';
 import '../../features/shared_catalogs/presentation/reseller_banner_page.dart';
 import 'app_routes.dart';
@@ -95,6 +97,12 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const HomePage(),
       ),
       GoRoute(
+        path: AppRoutes.accountSettings,
+        name: 'accountSettings',
+        builder: (BuildContext context, GoRouterState state) =>
+            const AccountSettingsPage(),
+      ),
+      GoRoute(
         path: AppRoutes.catalogDetail,
         name: 'catalogDetail',
         builder: (BuildContext context, GoRouterState state) {
@@ -119,6 +127,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         builder: (BuildContext context, GoRouterState state) {
           final ResellerBannerState args = state.extra! as ResellerBannerState;
           return ResellerBannerPage(args: args);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.productDetail,
+        name: 'productDetail',
+        builder: (BuildContext context, GoRouterState state) {
+          final ProductDetailArgs args = state.extra! as ProductDetailArgs;
+          return ProductDetailPage(args: args);
         },
       ),
     ],

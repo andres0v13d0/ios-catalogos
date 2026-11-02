@@ -22,6 +22,7 @@ import 'catalog_detail_filter.dart';
 import 'catalog_price_overlay_controller.dart';
 import 'catalog_products_header.dart';
 import 'price_adjustment_controller.dart';
+import 'product_detail_page.dart';
 import 'product_grid_card.dart';
 import 'reseller_share_sheet.dart';
 import 'shared_catalogs_controller.dart';
@@ -103,8 +104,19 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
     }
   }
 
-  /// El detalle de producto se diseña en otra etapa; de momento no hace nada.
-  void _openProduct(Product product) {}
+  /// Abre el detalle del producto (fotos, tallas, colores, precios), con la
+  /// misma acción "Editar precio" que el lápiz de la cuadrícula.
+  void _openProduct(Product product, bool priceHidden, int totalProducts) {
+    context.push<void>(
+      AppRoutes.productDetailPath(widget.catalogId),
+      extra: ProductDetailArgs(
+        catalogId: widget.catalogId,
+        product: product,
+        priceHidden: priceHidden,
+        totalProducts: totalProducts,
+      ),
+    );
+  }
 
   /// Tras guardar/quitar una regla (vuelve `true` de "Ajustar precios"):
   /// invalida la caché Hive de este catálogo y recarga productos + overlay,
@@ -306,7 +318,8 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
                               products: filtered,
                               priceHidden: detail.priceHidden,
                               overlay: overlay,
-                              onTap: _openProduct,
+                              onTap: (Product p) =>
+                                  _openProduct(p, detail.priceHidden, total),
                               onEditPrice: (Product p) =>
                                   _openProductAdjust(p, total, overlay.byProductId[p.id]),
                             )),
@@ -325,7 +338,9 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
 /// Composición común a todos los estados: cabecera curva + aviso offline
 /// (opcional) + buscador (opcional, oculto en carga/error) + cuerpo (sliver).
 /// Un único `CustomScrollView` para toda la pantalla (sin scroll anidado).
-class _Scaffold extends StatelessWidget {
+/// Además dibuja el botón flotante "volver arriba" cuando el scroll baja lo
+/// suficiente.
+class _Scaffold extends StatefulWidget {
   const _Scaffold({
     required this.hero,
     required this.body,
@@ -347,8 +362,50 @@ class _Scaffold extends StatelessWidget {
   final ValueChanged<String>? onSearchChanged;
 
   @override
+  State<_Scaffold> createState() => _ScaffoldState();
+}
+
+class _ScaffoldState extends State<_Scaffold> {
+  /// Umbral de desplazamiento (px) a partir del cual aparece el botón de
+  /// volver arriba: una altura de pantalla aprox., para que no aparezca con
+  /// apenas un par de filas de scroll.
+  static const double _scrollToTopThreshold = 600;
+
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollToTop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final bool shouldShow = _scrollController.offset > _scrollToTopThreshold;
+    if (shouldShow != _showScrollToTop) {
+      setState(() => _showScrollToTop = shouldShow);
+    }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final Widget scrollView = CustomScrollView(
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       // Colchón moderado para que la cuadrícula construya (y por tanto
       // empiece a descargar) unas pocas filas más allá de lo visible, sin
@@ -363,24 +420,88 @@ class _Scaffold extends StatelessWidget {
       // ignore: deprecated_member_use
       cacheExtent: 400,
       slivers: <Widget>[
-        SliverToBoxAdapter(child: hero),
-        if (offlineNotice) const SliverToBoxAdapter(child: _OfflineBanner()),
-        if (searchController != null && onSearchChanged != null)
+        SliverToBoxAdapter(child: widget.hero),
+        if (widget.offlineNotice) const SliverToBoxAdapter(child: _OfflineBanner()),
+        if (widget.searchController != null && widget.onSearchChanged != null)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
               child: _SearchField(
-                controller: searchController!,
-                onChanged: onSearchChanged!,
+                controller: widget.searchController!,
+                onChanged: widget.onSearchChanged!,
               ),
             ),
           ),
-        body,
+        widget.body,
       ],
     );
 
-    if (onRefresh == null) return scrollView;
-    return RefreshIndicator(onRefresh: onRefresh!, child: scrollView);
+    final Widget refreshable = widget.onRefresh == null
+        ? scrollView
+        : RefreshIndicator(onRefresh: widget.onRefresh!, child: scrollView);
+
+    return Stack(
+      children: <Widget>[
+        refreshable,
+        Positioned(
+          right: 20,
+          bottom: 20 + MediaQuery.paddingOf(context).bottom,
+          child: _ScrollToTopButton(
+            visible: _showScrollToTop,
+            onPressed: _scrollToTop,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Botón flotante circular "volver arriba". Se desvanece/escala al mostrarse
+/// u ocultarse (en vez de aparecer/desaparecer de golpe) e ignora toques
+/// mientras está oculto, para no robar el toque de lo que haya debajo.
+class _ScrollToTopButton extends StatelessWidget {
+  const _ScrollToTopButton({required this.visible, required this.onPressed});
+
+  final bool visible;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      ignoring: !visible,
+      child: AnimatedOpacity(
+        opacity: visible ? 1 : 0,
+        duration: const Duration(milliseconds: 200),
+        child: AnimatedScale(
+          scale: visible ? 1 : 0.8,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          child: Semantics(
+            button: true,
+            label: 'Volver arriba',
+            child: Material(
+              color: AppColors.primary,
+              shape: const CircleBorder(),
+              elevation: 4,
+              shadowColor: CatalogTokens.pencilShadow,
+              child: InkWell(
+                onTap: onPressed,
+                customBorder: const CircleBorder(),
+                child: const SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Icon(
+                    Icons.keyboard_arrow_up_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -554,15 +675,15 @@ class _ProductsGrid extends StatelessWidget {
             // diferencia no se dibujan ni la etiqueta verde ni la línea
             // "Proveedor $X": la tarjeta muestra únicamente "Desde $X" (ver
             // productos-a.html / regla del prompt).
-            final bool hasVisibleMarkup = _hasVisibleMarkup(overlayProduct);
+            final bool hasMarkup = hasVisibleMarkup(overlayProduct);
             return ProductGridCard(
               key: ValueKey<String>(product.id),
               product: product,
               priceHidden: priceHidden,
               memCachePixels: geometry.memCachePixels,
               onTap: () => onTap(product),
-              markupBadgeLabel: hasVisibleMarkup ? _overlayBadgeLabel(overlayProduct!) : null,
-              providerPriceLowest: hasVisibleMarkup ? overlayProduct!.lowestProviderPrice : null,
+              markupBadgeLabel: hasMarkup ? overlayBadgeLabel(overlayProduct!) : null,
+              providerPriceLowest: hasMarkup ? overlayProduct!.lowestProviderPrice : null,
               onEditPrice: overlayProduct != null ? () => onEditPrice(product) : null,
             );
           },
@@ -812,7 +933,10 @@ String _ruleBadgeLabel(PriceRule rule) =>
 /// regla — se deriva el porcentaje real a partir de precioProveedor vs.
 /// precioAjustado (válido sea la regla de catálogo o de producto, y sea
 /// porcentaje o valor fijo).
-String? _overlayBadgeLabel(CatalogPriceRuleProduct product) {
+///
+/// Público: también lo usa `ProductDetailPage` para la misma insignia en el
+/// detalle del producto (fuente única, para que no diverjan).
+String? overlayBadgeLabel(CatalogPriceRuleProduct product) {
   final num? provider = product.lowestProviderPrice;
   final num? adjusted = product.lowestAdjustedPrice;
   if (provider == null || adjusted == null || provider <= 0) return null;
@@ -825,7 +949,9 @@ String? _overlayBadgeLabel(CatalogPriceRuleProduct product) {
 /// efectiva (`reglaOrigen != null`) y el precio ajustado es ESTRICTAMENTE
 /// mayor que el del proveedor. Sin diferencia (mismo precio, o sin regla) no
 /// se dibujan ni la etiqueta "+X%" ni la línea "Proveedor $X".
-bool _hasVisibleMarkup(CatalogPriceRuleProduct? product) {
+///
+/// Público: también lo usa `ProductDetailPage` (ver [overlayBadgeLabel]).
+bool hasVisibleMarkup(CatalogPriceRuleProduct? product) {
   if (product == null || product.reglaOrigen == null) return false;
   final num? provider = product.lowestProviderPrice;
   final num? adjusted = product.lowestAdjustedPrice;

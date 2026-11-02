@@ -9,7 +9,6 @@ import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../auth/presentation/auth_gradient_button.dart';
 import '../../auth/presentation/auth_palette.dart';
-import '../../auth/presentation/auth_state_provider.dart';
 import '../../auth/presentation/auth_vector_icons.dart';
 import '../domain/catalog.dart';
 import 'catalog_carousel.dart';
@@ -78,21 +77,8 @@ class _HomePageState extends ConsumerState<HomePage>
     super.dispose();
   }
 
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) => _LogoutDialog(
-        onCancel: () => Navigator.of(dialogContext).pop(false),
-        onConfirm: () => Navigator.of(dialogContext).pop(true),
-      ),
-    );
-    if (confirmed ?? false) {
-      await ref.read(authStateProvider.notifier).logout();
-      // El guard del router reacciona a `authStateProvider`, pero se navega
-      // explícito aquí también: sin esto, en algunos dispositivos la pantalla
-      // se quedaba en "Tus catálogos" hasta reabrir la app.
-      if (context.mounted) context.go(AppRoutes.login);
-    }
+  void _openSettings(BuildContext context) {
+    context.push(AppRoutes.accountSettings);
   }
 
   void _openCatalog(Catalog catalog) {
@@ -162,7 +148,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     dotsHeight: 0,
                     compact: compact,
                     intro: _introController,
-                    onLogout: () => _confirmLogout(context, ref),
+                    onOpenSettings: () => _openSettings(context),
                     body: _ErrorBody(
                       onRetry: () => ref
                           .read(sharedCatalogsControllerProvider.notifier)
@@ -183,7 +169,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     dotsHeight: 0,
                     compact: compact,
                     intro: _introController,
-                    onLogout: () => _confirmLogout(context, ref),
+                    onOpenSettings: () => _openSettings(context),
                     body: const _SkeletonCard(),
                     onRefresh: null,
                   );
@@ -205,7 +191,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     dotsHeight: dotsHeight,
                     compact: compact,
                     intro: _introController,
-                    onLogout: () => _confirmLogout(context, ref),
+                    onOpenSettings: () => _openSettings(context),
                     offlineNotice: _showOfflineBanner,
                     body: total == 0
                         ? const _EmptyBody()
@@ -240,7 +226,7 @@ class _Scaffold extends StatelessWidget {
     required this.subtitle,
     required this.dotsHeight,
     required this.intro,
-    required this.onLogout,
+    required this.onOpenSettings,
     required this.body,
     required this.onRefresh,
     this.compact = false,
@@ -252,7 +238,7 @@ class _Scaffold extends StatelessWidget {
   final String subtitle;
   final double dotsHeight;
   final Animation<double> intro;
-  final VoidCallback onLogout;
+  final VoidCallback onOpenSettings;
   final Widget body;
   final bool compact;
   final bool offlineNotice;
@@ -294,7 +280,7 @@ class _Scaffold extends StatelessWidget {
                   child: HomeHero(
                     height: heroHeight,
                     subtitle: subtitle,
-                    onLogout: onLogout,
+                    onOpenSettings: onOpenSettings,
                     compact: compact,
                   ),
                 ),
@@ -340,96 +326,6 @@ class _Scaffold extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _LogoutDialog extends StatelessWidget {
-  const _LogoutDialog({required this.onCancel, required this.onConfirm});
-
-  final VoidCallback onCancel;
-  final VoidCallback onConfirm;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      namesRoute: true,
-      label: 'Cerrar sesión, diálogo de confirmación',
-      child: Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Text(
-                '¿Cerrar sesión?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Vas a salir de tu cuenta de FLY+ en este dispositivo.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AuthPalette.textMuted,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Semantics(
-                      button: true,
-                      label: 'Cancelar',
-                      child: OutlinedButton(
-                        onPressed: onCancel,
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          side: const BorderSide(
-                            color: AuthPalette.fieldBorder,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancelar',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Semantics(
-                      button: true,
-                      label: 'Salir',
-                      child: FilledButton(
-                        onPressed: onConfirm,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text('Salir'),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
