@@ -22,6 +22,7 @@ import 'package:catalogos/features/auth/presentation/auth_state_provider.dart';
 import 'package:catalogos/features/shared_catalogs/domain/catalog.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_page.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/home_page.dart';
+import 'package:catalogos/features/shared_catalogs/presentation/onboarding_video.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/shared_catalogs_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +42,14 @@ class _FakeSessionStore implements SessionStore {
 
   @override
   Future<void> save(SessionMetadata metadata) async {}
+}
+
+class _FakeOnboardingVideoSeenStore implements OnboardingVideoSeenStore {
+  @override
+  Future<bool> hasSeen() async => true;
+
+  @override
+  Future<void> markSeen() async {}
 }
 
 /// Controlador fake: estado fijo (AsyncData) con 2 catálogos, o lo que
@@ -121,6 +130,9 @@ void main() {
         sharedCatalogsControllerProvider.overrideWith(() => fake),
         authUserServiceProvider.overrideWithValue(FakeAuthUserService()),
         sessionStoreProvider.overrideWithValue(_FakeSessionStore()),
+        onboardingVideoSeenStoreProvider.overrideWithValue(
+          _FakeOnboardingVideoSeenStore(),
+        ),
       ],
       child: MaterialApp.router(routerConfig: router),
     );
@@ -258,5 +270,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('account-settings-stub'), findsOneWidget);
+  });
+
+  testWidgets('el botón de play del video de ayuda está presente', (
+    WidgetTester tester,
+  ) async {
+    await pumpHome(tester);
+
+    expect(find.bySemanticsLabel('Ver video de ayuda'), findsOneWidget);
   });
 }

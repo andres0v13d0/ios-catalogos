@@ -16,6 +16,7 @@ import 'package:catalogos/features/shared_catalogs/domain/catalog.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_carousel.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/home_page.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/home_palette.dart';
+import 'package:catalogos/features/shared_catalogs/presentation/onboarding_video.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/shared_catalogs_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -34,6 +35,14 @@ class _FakeSessionStore implements SessionStore {
 
   @override
   Future<void> save(SessionMetadata metadata) async {}
+}
+
+class _FakeOnboardingVideoSeenStore implements OnboardingVideoSeenStore {
+  @override
+  Future<bool> hasSeen() async => true;
+
+  @override
+  Future<void> markSeen() async {}
 }
 
 class _FakeController extends SharedCatalogsController {
@@ -104,6 +113,9 @@ void main() {
               ),
               authUserServiceProvider.overrideWithValue(FakeAuthUserService()),
               sessionStoreProvider.overrideWithValue(_FakeSessionStore()),
+              onboardingVideoSeenStoreProvider.overrideWithValue(
+                _FakeOnboardingVideoSeenStore(),
+              ),
             ],
             child: RepaintBoundary(
               key: boundaryKey,

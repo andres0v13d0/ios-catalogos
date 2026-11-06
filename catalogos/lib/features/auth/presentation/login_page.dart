@@ -15,10 +15,11 @@ import 'login_hero_art.dart';
 
 /// País seleccionable en el ingreso de teléfono.
 ///
-/// Fase 1 soporta Colombia (default) y un par de códigos comunes de la región
-/// para el selector; el número nacional se normaliza a E.164 con el código
-/// elegido. [shortCode] es puramente de presentación (botón "CO +57" del
-/// rediseño); la validación/normalización solo usa [dialCode].
+/// Colombia es el país por defecto; el selector cubre Latinoamérica para que
+/// el revendedor eligiendo su país envíe el número con el código correcto.
+/// El número nacional se normaliza a E.164 con el código elegido.
+/// [shortCode] es puramente de presentación (botón "CO +57" del rediseño);
+/// la validación/normalización solo usa [dialCode].
 class _Country {
   const _Country(this.flag, this.shortCode, this.name, this.dialCode);
   final String flag;
@@ -31,9 +32,23 @@ class _Country {
 
 const List<_Country> _countries = <_Country>[
   _Country('🇨🇴', 'CO', 'Colombia', '57'),
+  _Country('🇪🇨', 'EC', 'Ecuador', '593'),
   _Country('🇲🇽', 'MX', 'México', '52'),
   _Country('🇵🇪', 'PE', 'Perú', '51'),
-  _Country('🇪🇨', 'EC', 'Ecuador', '593'),
+  _Country('🇻🇪', 'VE', 'Venezuela', '58'),
+  _Country('🇦🇷', 'AR', 'Argentina', '54'),
+  _Country('🇨🇱', 'CL', 'Chile', '56'),
+  _Country('🇧🇷', 'BR', 'Brasil', '55'),
+  _Country('🇧🇴', 'BO', 'Bolivia', '591'),
+  _Country('🇵🇾', 'PY', 'Paraguay', '595'),
+  _Country('🇺🇾', 'UY', 'Uruguay', '598'),
+  _Country('🇵🇦', 'PA', 'Panamá', '507'),
+  _Country('🇨🇷', 'CR', 'Costa Rica', '506'),
+  _Country('🇬🇹', 'GT', 'Guatemala', '502'),
+  _Country('🇭🇳', 'HN', 'Honduras', '504'),
+  _Country('🇸🇻', 'SV', 'El Salvador', '503'),
+  _Country('🇳🇮', 'NI', 'Nicaragua', '505'),
+  _Country('🇩🇴', 'DO', 'República Dominicana', '1'),
   _Country('🇺🇸', 'US', 'Estados Unidos', '1'),
 ];
 

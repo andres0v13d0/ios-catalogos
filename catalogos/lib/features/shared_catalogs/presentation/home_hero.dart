@@ -18,12 +18,14 @@ class HomeHero extends StatelessWidget {
     required this.height,
     required this.subtitle,
     required this.onOpenSettings,
+    required this.onPlayVideo,
     this.compact = false,
   });
 
   final double height;
   final String subtitle;
   final VoidCallback onOpenSettings;
+  final VoidCallback onPlayVideo;
 
   /// Pantallas cortas (≤640dp de alto): título más pequeño y subtítulo en
   /// una sola línea, para que la cabecera siga cabiendo sin desbordarse.
@@ -92,9 +94,28 @@ class HomeHero extends StatelessWidget {
           // Marca "FLYmovil".
           const Positioned(left: 24, top: 16, child: _WordmarkSmall()),
 
+          // Ícono de play: reabre el modal del video de onboarding.
+          Positioned(
+            right: 68,
+            top: 2,
+            child: _HeroIconButton(
+              icon: Icons.play_arrow_rounded,
+              label: 'Ver video de ayuda',
+              onTap: onPlayVideo,
+            ),
+          ),
+
           // Ícono de ajustes: abre la pantalla "Cuenta" (número, cerrar
           // sesión, eliminar cuenta).
-          Positioned(right: 20, top: 2, child: _SettingsButton(onTap: onOpenSettings)),
+          Positioned(
+            right: 20,
+            top: 2,
+            child: _HeroIconButton(
+              icon: Icons.settings_outlined,
+              label: 'Ajustes de cuenta',
+              onTap: onOpenSettings,
+            ),
+          ),
 
           // Título + subtítulo.
           Positioned(
@@ -163,19 +184,24 @@ class _WordmarkSmall extends StatelessWidget {
   }
 }
 
-/// Botón circular de ajustes: abre la pantalla "Cuenta" (número del
-/// revendedor, cerrar sesión, eliminar cuenta — Apple/Google guideline
-/// 5.1.1(v): el borrado debe estar accesible desde la app).
-class _SettingsButton extends StatelessWidget {
-  const _SettingsButton({required this.onTap});
+/// Botón circular del hero (ajustes, play del video de ayuda): mismo cristal
+/// translúcido y área táctil ≥48dp (accesibilidad).
+class _HeroIconButton extends StatelessWidget {
+  const _HeroIconButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Ajustes de cuenta',
+      label: label,
       child: Material(
         color: const Color(0x24FFFFFF), // rgba(255,255,255,0.14)
         shape: const CircleBorder(
@@ -184,11 +210,10 @@ class _SettingsButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           customBorder: const CircleBorder(),
-          child: const SizedBox(
-            // 48dp (accesibilidad: áreas táctiles ≥48dp).
+          child: SizedBox(
             width: 48,
             height: 48,
-            child: Icon(Icons.settings_outlined, size: 22, color: Colors.white),
+            child: Icon(icon, size: 22, color: Colors.white),
           ),
         ),
       ),

@@ -52,6 +52,27 @@ void main() {
         '+14155552671',
       );
     });
+
+    test('Ecuador: descarta el 0 troncal del móvil (09xx -> +593 9xx)', () {
+      expect(
+        normalizeToE164('0982345678', countryCode: '593'),
+        '+593982345678',
+      );
+    });
+
+    test('Ecuador: no duplica el código de país si ya viene sin +', () {
+      expect(
+        normalizeToE164('593982345678', countryCode: '593'),
+        '+593982345678',
+      );
+    });
+
+    test('Ecuador: respeta el E.164 si ya viene con +', () {
+      expect(
+        normalizeToE164('+593982345678', countryCode: '593'),
+        '+593982345678',
+      );
+    });
   });
 
   group('normalizeToE164 — entradas inválidas', () {

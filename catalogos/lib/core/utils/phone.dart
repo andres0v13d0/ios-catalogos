@@ -60,10 +60,12 @@ String? normalizeToE164(String? input, {String countryCode = defaultCountryCode}
     return _validate(digits);
   }
 
-  // Si ya empieza con el código de país y la longitud es la esperada
-  // (código + 10 dígitos nacionales), lo tratamos como internacional sin `+`.
+  // Si ya empieza con el código de país y le sobran suficientes dígitos como
+  // para ser un número nacional completo, lo tratamos como internacional sin
+  // `+` (sin asumir que el número nacional tiene 10 dígitos: varía por país,
+  // p. ej. Ecuador/Perú usan 9).
   if (digits.startsWith(countryCode) &&
-      digits.length == countryCode.length + 10) {
+      digits.length >= countryCode.length + 7) {
     return _validate(digits);
   }
 

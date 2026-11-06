@@ -14,6 +14,7 @@ import '../domain/catalog.dart';
 import 'catalog_carousel.dart';
 import 'home_hero.dart';
 import 'home_palette.dart';
+import 'onboarding_video.dart';
 import 'shared_catalogs_controller.dart';
 
 /// Pantalla "Tus catálogos" (carrusel) — pantalla principal tras iniciar
@@ -68,6 +69,17 @@ class _HomePageState extends ConsumerState<HomePage>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
+    _maybeShowOnboardingVideo();
+  }
+
+  /// Primera apertura de la app: muestra el modal del video una sola vez.
+  Future<void> _maybeShowOnboardingVideo() async {
+    final OnboardingVideoSeenStore store = ref.read(
+      onboardingVideoSeenStoreProvider,
+    );
+    if (await store.hasSeen()) return;
+    await store.markSeen();
+    if (mounted) showOnboardingVideoModal(context);
   }
 
   @override
@@ -149,6 +161,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     compact: compact,
                     intro: _introController,
                     onOpenSettings: () => _openSettings(context),
+                    onPlayVideo: () => showOnboardingVideoModal(context),
                     body: _ErrorBody(
                       onRetry: () => ref
                           .read(sharedCatalogsControllerProvider.notifier)
@@ -170,6 +183,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     compact: compact,
                     intro: _introController,
                     onOpenSettings: () => _openSettings(context),
+                    onPlayVideo: () => showOnboardingVideoModal(context),
                     body: const _SkeletonCard(),
                     onRefresh: null,
                   );
@@ -192,6 +206,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     compact: compact,
                     intro: _introController,
                     onOpenSettings: () => _openSettings(context),
+                    onPlayVideo: () => showOnboardingVideoModal(context),
                     offlineNotice: _showOfflineBanner,
                     body: total == 0
                         ? const _EmptyBody()
@@ -227,6 +242,7 @@ class _Scaffold extends StatelessWidget {
     required this.dotsHeight,
     required this.intro,
     required this.onOpenSettings,
+    required this.onPlayVideo,
     required this.body,
     required this.onRefresh,
     this.compact = false,
@@ -239,6 +255,7 @@ class _Scaffold extends StatelessWidget {
   final double dotsHeight;
   final Animation<double> intro;
   final VoidCallback onOpenSettings;
+  final VoidCallback onPlayVideo;
   final Widget body;
   final bool compact;
   final bool offlineNotice;
@@ -281,6 +298,7 @@ class _Scaffold extends StatelessWidget {
                     height: heroHeight,
                     subtitle: subtitle,
                     onOpenSettings: onOpenSettings,
+                    onPlayVideo: onPlayVideo,
                     compact: compact,
                   ),
                 ),
