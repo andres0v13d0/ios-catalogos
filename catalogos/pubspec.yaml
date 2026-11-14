@@ -66,7 +66,8 @@ dependencies:
   # Integración de Hive con Flutter: `Hive.initFlutter()` resuelve el directorio
   # de documentos de la app para persistir las cajas (tarea 0.6). Versión fija.
   hive_flutter: 1.1.0
-  firebase_core: ^4.15.0
+  # Fija en 4.15.0 (firebase-ios-sdk 12.19.0, igual que auth, app_check y messaging).
+  firebase_core: 4.15.0
 
   # Firebase Auth (tareas 1.10/1.13a): tras verificar el código WhatsApp en el
   # backend, la app canjea el `customToken` con
@@ -127,7 +128,10 @@ dependencies:
   # iframe oficial de YouTube, así que no requiere llaves de API.
   # Versión fija (pin).
   youtube_player_flutter: 10.0.1
-  firebase_messaging: ^16.7.1
+  # Fija en 16.7.0: usa firebase-ios-sdk 12.19.0, igual que firebase_auth 6.7.0,
+  # firebase_app_check 0.4.8 y firebase_core 4.15.0 (la 16.7.1 pide 12.19.3 y
+  # Swift Package Manager no puede resolver ambas).
+  firebase_messaging: 16.7.0
   flutter_local_notifications: 22.3.2
   lucide_icons_flutter: ^4.0.3
 
