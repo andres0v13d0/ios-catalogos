@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -43,10 +44,7 @@ class ProductThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: _image(),
-      ),
+      child: AspectRatio(aspectRatio: 1, child: _image()),
     );
   }
 
@@ -67,7 +65,8 @@ class ProductThumbnail extends StatelessWidget {
       memCacheWidth: memCachePixels,
       fadeInDuration: const Duration(milliseconds: 150),
       useOldImageOnUrlChange: true,
-      placeholder: (BuildContext context, String url) => const _ProductImagePlaceholder(),
+      placeholder: (BuildContext context, String url) =>
+          const _ProductImagePlaceholder(),
       errorWidget: (BuildContext context, String url, Object error) =>
           _ProductImageFallback(iconSize: fallbackIconSize),
     );
@@ -96,7 +95,7 @@ class _ProductImageFallback extends StatelessWidget {
       decoration: const BoxDecoration(color: Color(0xFFF4F8FC)),
       child: Center(
         child: Icon(
-          Icons.inventory_2_outlined,
+          LucideIcons.package,
           color: AuthPalette.textMuted,
           size: iconSize,
         ),

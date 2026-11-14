@@ -83,12 +83,20 @@ abstract final class CatalogTokens {
   /// Intermedio del degradado de fondo del editor (180°, 55%). `#003A85`.
   static const Color adjustGradientMid = Color(0xFF003A85);
 
-  static const Color whiteOverlay08 = Color(0x14FFFFFF); // rgba(255,255,255,.08)
+  static const Color whiteOverlay08 = Color(
+    0x14FFFFFF,
+  ); // rgba(255,255,255,.08)
   static const Color whiteOverlay10 = Color(0x1AFFFFFF); // rgba(255,255,255,.1)
-  static const Color whiteOverlay12 = Color(0x1FFFFFFF); // rgba(255,255,255,.12)
-  static const Color whiteOverlay14 = Color(0x24FFFFFF); // rgba(255,255,255,.14)
+  static const Color whiteOverlay12 = Color(
+    0x1FFFFFFF,
+  ); // rgba(255,255,255,.12)
+  static const Color whiteOverlay14 = Color(
+    0x24FFFFFF,
+  ); // rgba(255,255,255,.14)
   static const Color whiteOverlay20 = Color(0x33FFFFFF); // rgba(255,255,255,.2)
-  static const Color whiteOverlay28 = Color(0x47FFFFFF); // rgba(255,255,255,.28)
+  static const Color whiteOverlay28 = Color(
+    0x47FFFFFF,
+  ); // rgba(255,255,255,.28)
   static const Color whiteOverlay30 = Color(0x4DFFFFFF); // rgba(255,255,255,.3)
 
   /// Fondo del teclado propio. `rgba(0,12,32,0.55)`.

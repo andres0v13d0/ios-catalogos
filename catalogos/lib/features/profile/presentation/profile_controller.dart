@@ -58,7 +58,10 @@ class ProfileController extends Notifier<ProfileState> {
   ProfileState build() {
     // Al cerrar sesión (logout o política de 401), reinicia el estado del
     // perfil para que el guard no siga redirigiendo a completar perfil.
-    ref.listen<AuthStatus>(authStateProvider, (AuthStatus? prev, AuthStatus next) {
+    ref.listen<AuthStatus>(authStateProvider, (
+      AuthStatus? prev,
+      AuthStatus next,
+    ) {
       if (next == AuthStatus.signedOut) {
         state = const ProfileState();
       }
@@ -67,10 +70,9 @@ class ProfileController extends Notifier<ProfileState> {
   }
 
   /// Determina el estado del perfil a partir de un [Reseller].
-  ProfileStatus _statusFor(Reseller reseller) =>
-      reseller.isProfileComplete
-          ? ProfileStatus.complete
-          : ProfileStatus.incomplete;
+  ProfileStatus _statusFor(Reseller reseller) => reseller.isProfileComplete
+      ? ProfileStatus.complete
+      : ProfileStatus.incomplete;
 
   /// Carga el perfil desde el backend y actualiza el estado + los metadatos
   /// persistidos. Se invoca tras el login y, opcionalmente, al entrar a la
@@ -81,15 +83,9 @@ class ProfileController extends Notifier<ProfileState> {
     switch (result) {
       case Ok<Reseller>(:final value):
         await _persist(value);
-        state = ProfileState(
-          status: _statusFor(value),
-          reseller: value,
-        );
+        state = ProfileState(status: _statusFor(value), reseller: value);
       case Err<Reseller>(:final failure):
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message,
-        );
+        state = state.copyWith(isLoading: false, errorMessage: failure.message);
     }
   }
 
@@ -108,16 +104,10 @@ class ProfileController extends Notifier<ProfileState> {
     switch (result) {
       case Ok<Reseller>(:final value):
         await _persist(value);
-        state = ProfileState(
-          status: _statusFor(value),
-          reseller: value,
-        );
+        state = ProfileState(status: _statusFor(value), reseller: value);
         return value.isProfileComplete;
       case Err<Reseller>(:final failure):
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message,
-        );
+        state = state.copyWith(isLoading: false, errorMessage: failure.message);
         return false;
     }
   }
@@ -141,7 +131,9 @@ class ProfileController extends Notifier<ProfileState> {
   void reset() => state = const ProfileState();
 
   Future<void> _persist(Reseller reseller) async {
-    await ref.read(sessionStoreProvider).save(
+    await ref
+        .read(sessionStoreProvider)
+        .save(
           SessionMetadata(resellerId: reseller.id, nombre: reseller.nombre),
         );
   }
@@ -149,5 +141,6 @@ class ProfileController extends Notifier<ProfileState> {
 
 /// Provider del controlador de perfil.
 final NotifierProvider<ProfileController, ProfileState>
-    profileControllerProvider =
-    NotifierProvider<ProfileController, ProfileState>(ProfileController.new);
+profileControllerProvider = NotifierProvider<ProfileController, ProfileState>(
+  ProfileController.new,
+);

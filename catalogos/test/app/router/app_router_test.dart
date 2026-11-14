@@ -9,6 +9,7 @@
 import 'package:catalogos/app/router/app_router.dart';
 import 'package:catalogos/app/router/app_routes.dart';
 import 'package:catalogos/app/theme/app_theme.dart';
+import 'package:catalogos/core/storage/storage.dart';
 import 'package:catalogos/features/auth/presentation/auth_state_provider.dart';
 import 'package:catalogos/features/auth/presentation/login_page.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/home_page.dart';
@@ -17,13 +18,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../helpers/memory_cache.dart';
+
 /// Monta la app usando el router real bajo un [ProviderScope], con la
 /// posibilidad de sobreescribir el estado de auth inicial.
 Future<GoRouter> _pumpApp(
   WidgetTester tester, {
   AuthStatus initialStatus = AuthStatus.signedOut,
 }) async {
-  final ProviderContainer container = ProviderContainer();
+  final ProviderContainer container = ProviderContainer(
+    overrides: [localCacheProvider.overrideWithValue(MemoryCache())],
+  );
   addTearDown(container.dispose);
 
   // Fija el estado inicial de la sesión antes de construir el router.
@@ -49,13 +54,26 @@ Future<GoRouter> _pumpApp(
 
 void main() {
   group('Guard de auth (sin sesión)', () {
-    testWidgets('arranca en /login cuando no hay sesión',
+    testWidgets('arranca en Comprar sin sesión y oculta Pedidos y Vender',
         (WidgetTester tester) async {
       final GoRouter router = await _pumpApp(tester);
 
-      expect(router.state.matchedLocation, AppRoutes.login);
-      expect(find.byType(LoginPage), findsOneWidget);
-      expect(find.byType(HomePage), findsNothing);
+      expect(router.state.matchedLocation, AppRoutes.buy);
+      expect(find.text('Chat'), findsOneWidget);
+      expect(find.text('Cuenta'), findsOneWidget);
+      expect(find.text('Pedidos'), findsNothing);
+      expect(find.text('Vender'), findsNothing);
+    });
+
+    testWidgets('Chat y Cuenta son públicos', (WidgetTester tester) async {
+      final GoRouter router = await _pumpApp(tester);
+
+      router.go(AppRoutes.chat);
+      await tester.pumpAndSettle();
+      expect(router.state.matchedLocation, AppRoutes.chat);
+      router.go(AppRoutes.account);
+      await tester.pumpAndSettle();
+      expect(router.state.matchedLocation, AppRoutes.account);
     });
 
     testWidgets('redirige a /login al intentar entrar a /home sin sesión',
@@ -87,7 +105,9 @@ void main() {
 
     testWidgets('al iniciar sesión, el guard navega de /login a /home',
         (WidgetTester tester) async {
-      final ProviderContainer container = ProviderContainer();
+      final ProviderContainer container = ProviderContainer(
+    overrides: [localCacheProvider.overrideWithValue(MemoryCache())],
+  );
       addTearDown(container.dispose);
       final GoRouter router = container.read(appRouterProvider);
 
@@ -103,6 +123,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Partimos en login (sin sesión).
+      router.go(AppRoutes.login);
+      await tester.pumpAndSettle();
       expect(find.byType(LoginPage), findsOneWidget);
 
       // Iniciar sesión (equivalente a verificar el OTP con éxito) hace que el

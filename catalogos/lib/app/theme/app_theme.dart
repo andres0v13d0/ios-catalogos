@@ -35,9 +35,9 @@ abstract final class AppTheme {
   /// [ThemeData] completo de la app con Poppins + [colorScheme].
   static ThemeData get themeData {
     final TextTheme baseTextTheme = ThemeData.light().textTheme.apply(
-          bodyColor: AppColors.text,
-          displayColor: AppColors.text,
-        );
+      bodyColor: AppColors.text,
+      displayColor: AppColors.text,
+    );
 
     return ThemeData(
       useMaterial3: true,

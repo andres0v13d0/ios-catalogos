@@ -161,7 +161,7 @@ void main() {
     (WidgetTester tester) async {
       await pumpHome(tester);
 
-      expect(find.text('Tus catálogos'), findsOneWidget);
+      expect(find.text('Vender'), findsOneWidget);
       expect(find.text('Desliza para ver más'), findsOneWidget);
       expect(find.text('Colección Primavera'), findsOneWidget);
       expect(find.text('Distribuidora Andina'), findsOneWidget);
@@ -259,17 +259,6 @@ void main() {
     );
 
     expect(find.textContaining('Sin conexión'), findsOneWidget);
-  });
-
-  testWidgets('el ícono de ajustes navega a la pantalla "Cuenta"', (
-    WidgetTester tester,
-  ) async {
-    await pumpHome(tester);
-
-    await tester.tap(find.bySemanticsLabel('Ajustes de cuenta'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('account-settings-stub'), findsOneWidget);
   });
 
   testWidgets('el botón de play del video de ayuda está presente', (

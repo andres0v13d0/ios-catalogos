@@ -42,10 +42,14 @@ class Environment {
   final bool enableLogging;
 
   /// Valores inyectados por `--dart-define-from-file`.
-  static const String _flavorRaw =
-      String.fromEnvironment('flavor', defaultValue: 'dev');
-  static const String _appName =
-      String.fromEnvironment('appName', defaultValue: 'FLY+ Dev');
+  static const String _flavorRaw = String.fromEnvironment(
+    'flavor',
+    defaultValue: 'dev',
+  );
+  static const String _appName = String.fromEnvironment(
+    'appName',
+    defaultValue: 'FLY+ Dev',
+  );
   // Fallback LOCAL para desarrollo: `10.0.2.2` es el alias del emulador de
   // Android hacia el `localhost` de la máquina anfitriona (el PC donde corre
   // el backend en el puerto 3000). No apuntamos a `dev-api.minymol.com` porque
@@ -65,10 +69,14 @@ class Environment {
     'apiBaseUrl',
     defaultValue: 'http://10.0.2.2:3000',
   );
-  static const String _firebaseOptions =
-      String.fromEnvironment('firebaseOptions', defaultValue: 'dev');
-  static const bool _enableLogging =
-      bool.fromEnvironment('enableLogging', defaultValue: true);
+  static const String _firebaseOptions = String.fromEnvironment(
+    'firebaseOptions',
+    defaultValue: 'dev',
+  );
+  static const bool _enableLogging = bool.fromEnvironment(
+    'enableLogging',
+    defaultValue: true,
+  );
 
   /// Instancia única del entorno actual, construida a partir de los
   /// dart-define disponibles en tiempo de compilación.
@@ -89,14 +97,13 @@ class Environment {
     String apiBaseUrl = 'https://api.test',
     String firebaseOptions = 'dev',
     bool enableLogging = true,
-  }) =>
-      Environment._(
-        flavor: flavor,
-        appName: appName,
-        apiBaseUrl: apiBaseUrl,
-        firebaseOptions: firebaseOptions,
-        enableLogging: enableLogging,
-      );
+  }) => Environment._(
+    flavor: flavor,
+    appName: appName,
+    apiBaseUrl: apiBaseUrl,
+    firebaseOptions: firebaseOptions,
+    enableLogging: enableLogging,
+  );
 
   bool get isDev => flavor == Flavor.dev;
   bool get isStaging => flavor == Flavor.staging;

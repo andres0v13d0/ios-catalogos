@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -11,7 +12,7 @@ const String _kOnboardingVideoId = 'znO7gc7MhX0';
 /// sobrevivir al cierre de sesión, así que no se usa su `clear()`.
 class OnboardingVideoSeenStore {
   OnboardingVideoSeenStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
@@ -25,9 +26,7 @@ class OnboardingVideoSeenStore {
 /// Provider del [OnboardingVideoSeenStore] (secure storage). Los tests lo
 /// sobreescriben para no tocar el almacenamiento seguro del SO.
 final Provider<OnboardingVideoSeenStore> onboardingVideoSeenStoreProvider =
-    Provider<OnboardingVideoSeenStore>(
-      (Ref ref) => OnboardingVideoSeenStore(),
-    );
+    Provider<OnboardingVideoSeenStore>((Ref ref) => OnboardingVideoSeenStore());
 
 /// Abre el modal del video de onboarding. Se usa tanto en la primera
 /// apertura automática como en el botón de play junto a ajustes.
@@ -43,8 +42,7 @@ class _OnboardingVideoDialog extends StatefulWidget {
   const _OnboardingVideoDialog();
 
   @override
-  State<_OnboardingVideoDialog> createState() =>
-      _OnboardingVideoDialogState();
+  State<_OnboardingVideoDialog> createState() => _OnboardingVideoDialogState();
 }
 
 class _OnboardingVideoDialogState extends State<_OnboardingVideoDialog> {
@@ -78,7 +76,7 @@ class _OnboardingVideoDialogState extends State<_OnboardingVideoDialog> {
               color: Colors.black54,
               shape: const CircleBorder(),
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
+                icon: const Icon(LucideIcons.x, color: Colors.white),
                 tooltip: 'Cerrar',
                 onPressed: () => Navigator.of(context).pop(),
               ),

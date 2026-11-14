@@ -15,11 +15,37 @@ abstract final class AppRoutes {
   /// tras `codeSent`; el estado del flujo (teléfono) vive en el controlador.
   static const String otp = '/login/otp';
 
+  /// Pestaña "Chat" (pública; el contenido llega en la Fase 5).
+  static const String chat = '/chat';
+
+  /// Conversación abierta (pública, mismo identificador de visitante).
+  static const String conversation = '/chat/c/:id';
+  static String conversationPath(String id) => '/chat/c/$id';
+
+  /// Pestaña "Cuenta": login para visitantes, ajustes para revendedores.
+  static const String account = '/cuenta';
+
   /// Ruta para completar el perfil tras el primer login (tarea 1.13). El guard
   /// redirige aquí mientras el reseller no tenga `nombre`.
   static const String completeProfile = '/complete-profile';
 
-  /// Ruta principal (autenticada).
+  /// Pestaña "Comprar": catálogos vistos como cliente (precios originales).
+  static const String buy = '/comprar';
+
+  /// Catálogo guardado por un visitante (por código corto).
+  static const String visitorCatalog = '/comprar/c/:code';
+  static String visitorCatalogPath(String code) => '/comprar/c/$code';
+
+  /// Productos de un catálogo en modo comprador (precios originales).
+  static const String buyCatalog = '/comprar/catalogo/:id';
+
+  static String buyCatalogPath(String catalogId) =>
+      '/comprar/catalogo/$catalogId';
+
+  /// Pestaña "Pedidos": recibidos de clientes y compras propias.
+  static const String orders = '/pedidos';
+
+  /// Pestaña "Vender" (home actual de catálogos, autenticada).
   static const String home = '/home';
 
   /// Ruta "Cuenta": número del revendedor, cerrar sesión, eliminar cuenta.
@@ -38,7 +64,8 @@ abstract final class AppRoutes {
   static const String adjustPrices = '/catalog/:id/adjust-prices';
 
   /// Construye el path concreto de "Ajustar precios" para un [catalogId].
-  static String adjustPricesPath(String catalogId) => '/catalog/$catalogId/adjust-prices';
+  static String adjustPricesPath(String catalogId) =>
+      '/catalog/$catalogId/adjust-prices';
 
   /// Ruta de "Banner del catálogo" del revendedor (recibe un
   /// `ResellerBannerState` vía `extra`).
@@ -52,5 +79,6 @@ abstract final class AppRoutes {
   static const String productDetail = '/catalog/:id/product';
 
   /// Construye el path concreto del detalle de producto para un [catalogId].
-  static String productDetailPath(String catalogId) => '/catalog/$catalogId/product';
+  static String productDetailPath(String catalogId) =>
+      '/catalog/$catalogId/product';
 }

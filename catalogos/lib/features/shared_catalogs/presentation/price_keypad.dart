@@ -109,7 +109,11 @@ class PriceKeypad extends StatelessWidget {
 }
 
 class _KeypadRow extends StatelessWidget {
-  const _KeypadRow({required this.children, required this.height, required this.gap});
+  const _KeypadRow({
+    required this.children,
+    required this.height,
+    required this.gap,
+  });
 
   final List<Widget> children;
   final double height;
@@ -224,7 +228,9 @@ class _BackspaceKey extends StatelessWidget {
               child: SizedBox(
                 width: 26 * (height / 52),
                 height: 26 * (height / 52),
-                child: const CustomPaint(painter: BackspacePainter(color: Colors.white)),
+                child: const CustomPaint(
+                  painter: BackspacePainter(color: Colors.white),
+                ),
               ),
             ),
           ),

@@ -95,5 +95,5 @@ class ResellerRepository {
 /// Provider del [ResellerRepository], construido con el [Dio] de la app.
 final Provider<ResellerRepository> resellerRepositoryProvider =
     Provider<ResellerRepository>(
-  (Ref ref) => ResellerRepository(ref.watch(dioProvider)),
-);
+      (Ref ref) => ResellerRepository(ref.watch(dioProvider)),
+    );

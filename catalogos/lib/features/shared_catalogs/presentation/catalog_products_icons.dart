@@ -92,8 +92,16 @@ class ShareNodesPainter extends CustomPainter {
     canvas.drawCircle(Offset(18 * s, 5 * s), 3 * s, stroke);
     canvas.drawCircle(Offset(6 * s, 12 * s), 3 * s, stroke);
     canvas.drawCircle(Offset(18 * s, 19 * s), 3 * s, stroke);
-    canvas.drawLine(Offset(8.6 * s, 10.5 * s), Offset(15.4 * s, 6.5 * s), stroke);
-    canvas.drawLine(Offset(8.6 * s, 13.5 * s), Offset(15.4 * s, 17.5 * s), stroke);
+    canvas.drawLine(
+      Offset(8.6 * s, 10.5 * s),
+      Offset(15.4 * s, 6.5 * s),
+      stroke,
+    );
+    canvas.drawLine(
+      Offset(8.6 * s, 13.5 * s),
+      Offset(15.4 * s, 17.5 * s),
+      stroke,
+    );
   }
 
   @override
@@ -157,14 +165,20 @@ class SwapPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    final Rect topArcRect = Rect.fromCircle(center: Offset(12 * s, 11 * s), radius: 8 * s);
+    final Rect topArcRect = Rect.fromCircle(
+      center: Offset(12 * s, 11 * s),
+      radius: 8 * s,
+    );
     final Path topArc = Path()
       ..addArc(topArcRect, _deg(-100), _deg(145))
       ..moveTo(4 * s, 4 * s)
       ..lineTo(4 * s, 9 * s)
       ..lineTo(9 * s, 9 * s);
 
-    final Rect bottomArcRect = Rect.fromCircle(center: Offset(12 * s, 13 * s), radius: 8 * s);
+    final Rect bottomArcRect = Rect.fromCircle(
+      center: Offset(12 * s, 13 * s),
+      radius: 8 * s,
+    );
     final Path bottomArc = Path()
       ..addArc(bottomArcRect, _deg(80), _deg(145))
       ..moveTo(20 * s, 20 * s)

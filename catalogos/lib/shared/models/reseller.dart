@@ -57,12 +57,12 @@ class Reseller {
 
   /// Serializa a JSON (camelCase). No incluye `tipo`.
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'firebaseUid': firebaseUid,
-        'telefonoE164': telefonoE164,
-        'nombre': nombre,
-        'countryCode': countryCode,
-      };
+    'id': id,
+    'firebaseUid': firebaseUid,
+    'telefonoE164': telefonoE164,
+    'nombre': nombre,
+    'countryCode': countryCode,
+  };
 
   Reseller copyWith({
     int? id,

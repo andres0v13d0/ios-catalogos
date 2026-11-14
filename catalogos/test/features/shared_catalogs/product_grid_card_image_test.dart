@@ -8,6 +8,7 @@
 //     alto a la vez (política "exact" que estiraría la foto).
 //   - Dos tarjetas de una misma fila tienen EXACTAMENTE la misma altura.
 
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:catalogos/features/shared_catalogs/domain/catalog_detail.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/product_grid_card.dart';
@@ -189,6 +190,6 @@ void main() {
     expect(find.descendant(of: find.byType(ProductThumbnail), matching: find.byType(ClipRRect)), findsOneWidget);
     // Sin URL: respaldo con ícono (no CachedNetworkImage).
     expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(find.byIcon(Icons.inventory_2_outlined), findsOneWidget);
+    expect(find.byIcon(LucideIcons.package), findsOneWidget);
   });
 }

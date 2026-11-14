@@ -30,9 +30,5 @@ abstract final class AppColors {
 
   /// Secuencia de colores del gradiente del botón primario:
   /// `#004AAD → #5DE0E6 → #00FF94`.
-  static const List<Color> primaryGradient = <Color>[
-    secondary,
-    accent,
-    brand,
-  ];
+  static const List<Color> primaryGradient = <Color>[secondary, accent, brand];
 }

@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
@@ -38,14 +39,11 @@ class ThemeShowcasePage extends StatelessWidget {
           const SizedBox(height: 12),
           FlyPrimaryButton(
             label: 'Continuar',
-            icon: Icons.arrow_forward,
+            icon: LucideIcons.arrowRight,
             onPressed: () {},
           ),
           const SizedBox(height: 16),
-          const FlyPrimaryButton(
-            label: 'Deshabilitado',
-            onPressed: null,
-          ),
+          const FlyPrimaryButton(label: 'Deshabilitado', onPressed: null),
         ],
       ),
     );

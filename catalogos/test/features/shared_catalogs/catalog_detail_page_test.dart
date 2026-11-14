@@ -14,6 +14,7 @@
 // red). Las `Image.network` fallan en el entorno de test y el
 // `errorBuilder` de la tarjeta renderiza el marcador de reemplazo.
 
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:catalogos/features/shared_catalogs/domain/catalog_detail.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_controller.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/catalog_detail_page.dart';
@@ -282,7 +283,7 @@ void main() {
 
       AnimatedOpacity opacityOf() => tester.widget<AnimatedOpacity>(
         find.ancestor(
-          of: find.byIcon(Icons.keyboard_arrow_up_rounded),
+          of: find.byIcon(LucideIcons.chevronUp),
           matching: find.byType(AnimatedOpacity),
         ),
       );
@@ -297,7 +298,7 @@ void main() {
 
       // Tocarlo vuelve arriba (el scroll baja del umbral y el botón se oculta
       // de nuevo al terminar la animación).
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_up_rounded));
+      await tester.tap(find.byIcon(LucideIcons.chevronUp));
       await tester.pumpAndSettle();
       expect(opacityOf().opacity, 0);
     },

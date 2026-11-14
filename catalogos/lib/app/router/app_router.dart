@@ -15,7 +15,14 @@ import '../../features/shared_catalogs/presentation/price_adjustment_page.dart';
 import '../../features/shared_catalogs/presentation/product_detail_page.dart';
 import '../../features/shared_catalogs/domain/reseller_banner.dart';
 import '../../features/shared_catalogs/presentation/reseller_banner_page.dart';
+import '../../features/orders/presentation/orders_page.dart';
+import '../../features/buy/buy_page.dart';
+import '../../features/account/account_tab.dart';
+import '../../features/chat/chat_tab.dart';
+import '../../features/visitor/visitor_buy_page.dart';
+import '../../features/chat/conversation_page.dart';
 import 'app_routes.dart';
+import 'main_shell.dart';
 
 /// Configuración de `go_router` con guard de autenticación (diseño §2.3).
 ///
@@ -31,7 +38,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.buy,
     refreshListenable: refresh,
     redirect: (BuildContext context, GoRouterState state) {
       final bool signedIn = ref.read(isSignedInProvider);
@@ -40,10 +47,17 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       // accesibles sin sesión.
       final bool goingToAuthFlow =
           location == AppRoutes.login || location == AppRoutes.otp;
+      // Pestañas públicas: el visitante entra sin cuenta.
+      final bool isPublic =
+          goingToAuthFlow ||
+          location == AppRoutes.buy ||
+          location.startsWith('/comprar/c/') ||
+          location.startsWith(AppRoutes.chat) ||
+          location == AppRoutes.account;
 
-      // Sin sesión: forzar login (salvo que ya se dirija al flujo de auth).
+      // Sin sesión: Pedidos, Vender y el resto exigen cuenta de revendedor.
       if (!signedIn) {
-        return goingToAuthFlow ? null : AppRoutes.login;
+        return isPublic ? null : AppRoutes.login;
       }
 
       // Con sesión: no permanecer en el flujo de auth; ir a home.
@@ -56,8 +70,9 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       // Cuando el estado del perfil es `complete`, deja de redirigir; en
       // `unknown` (aún no consultado) no se fuerza nada para no bloquear la
       // navegación antes de resolver `/reseller/me`.
-      final ProfileStatus profileStatus =
-          ref.read(profileControllerProvider).status;
+      final ProfileStatus profileStatus = ref
+          .read(profileControllerProvider)
+          .status;
       final bool onCompleteProfile = location == AppRoutes.completeProfile;
 
       if (profileStatus == ProfileStatus.incomplete && !onCompleteProfile) {
@@ -81,8 +96,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.otp,
         name: 'otp',
-        builder: (BuildContext context, GoRouterState state) =>
-            const OtpPage(),
+        builder: (BuildContext context, GoRouterState state) => const OtpPage(),
       ),
       GoRoute(
         path: AppRoutes.completeProfile,
@@ -90,11 +104,64 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         builder: (BuildContext context, GoRouterState state) =>
             const CompleteProfilePage(),
       ),
-      GoRoute(
-        path: AppRoutes.home,
-        name: 'home',
-        builder: (BuildContext context, GoRouterState state) =>
-            const HomePage(),
+      StatefulShellRoute.indexedStack(
+        builder: (
+          BuildContext context,
+          GoRouterState state,
+          StatefulNavigationShell shell,
+        ) => MainShell(navigationShell: shell),
+        branches: <StatefulShellBranch>[
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.buy,
+                name: 'buy',
+                builder: (BuildContext context, GoRouterState state) =>
+                    const BuyPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.chat,
+                name: 'chat',
+                builder: (BuildContext context, GoRouterState state) =>
+                    const ChatTab(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.orders,
+                name: 'orders',
+                builder: (BuildContext context, GoRouterState state) =>
+                    const OrdersPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.home,
+                name: 'home',
+                builder: (BuildContext context, GoRouterState state) =>
+                    const HomePage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.account,
+                name: 'account',
+                builder: (BuildContext context, GoRouterState state) =>
+                    const AccountTab(),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.accountSettings,
@@ -112,6 +179,27 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               : null;
           return CatalogDetailPage(catalogId: id, title: title);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.conversation,
+        builder: (BuildContext context, GoRouterState state) =>
+            ConversationPage(
+              conversationId: state.pathParameters['id'] ?? '',
+              title: state.extra is String ? state.extra! as String : null,
+            ),
+      ),
+      GoRoute(
+        path: AppRoutes.visitorCatalog,
+        builder: (BuildContext context, GoRouterState state) =>
+            VisitorCatalogPage(code: state.pathParameters['code'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.buyCatalog,
+        name: 'buyCatalog',
+        builder: (BuildContext context, GoRouterState state) => BuyCatalogPage(
+          catalogId: state.pathParameters['id'] ?? '',
+          title: state.extra is String ? state.extra! as String : null,
+        ),
       ),
       GoRoute(
         path: AppRoutes.adjustPrices,

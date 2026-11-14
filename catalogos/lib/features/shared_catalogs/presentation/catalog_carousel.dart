@@ -19,9 +19,17 @@ class CatalogCarousel extends StatefulWidget {
     required this.onOpenCatalog,
     required this.dotsHeight,
     this.compact = false,
+    this.onLongPressCatalog,
+    this.cardBuilder,
   });
 
   final List<Catalog> catalogs;
+
+  /// Pulsación larga sobre una tarjeta (p. ej. quitar un catálogo guardado).
+  final ValueChanged<Catalog>? onLongPressCatalog;
+
+  /// Tarjeta alternativa (por defecto, [CatalogCard]).
+  final Widget Function(Catalog catalog, int index, bool compact)? cardBuilder;
   final ValueChanged<Catalog> onOpenCatalog;
 
   /// Alto reservado para los puntos (0 si hay 1 solo catálogo).
@@ -50,6 +58,25 @@ class _CatalogCarouselState extends State<CatalogCarousel> {
     _controller.dispose();
     super.dispose();
   }
+
+  Widget _card(int index) {
+    final Catalog c = widget.catalogs[index];
+    return widget.cardBuilder?.call(c, index, widget.compact) ??
+        CatalogCard(
+          key: Key('catalog_${c.id}'),
+          catalog: c,
+          variantIndex: index,
+          compact: widget.compact,
+          onTap: () => widget.onOpenCatalog(c),
+        );
+  }
+
+  Widget _longPress(Catalog c, Widget card) => widget.onLongPressCatalog == null
+      ? card
+      : GestureDetector(
+          onLongPress: () => widget.onLongPressCatalog!(c),
+          child: card,
+        );
 
   void _announcePage(int index) {
     final FlutterView? view = View.maybeOf(context);
@@ -81,14 +108,9 @@ class _CatalogCarouselState extends State<CatalogCarousel> {
             // vez de estirarse a rellenar toda la pantalla, y el sobrante
             // queda como aire arriba/abajo de la tarjeta, no dentro de ella.
             child: total == 1
-                ? Center(
-                    child: CatalogCard(
-                      key: Key('catalog_${widget.catalogs.first.id}'),
-                      catalog: widget.catalogs.first,
-                      variantIndex: 0,
-                      compact: widget.compact,
-                      onTap: () => widget.onOpenCatalog(widget.catalogs.first),
-                    ),
+                ? Align(
+                    alignment: Alignment.topCenter,
+                    child: _longPress(widget.catalogs.first, _card(0)),
                   )
                 : const SizedBox.shrink(),
           );
@@ -137,14 +159,9 @@ class _CatalogCarouselState extends State<CatalogCarousel> {
                 // tarjeta use su alto natural y el sobrante quede fuera de
                 // ella (ver comentario equivalente en el estado de un solo
                 // catálogo, arriba).
-                child: Center(
-                  child: CatalogCard(
-                    key: Key('catalog_${widget.catalogs[index].id}'),
-                    catalog: widget.catalogs[index],
-                    variantIndex: index,
-                    compact: widget.compact,
-                    onTap: () => widget.onOpenCatalog(widget.catalogs[index]),
-                  ),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: _longPress(widget.catalogs[index], _card(index)),
                 ),
               );
             },

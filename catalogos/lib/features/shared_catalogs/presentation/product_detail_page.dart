@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -105,13 +106,21 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     // con lo que el revendedor ya vio ahí.
     final CatalogPriceOverlayState overlay = priceHidden
         ? CatalogPriceOverlayState.empty
-        : ref.watch(catalogPriceOverlayControllerProvider(widget.args.catalogId)).value ??
+        : ref
+                  .watch(
+                    catalogPriceOverlayControllerProvider(
+                      widget.args.catalogId,
+                    ),
+                  )
+                  .value ??
               CatalogPriceOverlayState.empty;
-    final CatalogPriceRuleProduct? overlayProduct = overlay.byProductId[product.id];
+    final CatalogPriceRuleProduct? overlayProduct =
+        overlay.byProductId[product.id];
     final bool showMarkup = hasVisibleMarkup(overlayProduct);
 
     final double screenWidth = MediaQuery.sizeOf(context).width;
-    final int memCachePixels = (screenWidth * MediaQuery.devicePixelRatioOf(context)).round();
+    final int memCachePixels =
+        (screenWidth * MediaQuery.devicePixelRatioOf(context)).round();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -148,19 +157,31 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             const SizedBox(height: 14),
                             _PriceSection(
                               product: product,
-                              overlayProduct: showMarkup ? overlayProduct : null,
-                              badgeLabel: showMarkup ? overlayBadgeLabel(overlayProduct!) : null,
+                              overlayProduct: showMarkup
+                                  ? overlayProduct
+                                  : null,
+                              badgeLabel: showMarkup
+                                  ? overlayBadgeLabel(overlayProduct!)
+                                  : null,
                             ),
                           ],
                           if (product.colores.isNotEmpty) ...<Widget>[
                             const SizedBox(height: 20),
-                            _VariantSection(title: 'Color', variants: product.colores),
+                            _VariantSection(
+                              title: 'Color',
+                              variants: product.colores,
+                            ),
                           ],
                           if (product.tallas.isNotEmpty) ...<Widget>[
                             const SizedBox(height: 20),
-                            _VariantSection(title: 'Talla', variants: product.tallas),
+                            _VariantSection(
+                              title: 'Talla',
+                              variants: product.tallas,
+                            ),
                           ],
-                          if ((product.descripcion ?? '').trim().isNotEmpty) ...<Widget>[
+                          if ((product.descripcion ?? '')
+                              .trim()
+                              .isNotEmpty) ...<Widget>[
                             const SizedBox(height: 20),
                             const Text(
                               'Descripción',
@@ -180,13 +201,16 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                               ),
                             ),
                           ],
-                          if (!priceHidden && overlayProduct != null) ...<Widget>[
+                          if (!priceHidden &&
+                              overlayProduct != null) ...<Widget>[
                             const SizedBox(height: 28),
                             SizedBox(
                               width: double.infinity,
                               child: AuthGradientButton(
                                 label: 'Editar precio',
-                                iconPainter: const ArrowForwardPainter(color: AppColors.primary),
+                                iconPainter: const ArrowForwardPainter(
+                                  color: AppColors.primary,
+                                ),
                                 enabled: true,
                                 loading: false,
                                 onPressed: () => _openEditPrice(overlayProduct),
@@ -225,7 +249,11 @@ class _Header extends StatelessWidget {
             label: 'Volver',
             child: IconButton(
               onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary, size: 20),
+              icon: const Icon(
+                LucideIcons.chevronLeft,
+                color: AppColors.primary,
+                size: 20,
+              ),
             ),
           ),
           Expanded(
@@ -275,7 +303,9 @@ class _ImageGallery extends StatelessWidget {
             onPageChanged: onPageChanged,
             itemCount: count,
             itemBuilder: (BuildContext context, int index) {
-              final String? url = images.isEmpty ? null : images[index].detailUrl;
+              final String? url = images.isEmpty
+                  ? null
+                  : images[index].detailUrl;
               return ProductThumbnail(
                 url: url,
                 memCachePixels: memCachePixels,
@@ -297,7 +327,9 @@ class _ImageGallery extends StatelessWidget {
                 width: active ? 18 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: active ? AppColors.secondary : CatalogTokens.cardBorder,
+                  color: active
+                      ? AppColors.secondary
+                      : CatalogTokens.cardBorder,
                   borderRadius: BorderRadius.circular(999),
                 ),
               );
@@ -347,14 +379,21 @@ class _PriceSection extends StatelessWidget {
             ),
             if (badgeLabel != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.brand,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   badgeLabel!,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
           ],
@@ -374,7 +413,10 @@ class _PriceSection extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
                 'Desde $cantidad unidad${cantidad == '1' ? '' : 'es'}: \$${formatCopPlain(precio)}',
-                style: const TextStyle(fontSize: 12, color: AuthPalette.textMuted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AuthPalette.textMuted,
+                ),
               ),
             );
           }),
@@ -413,7 +455,10 @@ class _VariantSection extends StatelessWidget {
           children: variants
               .map(
                 (Variant v) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: CatalogTokens.searchBackground,
                     border: Border.all(color: CatalogTokens.cardBorder),
@@ -421,7 +466,11 @@ class _VariantSection extends StatelessWidget {
                   ),
                   child: Text(
                     v.name,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               )

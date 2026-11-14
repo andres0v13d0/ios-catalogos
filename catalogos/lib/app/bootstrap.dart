@@ -47,8 +47,10 @@ Future<BootstrapResult> bootstrapFirebase() async {
     if (isFirebaseRequiredPlatform) {
       // En android/web NO continuamos en silencio: el llamador mostrará la
       // pantalla de error.
-      debugPrint('[bootstrap] Firebase/App Check falló en una plataforma '
-          'soportada: $error');
+      debugPrint(
+        '[bootstrap] Firebase/App Check falló en una plataforma '
+        'soportada: $error',
+      );
       debugPrintStack(stackTrace: stackTrace);
       return BootstrapResult(ok: false, error: error);
     }

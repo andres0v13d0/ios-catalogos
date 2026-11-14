@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Push (FCM/APNs), igual que Flymovil. 'development' en el archivo; al
+	  firmar para App Store/TestFlight el perfil de distribución lo deja en
+	  'production'. Requiere "Push Notifications" activo en el App ID
+	  com.flystock.revendedores (Apple Developer).
+	-->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

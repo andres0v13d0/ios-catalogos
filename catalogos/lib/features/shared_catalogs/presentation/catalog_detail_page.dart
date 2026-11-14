@@ -1,3 +1,5 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -122,7 +124,9 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
   /// invalida la caché Hive de este catálogo y recarga productos + overlay,
   /// para que la cuadrícula muestre los precios nuevos.
   Future<void> _afterPriceRuleChange() async {
-    await ref.read(localCacheProvider).delete(catalogDetailCacheKey(widget.catalogId));
+    await ref
+        .read(localCacheProvider)
+        .delete(catalogDetailCacheKey(widget.catalogId));
     ref.invalidate(catalogDetailControllerProvider(widget.catalogId));
     ref.invalidate(catalogPriceOverlayControllerProvider(widget.catalogId));
   }
@@ -130,7 +134,10 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
   Future<void> _openCatalogWideAdjust(int totalProducts) async {
     final bool? changed = await context.push<bool>(
       AppRoutes.adjustPricesPath(widget.catalogId),
-      extra: PriceAdjustmentArgs(catalogId: widget.catalogId, totalProductsHint: totalProducts),
+      extra: PriceAdjustmentArgs(
+        catalogId: widget.catalogId,
+        totalProductsHint: totalProducts,
+      ),
     );
     if (changed ?? false) {
       await _afterPriceRuleChange();
@@ -142,7 +149,9 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
     int totalProducts,
     CatalogPriceRuleProduct? overlayProduct,
   ) async {
-    if (overlayProduct == null) return; // overlay aún no cargado: el lápiz no se dibuja en ese caso
+    if (overlayProduct == null) {
+      return; // overlay aún no cargado: el lápiz no se dibuja en ese caso
+    }
     final bool? changed = await context.push<bool>(
       AppRoutes.adjustPricesPath(widget.catalogId),
       extra: PriceAdjustmentArgs(
@@ -171,14 +180,22 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
 
   /// Arma el estado para las pantallas de banner/compartir a partir del detalle
   /// cargado, el [Catalog] de la lista y el overlay de reglas de precio.
-  ResellerBannerState _bannerStateFor(CatalogDetail detail, CatalogPriceOverlayState overlay) {
+  ResellerBannerState _bannerStateFor(
+    CatalogDetail detail,
+    CatalogPriceOverlayState overlay,
+  ) {
     final Catalog? c = _catalogFromList();
     // Banner PROPIO del revendedor = ogImageUrl de su fila hija (null si no subió).
     final String? ownBanner = c?.ogImageUrl;
     // Imagen del proveedor para la vista previa cuando no hay banner propio.
-    final String? providerImage = c?.bannerUrl ?? c?.providerBannerUrl ?? detail.bannerUrl ?? c?.providerLogoUrl;
+    final String? providerImage =
+        c?.bannerUrl ??
+        c?.providerBannerUrl ??
+        detail.bannerUrl ??
+        c?.providerLogoUrl;
     // Hay reglas de precio si el overlay trae regla de catálogo o de producto.
-    final bool hasRules = overlay.catalogRule != null || overlay.byProductId.isNotEmpty;
+    final bool hasRules =
+        overlay.catalogRule != null || overlay.byProductId.isNotEmpty;
 
     return ResellerBannerState(
       catalogId: widget.catalogId,
@@ -186,11 +203,16 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
       publicName: detail.displayName,
       hasPriceRules: hasRules,
       ownBannerUrl: (ownBanner ?? '').trim().isEmpty ? null : ownBanner,
-      providerImageUrl: (providerImage ?? '').trim().isEmpty ? null : providerImage,
+      providerImageUrl: (providerImage ?? '').trim().isEmpty
+          ? null
+          : providerImage,
     );
   }
 
-  Future<void> _openBanner(CatalogDetail detail, CatalogPriceOverlayState overlay) async {
+  Future<void> _openBanner(
+    CatalogDetail detail,
+    CatalogPriceOverlayState overlay,
+  ) async {
     await context.push<void>(
       AppRoutes.bannerPath(widget.catalogId),
       extra: _bannerStateFor(detail, overlay),
@@ -227,17 +249,18 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
     // Cabecera para los estados de carga/error: aún no hay detalle ni overlay,
     // así que las acciones de banner/compartir no hacen nada todavía (los
     // accesos apenas se ven en esos estados). Se activan con el detalle cargado.
-    Widget hero({required String title, required String subtitle}) => CatalogProductsHero(
-      title: title,
-      subtitle: subtitle,
-      onBack: _goBack,
-      onShare: () {},
-      showAdjustPrices: false,
-      adjustPricesBadge: null,
-      onAdjustPrices: () {},
-      onImageLink: () {},
-      onShareLink: () {},
-    );
+    Widget hero({required String title, required String subtitle}) =>
+        CatalogProductsHero(
+          title: title,
+          subtitle: subtitle,
+          onBack: _goBack,
+          onShare: () {},
+          showAdjustPrices: false,
+          adjustPricesBadge: null,
+          onAdjustPrices: () {},
+          onImageLink: () {},
+          onShareLink: () {},
+        );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -257,76 +280,91 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
               child: const ColoredBox(color: AppColors.primary),
             ),
             SafeArea(
-          child: Builder(
-            builder: (BuildContext context) {
-              if (asyncState.hasError) {
-                return _Scaffold(
-                  hero: hero(title: fallbackTitle, subtitle: ''),
-                  body: _ErrorBody(onRetry: onRefresh),
-                  onRefresh: onRefresh,
-                );
-              }
+              child: Builder(
+                builder: (BuildContext context) {
+                  if (asyncState.hasError) {
+                    return _Scaffold(
+                      hero: hero(title: fallbackTitle, subtitle: ''),
+                      body: _ErrorBody(onRetry: onRefresh),
+                      onRefresh: onRefresh,
+                    );
+                  }
 
-              final CatalogDetailState? state = asyncState.value;
-              if (asyncState.isLoading || state == null) {
-                return _Scaffold(
-                  hero: hero(title: fallbackTitle, subtitle: ''),
-                  body: const _SkeletonGrid(),
-                  onRefresh: null,
-                );
-              }
+                  final CatalogDetailState? state = asyncState.value;
+                  if (asyncState.isLoading || state == null) {
+                    return _Scaffold(
+                      hero: hero(title: fallbackTitle, subtitle: ''),
+                      body: const _SkeletonGrid(),
+                      onRefresh: null,
+                    );
+                  }
 
-              final CatalogDetail detail = state.detail;
-              final int total = detail.products.length;
-              final List<Product> filtered = filterProducts(
-                detail.products,
-                search: _search,
-              );
+                  final CatalogDetail detail = state.detail;
+                  final int total = detail.products.length;
+                  final List<Product> filtered = filterProducts(
+                    detail.products,
+                    search: _search,
+                  );
 
-              // El overlay (precio del proveedor + origen de regla) solo
-              // tiene sentido si el catálogo SÍ muestra precios: en modo "sin
-              // precios" ni se pide (evitaría un 409) ni se dibuja nada.
-              final CatalogPriceOverlayState overlay = detail.priceHidden
-                  ? CatalogPriceOverlayState.empty
-                  : ref.watch(catalogPriceOverlayControllerProvider(widget.catalogId)).value ??
-                        CatalogPriceOverlayState.empty;
+                  // El overlay (precio del proveedor + origen de regla) solo
+                  // tiene sentido si el catálogo SÍ muestra precios: en modo "sin
+                  // precios" ni se pide (evitaría un 409) ni se dibuja nada.
+                  final CatalogPriceOverlayState overlay = detail.priceHidden
+                      ? CatalogPriceOverlayState.empty
+                      : ref
+                                .watch(
+                                  catalogPriceOverlayControllerProvider(
+                                    widget.catalogId,
+                                  ),
+                                )
+                                .value ??
+                            CatalogPriceOverlayState.empty;
 
-              return _Scaffold(
-                hero: CatalogProductsHero(
-                  title: detail.displayName,
-                  subtitle: '$total producto${total == 1 ? '' : 's'}',
-                  onBack: _goBack,
-                  onShare: () => _openShareSheet(detail, overlay),
-                  showAdjustPrices: !detail.priceHidden,
-                  adjustPricesBadge: overlay.catalogRule == null ? null : _ruleBadgeLabel(overlay.catalogRule!),
-                  onAdjustPrices: () => _openCatalogWideAdjust(total),
-                  onImageLink: () => _openBanner(detail, overlay),
-                  onShareLink: () => _openShareSheet(detail, overlay),
-                ),
-                offlineNotice: _showOfflineBanner,
-                searchController: _searchController,
-                onSearchChanged: _onSearchChanged,
-                body: total == 0
-                    ? const _EmptyBody(
-                        message: 'Este catálogo aún no tiene productos.',
-                      )
-                    : (filtered.isEmpty
-                          ? const _EmptyBody(
-                              message: 'Sin resultados para tu búsqueda.',
-                            )
-                          : _ProductsGrid(
-                              products: filtered,
-                              priceHidden: detail.priceHidden,
-                              overlay: overlay,
-                              onTap: (Product p) =>
-                                  _openProduct(p, detail.priceHidden, total),
-                              onEditPrice: (Product p) =>
-                                  _openProductAdjust(p, total, overlay.byProductId[p.id]),
-                            )),
-                onRefresh: onRefresh,
-              );
-            },
-          ),
+                  return _Scaffold(
+                    hero: CatalogProductsHero(
+                      title: detail.displayName,
+                      subtitle: '$total producto${total == 1 ? '' : 's'}',
+                      onBack: _goBack,
+                      onShare: () => _openShareSheet(detail, overlay),
+                      showAdjustPrices: !detail.priceHidden,
+                      adjustPricesBadge: overlay.catalogRule == null
+                          ? null
+                          : _ruleBadgeLabel(overlay.catalogRule!),
+                      onAdjustPrices: () => _openCatalogWideAdjust(total),
+                      onImageLink: () => _openBanner(detail, overlay),
+                      onShareLink: () => _openShareSheet(detail, overlay),
+                    ),
+                    offlineNotice: _showOfflineBanner,
+                    searchController: _searchController,
+                    onSearchChanged: _onSearchChanged,
+                    body: total == 0
+                        ? const _EmptyBody(
+                            message: 'Este catálogo aún no tiene productos.',
+                          )
+                        : (filtered.isEmpty
+                              ? const _EmptyBody(
+                                  message: 'Sin resultados para tu búsqueda.',
+                                )
+                              : _ProductsGrid(
+                                  products: filtered,
+                                  priceHidden: detail.priceHidden,
+                                  overlay: overlay,
+                                  onTap: (Product p) => _openProduct(
+                                    p,
+                                    detail.priceHidden,
+                                    total,
+                                  ),
+                                  onEditPrice: (Product p) =>
+                                      _openProductAdjust(
+                                        p,
+                                        total,
+                                        overlay.byProductId[p.id],
+                                      ),
+                                )),
+                    onRefresh: onRefresh,
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -421,7 +459,8 @@ class _ScaffoldState extends State<_Scaffold> {
       cacheExtent: 400,
       slivers: <Widget>[
         SliverToBoxAdapter(child: widget.hero),
-        if (widget.offlineNotice) const SliverToBoxAdapter(child: _OfflineBanner()),
+        if (widget.offlineNotice)
+          const SliverToBoxAdapter(child: _OfflineBanner()),
         if (widget.searchController != null && widget.onSearchChanged != null)
           SliverToBoxAdapter(
             child: Padding(
@@ -491,7 +530,7 @@ class _ScrollToTopButton extends StatelessWidget {
                   width: 48,
                   height: 48,
                   child: Icon(
-                    Icons.keyboard_arrow_up_rounded,
+                    LucideIcons.chevronUp,
                     color: Colors.white,
                     size: 28,
                   ),
@@ -527,7 +566,11 @@ class _SearchField extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            const Icon(Icons.search, size: 20, color: CatalogTokens.textMuted),
+            const Icon(
+              LucideIcons.search,
+              size: 20,
+              color: CatalogTokens.textMuted,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
@@ -601,8 +644,11 @@ _gridGeometry(BuildContext context, {required bool priceHidden}) {
   // aunque un producto concreto no tenga ajuste visible: todas las tarjetas de
   // una fila deben tener la MISMA altura, y reservar de más nunca desborda.
   final double priceBlockHeight = priceHidden ? 0.0 : (6.0 + 24.0 * textScale);
-  final double providerLineHeight = priceHidden ? 0.0 : (2.0 + 11.0 * 1.4 * textScale);
-  final double textBlockHeight = 10 + nameBlockHeight + priceBlockHeight + providerLineHeight + 4;
+  final double providerLineHeight = priceHidden
+      ? 0.0
+      : (2.0 + 11.0 * 1.4 * textScale);
+  final double textBlockHeight =
+      10 + nameBlockHeight + priceBlockHeight + providerLineHeight + 4;
   // +10: margen de seguridad (métricas reales de fuente/plataforma varían
   // un poco respecto a esta estimación; mejor un pelín de aire de más que
   // arriesgar un overflow de 1-2px).
@@ -669,7 +715,8 @@ class _ProductsGrid extends StatelessWidget {
           (BuildContext context, int index) {
             final Product product = products[index];
             _precacheUpcoming(context, index);
-            final CatalogPriceRuleProduct? overlayProduct = overlay.byProductId[product.id];
+            final CatalogPriceRuleProduct? overlayProduct =
+                overlay.byProductId[product.id];
             // Solo hay "ajuste" visible cuando el precio ajustado DIFIERE del
             // del proveedor (hay regla efectiva con efecto real). Sin esa
             // diferencia no se dibujan ni la etiqueta verde ni la línea
@@ -682,9 +729,15 @@ class _ProductsGrid extends StatelessWidget {
               priceHidden: priceHidden,
               memCachePixels: geometry.memCachePixels,
               onTap: () => onTap(product),
-              markupBadgeLabel: hasMarkup ? overlayBadgeLabel(overlayProduct!) : null,
-              providerPriceLowest: hasMarkup ? overlayProduct!.lowestProviderPrice : null,
-              onEditPrice: overlayProduct != null ? () => onEditPrice(product) : null,
+              markupBadgeLabel: hasMarkup
+                  ? overlayBadgeLabel(overlayProduct!)
+                  : null,
+              providerPriceLowest: hasMarkup
+                  ? overlayProduct!.lowestProviderPrice
+                  : null,
+              onEditPrice: overlayProduct != null
+                  ? () => onEditPrice(product)
+                  : null,
             );
           },
           childCount: products.length,
@@ -819,7 +872,7 @@ class _OfflineBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: const Row(
         children: <Widget>[
-          Icon(Icons.cloud_off, size: 16, color: CatalogTokens.textMuted),
+          Icon(LucideIcons.cloudOff, size: 16, color: CatalogTokens.textMuted),
           SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -851,7 +904,7 @@ class _EmptyBody extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const Icon(
-                Icons.inventory_2_outlined,
+                LucideIcons.package,
                 size: 40,
                 color: CatalogTokens.textMuted,
               ),
@@ -891,7 +944,7 @@ class _ErrorBody extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const Icon(
-                Icons.error_outline,
+                LucideIcons.circleAlert,
                 size: 40,
                 color: CatalogTokens.textMuted,
               ),
@@ -924,8 +977,9 @@ class _ErrorBody extends StatelessWidget {
 
 /// Etiqueta "+30%"/"+\$5.000" de una regla exacta (usada en el acceso rápido,
 /// donde sí se conoce la regla de catálogo completa).
-String _ruleBadgeLabel(PriceRule rule) =>
-    rule.mode == PriceRuleMode.percent ? '+${rule.value}%' : '+\$${formatCopPlain(rule.value)}';
+String _ruleBadgeLabel(PriceRule rule) => rule.mode == PriceRuleMode.percent
+    ? '+${rule.value}%'
+    : '+\$${formatCopPlain(rule.value)}';
 
 /// Etiqueta de la insignia por producto de la cuadrícula: el listado
 /// paginado del backend (`GET /reseller/app/catalogs/:id/products`) solo

@@ -124,7 +124,10 @@ class CatalogProductsHero extends StatelessWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: CatalogTokens.headerRing, width: 2 * s),
+                        border: Border.all(
+                          color: CatalogTokens.headerRing,
+                          width: 2 * s,
+                        ),
                       ),
                     ),
                   ),
@@ -142,7 +145,15 @@ class CatalogProductsHero extends StatelessWidget {
             ),
           ),
 
-          Positioned(left: 16 * s, top: 48 * s, child: _CircleIconButton(size: 44 * s, onTap: onBack, child: _BackIcon(size: 22 * s))),
+          Positioned(
+            left: 16 * s,
+            top: 48 * s,
+            child: _CircleIconButton(
+              size: 44 * s,
+              onTap: onBack,
+              child: _BackIcon(size: 22 * s),
+            ),
+          ),
 
           Positioned(
             left: 72 * s,
@@ -156,14 +167,23 @@ class CatalogProductsHero extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 18 * s, height: 1.3, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 18 * s,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
                 if (subtitle.isNotEmpty)
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12 * s, height: 1.4, color: CatalogTokens.subtitleOnDark),
+                    style: TextStyle(
+                      fontSize: 12 * s,
+                      height: 1.4,
+                      color: CatalogTokens.subtitleOnDark,
+                    ),
                   ),
               ],
             ),
@@ -176,14 +196,20 @@ class CatalogProductsHero extends StatelessWidget {
               size: 44 * s,
               background: AppColors.brand,
               shadow: <BoxShadow>[
-                BoxShadow(color: CatalogTokens.greenGlowShadow, offset: Offset(0, 10 * s), blurRadius: 22 * s),
+                BoxShadow(
+                  color: CatalogTokens.greenGlowShadow,
+                  offset: Offset(0, 10 * s),
+                  blurRadius: 22 * s,
+                ),
               ],
               onTap: onShare,
               semanticLabel: 'Compartir catálogo',
               child: SizedBox(
                 width: 20 * s,
                 height: 20 * s,
-                child: CustomPaint(painter: WhatsAppPainter(color: AppColors.primary)),
+                child: CustomPaint(
+                  painter: WhatsAppPainter(color: AppColors.primary),
+                ),
               ),
             ),
           ),
@@ -201,41 +227,41 @@ class CatalogProductsHero extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                if (showAdjustPrices) ...<Widget>[
+                  if (showAdjustPrices) ...<Widget>[
+                    Expanded(
+                      child: _QuickActionCard(
+                        scale: s,
+                        label: 'Ajustar precios',
+                        iconBackground: AppColors.accent,
+                        iconColor: AppColors.primary,
+                        icon: PercentDiagonalPainter(color: AppColors.primary),
+                        badge: adjustPricesBadge,
+                        onTap: onAdjustPrices,
+                      ),
+                    ),
+                    SizedBox(width: 10 * s),
+                  ],
                   Expanded(
                     child: _QuickActionCard(
                       scale: s,
-                      label: 'Ajustar precios',
-                      iconBackground: AppColors.accent,
+                      label: 'Imagen del catálogo',
+                      iconBackground: AppColors.brand,
                       iconColor: AppColors.primary,
-                      icon: PercentDiagonalPainter(color: AppColors.primary),
-                      badge: adjustPricesBadge,
-                      onTap: onAdjustPrices,
+                      icon: ImageIconPainter(color: AppColors.primary),
+                      onTap: onImageLink,
                     ),
                   ),
                   SizedBox(width: 10 * s),
-                ],
-                Expanded(
-                  child: _QuickActionCard(
-                    scale: s,
-                    label: 'Imagen del catálogo',
-                    iconBackground: AppColors.brand,
-                    iconColor: AppColors.primary,
-                    icon: ImageIconPainter(color: AppColors.primary),
-                    onTap: onImageLink,
+                  Expanded(
+                    child: _QuickActionCard(
+                      scale: s,
+                      label: 'Compartir catálogo',
+                      iconBackground: AppColors.primary,
+                      iconColor: AppColors.brand,
+                      icon: WhatsAppPainter(color: AppColors.brand),
+                      onTap: onShareLink,
+                    ),
                   ),
-                ),
-                SizedBox(width: 10 * s),
-                Expanded(
-                  child: _QuickActionCard(
-                    scale: s,
-                    label: 'Compartir catálogo',
-                    iconBackground: AppColors.primary,
-                    iconColor: AppColors.brand,
-                    icon: WhatsAppPainter(color: AppColors.brand),
-                    onTap: onShareLink,
-                  ),
-                ),
                 ],
               ),
             ),
@@ -284,7 +310,11 @@ class _QuickActionCard extends StatelessWidget {
               border: Border.all(color: CatalogTokens.cardBorder),
               borderRadius: BorderRadius.circular(18 * s),
               boxShadow: <BoxShadow>[
-                BoxShadow(color: CatalogTokens.quickActionShadow, offset: Offset(0, 12 * s), blurRadius: 26 * s),
+                BoxShadow(
+                  color: CatalogTokens.quickActionShadow,
+                  offset: Offset(0, 12 * s),
+                  blurRadius: 26 * s,
+                ),
               ],
             ),
             child: Column(
@@ -297,25 +327,43 @@ class _QuickActionCard extends StatelessWidget {
                       width: 34 * s,
                       height: 34 * s,
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(color: iconBackground, shape: BoxShape.circle),
-                      child: SizedBox(width: 18 * s, height: 18 * s, child: CustomPaint(painter: icon)),
+                      decoration: BoxDecoration(
+                        color: iconBackground,
+                        shape: BoxShape.circle,
+                      ),
+                      child: SizedBox(
+                        width: 18 * s,
+                        height: 18 * s,
+                        child: CustomPaint(painter: icon),
+                      ),
                     ),
                     if (badge != null)
                       Positioned(
                         right: -10 * s,
                         top: -6 * s,
                         child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6 * s, vertical: 1 * s),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6 * s,
+                            vertical: 1 * s,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.brand,
                             borderRadius: BorderRadius.circular(999),
                             boxShadow: <BoxShadow>[
-                              BoxShadow(color: CatalogTokens.greenGlowShadow, offset: Offset(0, 4 * s), blurRadius: 10 * s),
+                              BoxShadow(
+                                color: CatalogTokens.greenGlowShadow,
+                                offset: Offset(0, 4 * s),
+                                blurRadius: 10 * s,
+                              ),
                             ],
                           ),
                           child: Text(
                             badge!,
-                            style: TextStyle(fontSize: 9.5 * s, fontWeight: FontWeight.w700, color: AppColors.primary),
+                            style: TextStyle(
+                              fontSize: 9.5 * s,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                       ),
@@ -327,7 +375,12 @@ class _QuickActionCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12 * s, fontWeight: FontWeight.w600, height: 1.25, color: AppColors.primary),
+                  style: TextStyle(
+                    fontSize: 12 * s,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),
@@ -369,7 +422,11 @@ class _CircleIconButton extends StatelessWidget {
             width: size,
             height: size,
             alignment: Alignment.center,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: background, boxShadow: shadow),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: background,
+              boxShadow: shadow,
+            ),
             child: child,
           ),
         ),

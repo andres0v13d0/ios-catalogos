@@ -41,7 +41,8 @@ class ResellerBannerRepository {
   final Dio _dio;
   final NetLogSink? _logSink;
 
-  String _bannerPath(String catalogId) => '/reseller/app/catalogs/$catalogId/banner';
+  String _bannerPath(String catalogId) =>
+      '/reseller/app/catalogs/$catalogId/banner';
 
   /// `PUT .../banner` — sube el archivo [filePath] como banner propio.
   /// El servidor valida tipo (magic bytes) y tamaño (≤5MB) y reprocesa.
@@ -57,7 +58,9 @@ class ResellerBannerRepository {
       });
       final response = await _dio.put<dynamic>(path, data: formData);
       rawBody = response.data;
-      return Ok<ResellerBannerResult>(ResellerBannerResult.fromJson(_asMap(rawBody)));
+      return Ok<ResellerBannerResult>(
+        ResellerBannerResult.fromJson(_asMap(rawBody)),
+      );
     } on DioException catch (e) {
       return Err<ResellerBannerResult>(_failureOf(e));
     } catch (e) {
@@ -73,7 +76,9 @@ class ResellerBannerRepository {
     try {
       final response = await _dio.delete<dynamic>(path);
       rawBody = response.data;
-      return Ok<ResellerBannerResult>(ResellerBannerResult.fromJson(_asMap(rawBody)));
+      return Ok<ResellerBannerResult>(
+        ResellerBannerResult.fromJson(_asMap(rawBody)),
+      );
     } on DioException catch (e) {
       return Err<ResellerBannerResult>(_failureOf(e));
     } catch (e) {
@@ -85,7 +90,9 @@ class ResellerBannerRepository {
   Map<String, dynamic> _asMap(dynamic data) {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
-    throw const FormatException('Respuesta inesperada del banner del revendedor');
+    throw const FormatException(
+      'Respuesta inesperada del banner del revendedor',
+    );
   }
 
   /// Afina el mapeo del `ErrorInterceptor` para los códigos propios del banner;
@@ -99,7 +106,9 @@ class ResellerBannerRepository {
     switch (statusCode) {
       case 400:
         return ValidationFailure(
-          message: _backendMessage(body) ?? 'La imagen no es válida. Usa JPG, PNG o WebP de hasta 5 MB.',
+          message:
+              _backendMessage(body) ??
+              'La imagen no es válida. Usa JPG, PNG o WebP de hasta 5 MB.',
           cause: e,
         );
       case 404:

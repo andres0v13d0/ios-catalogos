@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:async';
 import 'dart:ui' show FlutterView;
 
@@ -592,7 +593,7 @@ class _PasteChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(Icons.content_paste_rounded, size: 16, color: Colors.white),
+                Icon(LucideIcons.clipboardPaste, size: 16, color: Colors.white),
                 SizedBox(width: 6),
                 Text(
                   'Pegar código',

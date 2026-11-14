@@ -66,6 +66,12 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<!-- Notificaciones push: permite que FCM entregue mensajes en segundo plano. -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+			<string>fetch</string>
+		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<!-- Selector de fotos del sistema (image_picker/PHPicker). En iOS 14+ el

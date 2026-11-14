@@ -1,21 +1,24 @@
 // Smoke test de la app de Revendedores (Fase 0).
 //
 // Tras la tarea 0.5 la app usa go_router con un guard de auth placeholder.
-// Sin sesión, el guard redirige a `/login`, por lo que la pantalla inicial es
-// la de ingreso.
+// Sin sesión la app arranca en Comprar (pública).
 
 import 'package:catalogos/app/app.dart';
-import 'package:catalogos/features/auth/presentation/login_page.dart';
+import 'package:catalogos/core/storage/storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/memory_cache.dart';
+
 void main() {
-  testWidgets('La app arranca y, sin sesión, muestra la pantalla de login',
+  testWidgets('La app arranca y, sin sesión, muestra Comprar',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: RevendedoresApp()));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [localCacheProvider.overrideWithValue(MemoryCache())],
+      child: const RevendedoresApp(),
+    ));
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoginPage), findsOneWidget);
-    expect(find.text('Enviar código'), findsOneWidget);
+    expect(find.textContaining('Aquí verás tus catálogos guardados'), findsOneWidget);
   });
 }

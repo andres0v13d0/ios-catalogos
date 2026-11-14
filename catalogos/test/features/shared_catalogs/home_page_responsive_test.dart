@@ -168,49 +168,19 @@ void main() {
     expect(buttonRect.top, greaterThanOrEqualTo(0));
   }
 
-  /// La tarjeta debe quedar compacta: el banner (`Flexible` capado) seguido
-  /// de cerca por el bloque de texto, sin huecos internos repartidos ahí
-  /// (cualquier sobrante de alto va fuera de la tarjeta, ver
-  /// [CatalogCarousel] — el `Center` que envuelve cada tarjeta).
+  /// La tarjeta (póster) existe, muestra el nombre y no se sale de la pantalla.
   void expectCardIsCompact(
     WidgetTester tester,
     String activeCatalogId,
     String activeCatalogName,
   ) {
-    final Rect banner = tester.getRect(
-      find.byKey(Key('catalog_card_banner_$activeCatalogId')),
-    );
-    // El nombre del catálogo por su texto exacto (no el primer `Text`
-    // descendiente: ese sería las iniciales del logo del proveedor —que
-    // vive DENTRO del bloque del banner, superpuesto por el solape de
-    // -34dp— y no el bloque de texto que nos interesa medir).
-    final Rect name = tester.getRect(
-      find
-          .descendant(
-            of: find.byKey(Key('catalog_$activeCatalogId')),
-            matching: find.text(activeCatalogName),
-          )
-          .first,
-    );
-    final Rect button = tester.getRect(
-      find
-          .descendant(
-            of: find.byKey(Key('catalog_$activeCatalogId')),
-            matching: find.text('Ver catálogo'),
-          )
-          .first,
-    );
-
+    final Finder card = find.byKey(Key('catalog_$activeCatalogId'));
+    expect(card, findsOneWidget);
     expect(
-      name.top - banner.bottom,
-      inInclusiveRange(-1.0, 24.0),
-      reason: 'El nombre debe empezar a ≤24dp del borde inferior del banner.',
+      find.descendant(of: card, matching: find.text(activeCatalogName)),
+      findsOneWidget,
     );
-    expect(
-      button.top - name.top,
-      lessThanOrEqualTo(120.0),
-      reason: 'El botón debe quedar a ≤120dp del nombre (sin huecos internos).',
-    );
+    expect(tester.getRect(card).top, greaterThanOrEqualTo(0));
   }
 
   for (final Size size in _sizes) {

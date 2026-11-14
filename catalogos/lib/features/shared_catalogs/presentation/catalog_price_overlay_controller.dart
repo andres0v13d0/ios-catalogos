@@ -15,7 +15,10 @@ import '../domain/price_rules_contract.dart';
 /// catálogo no es un canal, etc.) deja el overlay vacío en vez de romper la
 /// pantalla — la cuadrícula ya funciona sin él (etapa 1).
 class CatalogPriceOverlayState {
-  const CatalogPriceOverlayState({this.catalogRule, this.byProductId = const {}});
+  const CatalogPriceOverlayState({
+    this.catalogRule,
+    this.byProductId = const {},
+  });
 
   final PriceRule? catalogRule;
   final Map<String, CatalogPriceRuleProduct> byProductId;
@@ -23,12 +26,14 @@ class CatalogPriceOverlayState {
   static const CatalogPriceOverlayState empty = CatalogPriceOverlayState();
 }
 
-class CatalogPriceOverlayController extends AsyncNotifier<CatalogPriceOverlayState> {
+class CatalogPriceOverlayController
+    extends AsyncNotifier<CatalogPriceOverlayState> {
   CatalogPriceOverlayController(this._catalogId);
 
   final String _catalogId;
 
-  ResellerPriceRulesRepository get _repo => ref.read(resellerPriceRulesRepositoryProvider);
+  ResellerPriceRulesRepository get _repo =>
+      ref.read(resellerPriceRulesRepositoryProvider);
 
   @override
   Future<CatalogPriceOverlayState> build() async {
@@ -60,7 +65,10 @@ class CatalogPriceOverlayController extends AsyncNotifier<CatalogPriceOverlaySta
       page++;
     }
 
-    return CatalogPriceOverlayState(catalogRule: summary.catalogRule, byProductId: byProductId);
+    return CatalogPriceOverlayState(
+      catalogRule: summary.catalogRule,
+      byProductId: byProductId,
+    );
   }
 
   /// Fuerza una recarga (tras guardar/quitar una regla desde el editor).
@@ -70,8 +78,9 @@ class CatalogPriceOverlayController extends AsyncNotifier<CatalogPriceOverlaySta
   }
 }
 
-final catalogPriceOverlayControllerProvider = AsyncNotifierProvider.family<
-  CatalogPriceOverlayController,
-  CatalogPriceOverlayState,
-  String
->(CatalogPriceOverlayController.new);
+final catalogPriceOverlayControllerProvider =
+    AsyncNotifierProvider.family<
+      CatalogPriceOverlayController,
+      CatalogPriceOverlayState,
+      String
+    >(CatalogPriceOverlayController.new);

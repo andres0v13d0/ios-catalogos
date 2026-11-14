@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'theme/app_colors.dart';
@@ -30,7 +31,7 @@ class ErrorApp extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   const Icon(
-                    Icons.error_outline,
+                    LucideIcons.circleAlert,
                     color: AppColors.secondary,
                     size: 64,
                   ),

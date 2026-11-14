@@ -1,6 +1,6 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/app_colors.dart';
 import '../../auth/presentation/auth_background.dart';
 import '../../auth/presentation/auth_palette.dart';
 import 'home_palette.dart';
@@ -17,15 +17,17 @@ class HomeHero extends StatelessWidget {
     super.key,
     required this.height,
     required this.subtitle,
-    required this.onOpenSettings,
     required this.onPlayVideo,
+    this.topInset = 0,
     this.compact = false,
   });
 
   final double height;
   final String subtitle;
-  final VoidCallback onOpenSettings;
   final VoidCallback onPlayVideo;
+
+  /// Alto de la barra de estado: el azul se extiende detrás de ella.
+  final double topInset;
 
   /// Pantallas cortas (≤640dp de alto): título más pequeño y subtítulo en
   /// una sola línea, para que la cabecera siga cabiendo sin desbordarse.
@@ -77,13 +79,18 @@ class HomeHero extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Positioned(
+                  const Positioned(
                     left: 0,
                     right: 0,
                     bottom: -1,
-                    child: SizedBox(
-                      height: 60,
-                      child: CustomPaint(painter: _WaveBottomPainter()),
+                    height: 24,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -91,37 +98,22 @@ class HomeHero extends StatelessWidget {
             ),
           ),
 
-          // Marca "FLYmovil".
-          const Positioned(left: 24, top: 16, child: _WordmarkSmall()),
-
           // Ícono de play: reabre el modal del video de onboarding.
           Positioned(
-            right: 68,
-            top: 2,
+            right: 20,
+            top: topInset + 8,
             child: _HeroIconButton(
-              icon: Icons.play_arrow_rounded,
+              icon: LucideIcons.play,
               label: 'Ver video de ayuda',
               onTap: onPlayVideo,
-            ),
-          ),
-
-          // Ícono de ajustes: abre la pantalla "Cuenta" (número, cerrar
-          // sesión, eliminar cuenta).
-          Positioned(
-            right: 20,
-            top: 2,
-            child: _HeroIconButton(
-              icon: Icons.settings_outlined,
-              label: 'Ajustes de cuenta',
-              onTap: onOpenSettings,
             ),
           ),
 
           // Título + subtítulo.
           Positioned(
             left: 24,
-            right: 24,
-            top: 64,
+            top: topInset + 16,
+            right: 80,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -158,32 +150,6 @@ class HomeHero extends StatelessWidget {
   }
 }
 
-class _WordmarkSmall extends StatelessWidget {
-  const _WordmarkSmall();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text.rich(
-      TextSpan(
-        style: TextStyle(fontSize: 18, height: 1.0),
-        children: <InlineSpan>[
-          TextSpan(
-            text: 'FLY',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-          ),
-          TextSpan(
-            text: '+',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: AppColors.accent,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Botón circular del hero (ajustes, play del video de ayuda): mismo cristal
 /// translúcido y área táctil ≥48dp (accesibilidad).
 class _HeroIconButton extends StatelessWidget {
@@ -205,7 +171,10 @@ class _HeroIconButton extends StatelessWidget {
       child: Material(
         color: const Color(0x24FFFFFF), // rgba(255,255,255,0.14)
         shape: const CircleBorder(
-          side: BorderSide(color: Color(0x47FFFFFF), width: 1), // rgba(255,255,255,0.28)
+          side: BorderSide(
+            color: Color(0x47FFFFFF),
+            width: 1,
+          ), // rgba(255,255,255,0.28)
         ),
         child: InkWell(
           onTap: onTap,
@@ -219,25 +188,4 @@ class _HeroIconButton extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Onda blanca que separa el hero del cuerpo. Replica
-/// `M0 30 C 90 72, 230 0, 390 36 L390 60 L0 60 Z` (viewBox 390x60), escalada
-/// al ancho real del dispositivo.
-class _WaveBottomPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double sx = size.width / 390;
-    final double sy = size.height / 60;
-    final Path path = Path()
-      ..moveTo(0, 30 * sy)
-      ..cubicTo(90 * sx, 72 * sy, 230 * sx, 0, 390 * sx, 36 * sy)
-      ..lineTo(390 * sx, 60 * sy)
-      ..lineTo(0, 60 * sy)
-      ..close();
-    canvas.drawPath(path, Paint()..color = Colors.white);
-  }
-
-  @override
-  bool shouldRepaint(covariant _WaveBottomPainter oldDelegate) => false;
 }

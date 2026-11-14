@@ -66,7 +66,8 @@ class ResellerBannerController extends Notifier<ResellerBannerUiState> {
 
   final ResellerBannerState _args;
 
-  ResellerBannerRepository get _repo => ref.read(resellerBannerRepositoryProvider);
+  ResellerBannerRepository get _repo =>
+      ref.read(resellerBannerRepositoryProvider);
   ImagePicker get _picker => ref.read(imagePickerProvider);
 
   @override
@@ -77,7 +78,11 @@ class ResellerBannerController extends Notifier<ResellerBannerUiState> {
   /// Abre el selector del sistema y, si el usuario elige una imagen, la sube.
   /// Si cancela: no muestra error, vuelve al estado anterior.
   Future<void> pickAndUpload() async {
-    state = state.copyWith(clearError: true, permissionDenied: false, phase: ResellerBannerPhase.idle);
+    state = state.copyWith(
+      clearError: true,
+      permissionDenied: false,
+      phase: ResellerBannerPhase.idle,
+    );
 
     XFile? picked;
     try {
@@ -128,9 +133,16 @@ class ResellerBannerController extends Notifier<ResellerBannerUiState> {
       // Si no se puede medir, se deja que el servidor valide.
     }
 
-    state = state.copyWith(phase: ResellerBannerPhase.uploading, clearError: true, permissionDenied: false);
+    state = state.copyWith(
+      phase: ResellerBannerPhase.uploading,
+      clearError: true,
+      permissionDenied: false,
+    );
 
-    final Result<ResellerBannerResult> result = await _repo.uploadBanner(state.banner.catalogId, path);
+    final Result<ResellerBannerResult> result = await _repo.uploadBanner(
+      state.banner.catalogId,
+      path,
+    );
     await _deleteTemp(file);
 
     switch (result) {
@@ -153,8 +165,13 @@ class ResellerBannerController extends Notifier<ResellerBannerUiState> {
 
   /// Quita el banner propio (vuelve a verse la imagen del proveedor).
   Future<void> removeBanner() async {
-    state = state.copyWith(phase: ResellerBannerPhase.uploading, clearError: true);
-    final Result<ResellerBannerResult> result = await _repo.deleteBanner(state.banner.catalogId);
+    state = state.copyWith(
+      phase: ResellerBannerPhase.uploading,
+      clearError: true,
+    );
+    final Result<ResellerBannerResult> result = await _repo.deleteBanner(
+      state.banner.catalogId,
+    );
     switch (result) {
       case Ok<ResellerBannerResult>(:final value):
         state = state.copyWith(
@@ -191,6 +208,8 @@ class ResellerBannerController extends Notifier<ResellerBannerUiState> {
 }
 
 final resellerBannerControllerProvider =
-    NotifierProvider.family<ResellerBannerController, ResellerBannerUiState, ResellerBannerState>(
-      ResellerBannerController.new,
-    );
+    NotifierProvider.family<
+      ResellerBannerController,
+      ResellerBannerUiState,
+      ResellerBannerState
+    >(ResellerBannerController.new);

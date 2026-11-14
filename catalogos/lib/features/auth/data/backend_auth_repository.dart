@@ -19,6 +19,9 @@ import '../domain/auth_repository.dart';
 /// - 429 → [LockedFailure] con los segundos de cooldown/lockout
 ///   (`resendAvailableInSeconds` o `retryAfterSeconds`).
 /// - 502/503 → [ServerFailure] con un mensaje de fallo de envío de WhatsApp.
+/// Versión (fecha) de los textos legales vigentes; súbela al cambiarlos.
+const String legalVersion = '2026-11-13';
+
 class BackendAuthRepository implements AuthRepository {
   const BackendAuthRepository(this._dio);
 
@@ -73,11 +76,16 @@ class BackendAuthRepository implements AuthRepository {
     try {
       final response = await _dio.post<dynamic>(
         _verifyPath,
-        data: _body(
-          phoneNumber: phoneNumber,
-          countryCode: countryCode,
-          code: code,
-        ),
+        data: <String, dynamic>{
+          ..._body(
+            phoneNumber: phoneNumber,
+            countryCode: countryCode,
+            code: code,
+          ),
+          // La pantalla de ingreso exige marcar la casilla de aceptación antes
+          // de pedir el código; esto deja la prueba en el backend.
+          'acceptedTermsVersion': legalVersion,
+        },
       );
       return Ok<VerifyCodeResult>(
         VerifyCodeResult.fromJson(_asMap(response.data)),

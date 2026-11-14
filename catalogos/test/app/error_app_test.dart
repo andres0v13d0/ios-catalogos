@@ -3,8 +3,8 @@
 // Verifica que la pantalla de error renderiza el mensaje/detalle del error
 // cuando la inicialización de Firebase falla en una plataforma soportada.
 
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:catalogos/app/error_app.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -17,6 +17,6 @@ void main() {
 
     expect(find.text('No se pudo iniciar la aplicación'), findsOneWidget);
     expect(find.textContaining('FirebaseException: boom'), findsOneWidget);
-    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    expect(find.byIcon(LucideIcons.circleAlert), findsOneWidget);
   });
 }

@@ -1,3 +1,5 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'dart:math' as math;
 import 'dart:ui' show PathMetric;
 
@@ -40,20 +42,27 @@ class PriceAdjustmentPage extends ConsumerWidget {
       ),
     );
     if (confirmed ?? false) {
-      await ref.read(priceAdjustmentControllerProvider(args).notifier).onRemove();
+      await ref
+          .read(priceAdjustmentControllerProvider(args).notifier)
+          .onRemove();
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final PriceAdjustmentState state = ref.watch(priceAdjustmentControllerProvider(args));
+    final PriceAdjustmentState state = ref.watch(
+      priceAdjustmentControllerProvider(args),
+    );
     final PriceAdjustmentController controller = ref.read(
       priceAdjustmentControllerProvider(args).notifier,
     );
 
     // El estado "Removido" no tiene pantalla propia en el diseño: se cierra
     // solo, devolviendo `true` para que la lista de productos se refresque.
-    ref.listen<PriceAdjustmentState>(priceAdjustmentControllerProvider(args), (previous, next) {
+    ref.listen<PriceAdjustmentState>(priceAdjustmentControllerProvider(args), (
+      previous,
+      next,
+    ) {
       if (next is PriceAdjustmentRemoved && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(true);
       }
@@ -73,78 +82,95 @@ class PriceAdjustmentPage extends ConsumerWidget {
             builder: (BuildContext context, BoxConstraints outerConstraints) {
               final double s = catalogScale(context);
               return Stack(
-            children: <Widget>[
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: <double>[0.0, 0.55, 1.0],
-                      colors: <Color>[AppColors.primary, CatalogTokens.adjustGradientMid, AppColors.secondary],
+                children: <Widget>[
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: <double>[0.0, 0.55, 1.0],
+                          colors: <Color>[
+                            AppColors.primary,
+                            CatalogTokens.adjustGradientMid,
+                            AppColors.secondary,
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                left: -60 * s,
-                top: -40 * s,
-                width: 380 * s,
-                height: 380 * s,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: <Color>[const Color(0x665DE0E6), const Color(0x665DE0E6).withAlpha(0)],
-                      stops: const <double>[0.0, 0.68],
+                  Positioned(
+                    left: -60 * s,
+                    top: -40 * s,
+                    width: 380 * s,
+                    height: 380 * s,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: <Color>[
+                            const Color(0x665DE0E6),
+                            const Color(0x665DE0E6).withAlpha(0),
+                          ],
+                          stops: const <double>[0.0, 0.68],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                right: -70 * s,
-                top: 430 * s,
-                width: 200 * s,
-                height: 200 * s,
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Color(0x1F00FF94)),
-                ),
-              ),
-              SafeArea(
-                child: switch (state) {
-                  PriceAdjustmentLoading() => const _CenteredSpinner(),
-                  PriceAdjustmentLoadError(:final failure) => _LoadErrorBody(
-                    message: failure.message,
-                    onBack: () => Navigator.of(context).pop(false),
+                  Positioned(
+                    right: -70 * s,
+                    top: 430 * s,
+                    width: 200 * s,
+                    height: 200 * s,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0x1F00FF94),
+                      ),
+                    ),
                   ),
-                  PriceAdjustmentReady() => _EditorBody(
-                    args: args,
-                    state: state,
-                    controller: controller,
-                    onRemove: () => _confirmRemove(context, ref),
+                  SafeArea(
+                    child: switch (state) {
+                      PriceAdjustmentLoading() => const _CenteredSpinner(),
+                      PriceAdjustmentLoadError(:final failure) =>
+                        _LoadErrorBody(
+                          message: failure.message,
+                          onBack: () => Navigator.of(context).pop(false),
+                        ),
+                      PriceAdjustmentReady() => _EditorBody(
+                        args: args,
+                        state: state,
+                        controller: controller,
+                        onRemove: () => _confirmRemove(context, ref),
+                      ),
+                      PriceAdjustmentSavedCatalog(:final result) => _DoneBody(
+                        title: 'Precios actualizados',
+                        subtitleRule: result.rule,
+                        rows: <(String, String)>[
+                          (
+                            'Productos con el ajuste del catálogo',
+                            '${result.affectedProductIds.length}',
+                          ),
+                          (
+                            'Con ajuste propio (no cambian)',
+                            '${result.productsWithOwnRule.length}',
+                          ),
+                          ('Ajuste del catálogo', _ruleLabel(result.rule)),
+                        ],
+                        onBack: () => Navigator.of(context).pop(true),
+                      ),
+                      PriceAdjustmentSavedProduct(:final result) => _DoneBody(
+                        title: 'Precio actualizado',
+                        subtitleRule: result.rule,
+                        rows: <(String, String)>[
+                          ('Ajuste de este producto', _ruleLabel(result.rule)),
+                        ],
+                        onBack: () => Navigator.of(context).pop(true),
+                      ),
+                      PriceAdjustmentRemoved() => const _CenteredSpinner(),
+                    },
                   ),
-                  PriceAdjustmentSavedCatalog(:final result) => _DoneBody(
-                    title: 'Precios actualizados',
-                    subtitleRule: result.rule,
-                    rows: <(String, String)>[
-                      ('Productos con el ajuste del catálogo', '${result.affectedProductIds.length}'),
-                      ('Con ajuste propio (no cambian)', '${result.productsWithOwnRule.length}'),
-                      ('Ajuste del catálogo', _ruleLabel(result.rule)),
-                    ],
-                    onBack: () => Navigator.of(context).pop(true),
-                  ),
-                  PriceAdjustmentSavedProduct(:final result) => _DoneBody(
-                    title: 'Precio actualizado',
-                    subtitleRule: result.rule,
-                    rows: <(String, String)>[
-                      ('Ajuste de este producto', _ruleLabel(result.rule)),
-                    ],
-                    onBack: () => Navigator.of(context).pop(true),
-                  ),
-                  PriceAdjustmentRemoved() => const _CenteredSpinner(),
-                },
-              ),
-            ],
+                ],
               );
             },
           ),
@@ -154,8 +180,9 @@ class PriceAdjustmentPage extends ConsumerWidget {
   }
 }
 
-String _ruleLabel(PriceRule rule) =>
-    rule.mode == PriceRuleMode.percent ? '+${rule.value}%' : '+\$${formatCopPlain(rule.value)}';
+String _ruleLabel(PriceRule rule) => rule.mode == PriceRuleMode.percent
+    ? '+${rule.value}%'
+    : '+\$${formatCopPlain(rule.value)}';
 
 class _CenteredSpinner extends StatelessWidget {
   const _CenteredSpinner();
@@ -163,7 +190,9 @@ class _CenteredSpinner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+      child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      ),
     );
   }
 }
@@ -192,7 +221,11 @@ class _LoadErrorBody extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  const Icon(Icons.error_outline, size: 40, color: Colors.white),
+                  const Icon(
+                    LucideIcons.circleAlert,
+                    size: 40,
+                    color: Colors.white,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     message,
@@ -241,7 +274,9 @@ class _BackButton extends StatelessWidget {
                   child: SizedBox(
                     width: 22 * s,
                     height: 22 * s,
-                    child: CustomPaint(painter: ChevronLeftPainter(color: Colors.white)),
+                    child: CustomPaint(
+                      painter: ChevronLeftPainter(color: Colors.white),
+                    ),
                   ),
                 ),
               ),
@@ -320,13 +355,27 @@ class _EditorBody extends StatelessWidget {
                       SizedBox(height: 16 * s),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 20 * s),
-                        child: _ModeTabs(scale: s, mode: state.mode, onChanged: controller.onModeChanged),
+                        child: _ModeTabs(
+                          scale: s,
+                          mode: state.mode,
+                          onChanged: controller.onModeChanged,
+                        ),
                       ),
                       SizedBox(height: 14 * s),
-                      _BigNumberArea(scale: s, mode: state.mode, rawDigits: state.rawDigits),
+                      _BigNumberArea(
+                        scale: s,
+                        mode: state.mode,
+                        rawDigits: state.rawDigits,
+                      ),
                       SizedBox(height: 12 * s),
-                      _ChipsRow(scale: s, mode: state.mode, value: state.value, onTap: controller.onChipTap),
-                      if (args.isSingleProduct && state.catalogRule != null) ...<Widget>[
+                      _ChipsRow(
+                        scale: s,
+                        mode: state.mode,
+                        value: state.value,
+                        onTap: controller.onChipTap,
+                      ),
+                      if (args.isSingleProduct &&
+                          state.catalogRule != null) ...<Widget>[
                         SizedBox(height: 14 * s),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 20 * s),
@@ -344,17 +393,27 @@ class _EditorBody extends StatelessWidget {
                           scale: s,
                           product: state.currentPreview,
                           adjustedPrice: state.previewAdjustedPrice,
-                          showChangeButton: !args.isSingleProduct && state.previewProducts.length > 1,
+                          showChangeButton:
+                              !args.isSingleProduct &&
+                              state.previewProducts.length > 1,
                           onChange: controller.onChangePreview,
                         ),
                       ),
                       if (state.actionError != null) ...<Widget>[
                         Padding(
-                          padding: EdgeInsets.fromLTRB(20 * s, 10 * s, 20 * s, 0),
+                          padding: EdgeInsets.fromLTRB(
+                            20 * s,
+                            10 * s,
+                            20 * s,
+                            0,
+                          ),
                           child: Text(
                             state.actionError!.message,
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12.5 * s, color: CatalogTokens.errorOnDark),
+                            style: TextStyle(
+                              fontSize: 12.5 * s,
+                              color: CatalogTokens.errorOnDark,
+                            ),
                           ),
                         ),
                       ],
@@ -365,7 +424,9 @@ class _EditorBody extends StatelessWidget {
                           label: args.isSingleProduct
                               ? 'Guardar para este producto'
                               : 'Aplicar a ${state.totalProducts} producto${state.totalProducts == 1 ? '' : 's'}',
-                          iconPainter: const CheckPainter(color: AppColors.primary),
+                          iconPainter: const CheckPainter(
+                            color: AppColors.primary,
+                          ),
                           enabled: state.canSubmit,
                           loading: state.saving,
                           onPressed: () => controller.onSubmit(),
@@ -430,18 +491,28 @@ class _CatalogWideTopBar extends StatelessWidget {
                 'Ajustar precios',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 18 * s, height: 1.3, fontWeight: FontWeight.w600, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 18 * s,
+                  height: 1.3,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
               Text(
                 'Catálogo completo · $totalProducts producto${totalProducts == 1 ? '' : 's'}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12 * s, height: 1.4, color: CatalogTokens.subtitleOnDark),
+                style: TextStyle(
+                  fontSize: 12 * s,
+                  height: 1.4,
+                  color: CatalogTokens.subtitleOnDark,
+                ),
               ),
             ],
           ),
         ),
-        if (hasOwnRule) _RemoveButton(scale: s, loading: removing, onTap: onRemove),
+        if (hasOwnRule)
+          _RemoveButton(scale: s, loading: removing, onTap: onRemove),
       ],
     );
   }
@@ -500,25 +571,39 @@ class _SingleProductTopBar extends StatelessWidget {
                 'Solo este producto',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12 * s, height: 1.3, color: CatalogTokens.subtitleOnDark),
+                style: TextStyle(
+                  fontSize: 12 * s,
+                  height: 1.3,
+                  color: CatalogTokens.subtitleOnDark,
+                ),
               ),
               Text(
                 productName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 15 * s, height: 1.3, fontWeight: FontWeight.w600, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 15 * s,
+                  height: 1.3,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
         ),
-        if (hasOwnRule) _RemoveButton(scale: s, loading: removing, onTap: onRemove),
+        if (hasOwnRule)
+          _RemoveButton(scale: s, loading: removing, onTap: onRemove),
       ],
     );
   }
 }
 
 class _RemoveButton extends StatelessWidget {
-  const _RemoveButton({required this.scale, required this.loading, required this.onTap});
+  const _RemoveButton({
+    required this.scale,
+    required this.loading,
+    required this.onTap,
+  });
 
   final double scale;
   final bool loading;
@@ -556,7 +641,11 @@ class _RemoveButton extends StatelessWidget {
                   )
                 : Text(
                     'Quitar',
-                    style: TextStyle(fontSize: 13 * s, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 13 * s,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
           ),
         ),
@@ -566,7 +655,11 @@ class _RemoveButton extends StatelessWidget {
 }
 
 class _ModeTabs extends StatelessWidget {
-  const _ModeTabs({required this.scale, required this.mode, required this.onChanged});
+  const _ModeTabs({
+    required this.scale,
+    required this.mode,
+    required this.onChanged,
+  });
 
   final double scale;
   final PriceRuleMode mode;
@@ -608,7 +701,12 @@ class _ModeTabs extends StatelessWidget {
 }
 
 class _ModeTab extends StatelessWidget {
-  const _ModeTab({required this.scale, required this.label, required this.selected, required this.onTap});
+  const _ModeTab({
+    required this.scale,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final double scale;
   final String label;
@@ -636,7 +734,11 @@ class _ModeTab extends StatelessWidget {
                 ? BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     boxShadow: <BoxShadow>[
-                      BoxShadow(color: CatalogTokens.tabActiveShadow, offset: Offset(0, 6 * s), blurRadius: 16 * s),
+                      BoxShadow(
+                        color: CatalogTokens.tabActiveShadow,
+                        offset: Offset(0, 6 * s),
+                        blurRadius: 16 * s,
+                      ),
                     ],
                   )
                 : null,
@@ -645,7 +747,9 @@ class _ModeTab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14 * s,
                 fontWeight: FontWeight.w600,
-                color: selected ? AppColors.primary : CatalogTokens.subtitleOnDark,
+                color: selected
+                    ? AppColors.primary
+                    : CatalogTokens.subtitleOnDark,
               ),
             ),
           ),
@@ -656,7 +760,11 @@ class _ModeTab extends StatelessWidget {
 }
 
 class _BigNumberArea extends StatelessWidget {
-  const _BigNumberArea({required this.scale, required this.mode, required this.rawDigits});
+  const _BigNumberArea({
+    required this.scale,
+    required this.mode,
+    required this.rawDigits,
+  });
 
   final double scale;
   final PriceRuleMode mode;
@@ -666,13 +774,17 @@ class _BigNumberArea extends StatelessWidget {
   Widget build(BuildContext context) {
     final double s = scale;
     final String display = rawDigits.isEmpty ? '0' : rawDigits;
-    final String label = mode == PriceRuleMode.percent ? 'Subir el precio en' : 'Sumar al precio de cada producto';
+    final String label = mode == PriceRuleMode.percent
+        ? 'Subir el precio en'
+        : 'Sumar al precio de cada producto';
     final double numberSize = (mode == PriceRuleMode.percent ? 60 : 56) * s;
     final double affixSize = (mode == PriceRuleMode.percent ? 32 : 30) * s;
 
     return Semantics(
       liveRegion: true,
-      label: mode == PriceRuleMode.percent ? '$display por ciento' : 'Más \$$display pesos',
+      label: mode == PriceRuleMode.percent
+          ? '$display por ciento'
+          : 'Más \$$display pesos',
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 24 * s),
         child: Column(
@@ -683,7 +795,11 @@ class _BigNumberArea extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13 * s, height: 1.4, color: CatalogTokens.subtitleOnDark),
+              style: TextStyle(
+                fontSize: 13 * s,
+                height: 1.4,
+                color: CatalogTokens.subtitleOnDark,
+              ),
             ),
             SizedBox(height: 4 * s),
             FittedBox(
@@ -694,19 +810,35 @@ class _BigNumberArea extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     mode == PriceRuleMode.percent ? '+' : '+\$',
-                    style: TextStyle(fontSize: affixSize, fontWeight: FontWeight.w700, color: AppColors.accent),
+                    style: TextStyle(
+                      fontSize: affixSize,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accent,
+                    ),
                   ),
                   Text(
                     display,
-                    style: TextStyle(fontSize: numberSize, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: numberSize,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                   if (mode == PriceRuleMode.percent)
                     Text(
                       '%',
-                      style: TextStyle(fontSize: 34 * s, fontWeight: FontWeight.w700, color: AppColors.accent),
+                      style: TextStyle(
+                        fontSize: 34 * s,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent,
+                      ),
                     ),
                   SizedBox(width: 4 * s),
-                  Container(width: 3 * s, height: 44 * s, color: AppColors.accent),
+                  Container(
+                    width: 3 * s,
+                    height: 44 * s,
+                    color: AppColors.accent,
+                  ),
                 ],
               ),
             ),
@@ -718,7 +850,12 @@ class _BigNumberArea extends StatelessWidget {
 }
 
 class _ChipsRow extends StatelessWidget {
-  const _ChipsRow({required this.scale, required this.mode, required this.value, required this.onTap});
+  const _ChipsRow({
+    required this.scale,
+    required this.mode,
+    required this.value,
+    required this.onTap,
+  });
 
   final double scale;
   final PriceRuleMode mode;
@@ -742,9 +879,16 @@ class _ChipsRow extends StatelessWidget {
       if (i > 0) chips.add(SizedBox(width: 8 * s));
       final int preset = presets[i];
       final bool active = preset == value;
-      final String label = mode == PriceRuleMode.percent ? '$preset%' : '+\$${formatCopPlain(preset)}';
+      final String label = mode == PriceRuleMode.percent
+          ? '$preset%'
+          : '+\$${formatCopPlain(preset)}';
       chips.add(
-        _PresetChip(scale: s, label: label, active: active, onTap: () => onTap(preset)),
+        _PresetChip(
+          scale: s,
+          label: label,
+          active: active,
+          onTap: () => onTap(preset),
+        ),
       );
     }
 
@@ -757,10 +901,7 @@ class _ChipsRow extends StatelessWidget {
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: chips,
-        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: chips),
       ),
     );
   }
@@ -799,7 +940,9 @@ class _PresetChip extends StatelessWidget {
             height: 40 * s,
             padding: EdgeInsets.symmetric(horizontal: 16 * s),
             decoration: BoxDecoration(
-              border: active ? null : Border.all(color: CatalogTokens.whiteOverlay30, width: 1.5),
+              border: active
+                  ? null
+                  : Border.all(color: CatalogTokens.whiteOverlay30, width: 1.5),
               borderRadius: BorderRadius.circular(999),
             ),
             // Sin `alignment` (que haría crecer el Container a todo el ancho
@@ -826,7 +969,11 @@ class _PresetChip extends StatelessWidget {
 }
 
 class _UseCatalogRuleRow extends StatelessWidget {
-  const _UseCatalogRuleRow({required this.scale, required this.rule, required this.onUse});
+  const _UseCatalogRuleRow({
+    required this.scale,
+    required this.rule,
+    required this.onUse,
+  });
 
   final double scale;
   final PriceRule rule;
@@ -853,7 +1000,10 @@ class _UseCatalogRuleRow extends StatelessWidget {
                   const TextSpan(text: 'Usar el ajuste del catálogo '),
                   TextSpan(
                     text: '(${_ruleLabel(rule)})',
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accent,
+                    ),
                   ),
                 ],
               ),
@@ -875,7 +1025,11 @@ class _UseCatalogRuleRow extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     'Usar',
-                    style: TextStyle(fontSize: 13 * s, fontWeight: FontWeight.w700, color: AppColors.primary),
+                    style: TextStyle(
+                      fontSize: 13 * s,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ),
@@ -916,7 +1070,11 @@ class _PreviewCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22 * s),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: CatalogTokens.darkCardShadow, offset: Offset(0, 18 * s), blurRadius: 40 * s),
+          BoxShadow(
+            color: CatalogTokens.darkCardShadow,
+            offset: Offset(0, 18 * s),
+            blurRadius: 40 * s,
+          ),
         ],
       ),
       child: Column(
@@ -932,7 +1090,11 @@ class _PreviewCard extends StatelessWidget {
                     product.nombre,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14 * s, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    style: TextStyle(
+                      fontSize: 14 * s,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
                 Semantics(
@@ -941,19 +1103,28 @@ class _PreviewCard extends StatelessWidget {
                   child: InkWell(
                     onTap: onChange,
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 10 * s),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4 * s,
+                        vertical: 10 * s,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           SizedBox(
                             width: 16 * s,
                             height: 16 * s,
-                            child: CustomPaint(painter: SwapPainter(color: AppColors.secondary)),
+                            child: CustomPaint(
+                              painter: SwapPainter(color: AppColors.secondary),
+                            ),
                           ),
                           SizedBox(width: 6 * s),
                           Text(
                             'Cambiar',
-                            style: TextStyle(fontSize: 12 * s, fontWeight: FontWeight.w600, color: AppColors.secondary),
+                            style: TextStyle(
+                              fontSize: 12 * s,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.secondary,
+                            ),
                           ),
                         ],
                       ),
@@ -970,16 +1141,30 @@ class _PreviewCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                _PriceColumn(scale: s, label: 'Proveedor', value: providerPrice, big: false),
+                _PriceColumn(
+                  scale: s,
+                  label: 'Proveedor',
+                  value: providerPrice,
+                  big: false,
+                ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12 * s),
                   child: SizedBox(
                     width: 18 * s,
                     height: 18 * s,
-                    child: CustomPaint(painter: ArrowForwardPainter(color: CatalogTokens.textMuted)),
+                    child: CustomPaint(
+                      painter: ArrowForwardPainter(
+                        color: CatalogTokens.textMuted,
+                      ),
+                    ),
                   ),
                 ),
-                _PriceColumn(scale: s, label: 'Tu precio', value: adjustedPrice, big: true),
+                _PriceColumn(
+                  scale: s,
+                  label: 'Tu precio',
+                  value: adjustedPrice,
+                  big: true,
+                ),
               ],
             ),
           ),
@@ -995,19 +1180,29 @@ class _PreviewCard extends StatelessWidget {
               runSpacing: 2 * s,
               children: <Widget>[
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8 * s, vertical: 2 * s),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 8 * s,
+                    vertical: 2 * s,
+                  ),
                   decoration: BoxDecoration(
                     color: CatalogTokens.perUnitBadgeBackground,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     '+\$${formatCopPlain(perUnit)} por unidad',
-                    style: TextStyle(fontSize: 11 * s, fontWeight: FontWeight.w700, color: CatalogTokens.perUnitBadgeText),
+                    style: TextStyle(
+                      fontSize: 11 * s,
+                      fontWeight: FontWeight.w700,
+                      color: CatalogTokens.perUnitBadgeText,
+                    ),
                   ),
                 ),
                 Text(
                   'Redondeado a la centena',
-                  style: TextStyle(fontSize: 11 * s, color: CatalogTokens.textMuted),
+                  style: TextStyle(
+                    fontSize: 11 * s,
+                    color: CatalogTokens.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -1046,7 +1241,12 @@ class _PreviewThumbnail extends StatelessWidget {
 }
 
 class _PriceColumn extends StatelessWidget {
-  const _PriceColumn({required this.scale, required this.label, required this.value, required this.big});
+  const _PriceColumn({
+    required this.scale,
+    required this.label,
+    required this.value,
+    required this.big,
+  });
 
   final double scale;
   final String label;
@@ -1060,7 +1260,10 @@ class _PriceColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Text(label, style: TextStyle(fontSize: 11 * s, color: CatalogTokens.textMuted)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11 * s, color: CatalogTokens.textMuted),
+        ),
         Text(
           value == null ? '—' : '\$${formatCopPlain(value!)}',
           style: TextStyle(
@@ -1097,7 +1300,11 @@ class _DoneBody extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         return Stack(
           children: <Widget>[
-            Positioned(left: 16 * s, top: 0, child: _BackButton(onTap: onBack, scale: s)),
+            Positioned(
+              left: 16 * s,
+              top: 0,
+              child: _BackButton(onTap: onBack, scale: s),
+            ),
             // Los anillos "sonar" los dibuja ahora `_SuccessBurst` alrededor
             // del círculo verde (ver más abajo), animados en bucle.
             Positioned.fill(
@@ -1111,94 +1318,132 @@ class _DoneBody extends StatelessWidget {
                       child: SizedBox(
                         width: constraints.maxWidth,
                         child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        SizedBox(height: 120 * s),
-                        _SuccessBurst(scale: s),
-                        SizedBox(height: 28 * s),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24 * s),
-                          child: Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 26 * s, fontWeight: FontWeight.w700, color: Colors.white),
-                          ),
-                        ),
-                        SizedBox(height: 12 * s),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 32 * s),
-                          child: Text.rich(
-                            TextSpan(
-                              style: TextStyle(fontSize: 14 * s, color: CatalogTokens.subtitleOnDark),
-                              children: <InlineSpan>[
-                                const TextSpan(text: 'Tu enlace ya muestra los precios con '),
-                                TextSpan(
-                                  text: _ruleLabel(subtitleRule),
-                                  style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            SizedBox(height: 120 * s),
+                            _SuccessBurst(scale: s),
+                            SizedBox(height: 28 * s),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24 * s),
+                              child: Text(
+                                title,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 26 * s,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
                                 ),
-                              ],
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        SizedBox(height: 36 * s),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20 * s),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 18 * s),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(22 * s),
-                              boxShadow: <BoxShadow>[
-                                BoxShadow(color: CatalogTokens.darkCardShadow, offset: Offset(0, 18 * s), blurRadius: 40 * s),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                for (int i = 0; i < rows.length; i++)
-                                  Container(
-                                    padding: EdgeInsets.symmetric(vertical: 12 * s),
-                                    decoration: BoxDecoration(
-                                      border: i == rows.length - 1
-                                          ? null
-                                          : Border(bottom: BorderSide(color: CatalogTokens.summaryDivider)),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: <Widget>[
-                                        Flexible(
-                                          child: Text(
-                                            rows[i].$1,
-                                            style: TextStyle(fontSize: 13 * s, color: CatalogTokens.textMuted),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8 * s),
-                                        Text(
-                                          rows[i].$2,
-                                          style: TextStyle(fontSize: 15 * s, fontWeight: FontWeight.w700, color: AppColors.primary),
-                                        ),
-                                      ],
-                                    ),
+                            SizedBox(height: 12 * s),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 32 * s),
+                              child: Text.rich(
+                                TextSpan(
+                                  style: TextStyle(
+                                    fontSize: 14 * s,
+                                    color: CatalogTokens.subtitleOnDark,
                                   ),
-                              ],
+                                  children: <InlineSpan>[
+                                    const TextSpan(
+                                      text: 'Tu enlace ya muestra los precios con ',
+                                    ),
+                                    TextSpan(
+                                      text: _ruleLabel(subtitleRule),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ),
+                            SizedBox(height: 36 * s),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20 * s),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 18 * s,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(22 * s),
+                                  boxShadow: <BoxShadow>[
+                                    BoxShadow(
+                                      color: CatalogTokens.darkCardShadow,
+                                      offset: Offset(0, 18 * s),
+                                      blurRadius: 40 * s,
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    for (int i = 0; i < rows.length; i++)
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 12 * s,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: i == rows.length - 1
+                                              ? null
+                                              : Border(
+                                                  bottom: BorderSide(
+                                                    color: CatalogTokens
+                                                        .summaryDivider,
+                                                  ),
+                                                ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: <Widget>[
+                                            Flexible(
+                                              child: Text(
+                                                rows[i].$1,
+                                                style: TextStyle(
+                                                  fontSize: 13 * s,
+                                                  color:
+                                                      CatalogTokens.textMuted,
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 8 * s),
+                                            Text(
+                                              rows[i].$2,
+                                              style: TextStyle(
+                                                fontSize: 15 * s,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 20 * s),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20 * s),
+                              child: _SecondaryDarkButton(
+                                scale: s,
+                                label: 'Volver al catálogo',
+                                onTap: onBack,
+                              ),
+                            ),
+                            SizedBox(height: 20 * s),
+                          ],
                         ),
-                        SizedBox(height: 20 * s),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20 * s),
-                          child: _SecondaryDarkButton(scale: s, label: 'Volver al catálogo', onTap: onBack),
-                        ),
-                        SizedBox(height: 20 * s),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
           ],
         );
       },
@@ -1235,7 +1480,8 @@ class _SuccessBurst extends StatefulWidget {
   State<_SuccessBurst> createState() => _SuccessBurstState();
 }
 
-class _SuccessBurstState extends State<_SuccessBurst> with TickerProviderStateMixin {
+class _SuccessBurstState extends State<_SuccessBurst>
+    with TickerProviderStateMixin {
   late final AnimationController _waves; // bucle: ondas + respiración
   late final AnimationController _entry; // one-shot: círculo + check
 
@@ -1249,8 +1495,14 @@ class _SuccessBurstState extends State<_SuccessBurst> with TickerProviderStateMi
   @override
   void initState() {
     super.initState();
-    _waves = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
-    _entry = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+    _waves = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+    _entry = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
   }
 
   @override
@@ -1287,7 +1539,10 @@ class _SuccessBurstState extends State<_SuccessBurst> with TickerProviderStateMi
     // Lado del lienzo del burst = diámetro máximo de la onda (≈250dp·s),
     // acotado para no exceder el ancho disponible (nunca overflow en 320dp).
     final double available = MediaQuery.sizeOf(context).width;
-    final double maxBox = (_circleRef * _maxWaveScale * s).clamp(circle, available);
+    final double maxBox = (_circleRef * _maxWaveScale * s).clamp(
+      circle,
+      available,
+    );
 
     return ExcludeSemantics(
       child: RepaintBoundary(
@@ -1310,7 +1565,9 @@ class _SuccessBurstState extends State<_SuccessBurst> with TickerProviderStateMi
                   // easeOutBack para la entrada del círculo.
                   final double entry = _reduceMotion
                       ? 1.0
-                      : Curves.easeOutBack.transform(_entry.value.clamp(0.0, 1.0));
+                      : Curves.easeOutBack.transform(
+                          _entry.value.clamp(0.0, 1.0),
+                        );
                   // El check empieza un poco después y dura ~350ms (de 450ms).
                   final double checkT = _reduceMotion
                       ? 1.0
@@ -1318,7 +1575,10 @@ class _SuccessBurstState extends State<_SuccessBurst> with TickerProviderStateMi
                   // Respiración del brillo: 1.0 → 1.05 con el periodo de onda.
                   final double glow = _reduceMotion
                       ? 1.0
-                      : 1.0 + 0.05 * (0.5 - 0.5 * math.cos(2 * math.pi * _waves.value));
+                      : 1.0 +
+                            0.05 *
+                                (0.5 -
+                                    0.5 * math.cos(2 * math.pi * _waves.value));
 
                   return CustomPaint(
                     painter: _SuccessBurstPainter(
@@ -1326,7 +1586,9 @@ class _SuccessBurstState extends State<_SuccessBurst> with TickerProviderStateMi
                       circleDiameter: circle,
                       waveT: wave,
                       maxWaveScale: _maxWaveScale,
-                      entryScale: _reduceMotion ? 1.0 : (0.6 + 0.4 * entry).clamp(0.0, 1.2),
+                      entryScale: _reduceMotion
+                          ? 1.0
+                          : (0.6 + 0.4 * entry).clamp(0.0, 1.2),
                       checkProgress: checkT,
                       glowScale: glow,
                       reduceMotion: _reduceMotion,
@@ -1340,7 +1602,6 @@ class _SuccessBurstState extends State<_SuccessBurst> with TickerProviderStateMi
       ),
     );
   }
-
 }
 
 /// Dibuja el círculo verde (con su brillo), el check progresivo y las dos
@@ -1375,7 +1636,9 @@ class _SuccessBurstPainter extends CustomPainter {
     // Dos fases desfasadas 0.5 (1.2s de 2.4s). easeOut en el radio.
     for (final double phase in <double>[0.0, 0.5]) {
       final double t = reduceMotion
-          ? (phase == 0.0 ? 0.35 : 0.7) // posiciones intermedias estáticas (≈180 y ≈250)
+          ? (phase == 0.0
+                ? 0.35
+                : 0.7) // posiciones intermedias estáticas (≈180 y ≈250)
           : (waveT + phase) % 1.0;
       final double eased = Curves.easeOut.transform(t);
       final double ringScale = 1.0 + (maxWaveScale - 1.0) * eased;
@@ -1408,7 +1671,8 @@ class _SuccessBurstPainter extends CustomPainter {
 
     // ---- Check progresivo (trazo) ----
     if (checkProgress > 0) {
-      final double cs = circleDiameter / 24; // el check base ocupa ~58dp dentro de 120dp
+      final double cs =
+          circleDiameter / 24; // el check base ocupa ~58dp dentro de 120dp
       // Escalamos el path del check (viewBox 24) a ~58dp centrado.
       final double checkSize = 58 * scale;
       final double k = checkSize / 24;
@@ -1419,7 +1683,10 @@ class _SuccessBurstPainter extends CustomPainter {
         ..lineTo(p(9.5, 17).dx, p(9.5, 17).dy)
         ..lineTo(p(19, 7.5).dx, p(19, 7.5).dy);
 
-      final Path drawn = _fractionOfPath(check, checkProgress * entryScale.clamp(0.0, 1.0));
+      final Path drawn = _fractionOfPath(
+        check,
+        checkProgress * entryScale.clamp(0.0, 1.0),
+      );
       final Paint checkPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.4 * cs
@@ -1436,7 +1703,10 @@ class _SuccessBurstPainter extends CustomPainter {
     if (fraction >= 1.0) return path;
     final Path result = Path();
     for (final PathMetric metric in path.computeMetrics()) {
-      result.addPath(metric.extractPath(0, metric.length * fraction.clamp(0.0, 1.0)), Offset.zero);
+      result.addPath(
+        metric.extractPath(0, metric.length * fraction.clamp(0.0, 1.0)),
+        Offset.zero,
+      );
     }
     return result;
   }
@@ -1451,7 +1721,11 @@ class _SuccessBurstPainter extends CustomPainter {
 }
 
 class _SecondaryDarkButton extends StatelessWidget {
-  const _SecondaryDarkButton({required this.scale, required this.label, required this.onTap});
+  const _SecondaryDarkButton({
+    required this.scale,
+    required this.label,
+    required this.onTap,
+  });
 
   final double scale;
   final String label;
@@ -1472,13 +1746,20 @@ class _SecondaryDarkButton extends StatelessWidget {
           child: Container(
             height: 52 * s,
             decoration: BoxDecoration(
-              border: Border.all(color: CatalogTokens.whiteOverlay30, width: 1.5),
+              border: Border.all(
+                color: CatalogTokens.whiteOverlay30,
+                width: 1.5,
+              ),
               borderRadius: BorderRadius.circular(18 * s),
             ),
             alignment: Alignment.center,
             child: Text(
               label,
-              style: TextStyle(fontSize: 15 * s, fontWeight: FontWeight.w600, color: Colors.white),
+              style: TextStyle(
+                fontSize: 15 * s,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -1511,7 +1792,11 @@ class _RemoveConfirmationDialog extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
           boxShadow: const <BoxShadow>[
-            BoxShadow(color: Color(0x59000A1E), offset: Offset(0, 18), blurRadius: 40),
+            BoxShadow(
+              color: Color(0x59000A1E),
+              offset: Offset(0, 18),
+              blurRadius: 40,
+            ),
           ],
         ),
         child: Column(
@@ -1520,14 +1805,22 @@ class _RemoveConfirmationDialog extends StatelessWidget {
           children: <Widget>[
             const Text(
               '¿Quitar el ajuste de precio?',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primary),
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               isSingleProduct
                   ? 'Este producto dejará de tener un ajuste propio. Si el catálogo tiene un ajuste general, ese seguirá aplicando.'
                   : 'Se eliminará el ajuste de todo el catálogo. Los productos con un ajuste propio no se ven afectados.',
-              style: const TextStyle(fontSize: 14, height: 1.4, color: CatalogTokens.textMuted),
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: CatalogTokens.textMuted,
+              ),
             ),
             const SizedBox(height: 22),
             Row(
@@ -1547,7 +1840,11 @@ class _RemoveConfirmationDialog extends StatelessWidget {
                           child: Center(
                             child: Text(
                               'Cancelar',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ),
@@ -1571,7 +1868,11 @@ class _RemoveConfirmationDialog extends StatelessWidget {
                           child: Center(
                             child: Text(
                               'Quitar',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFFB3261E)),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFB3261E),
+                              ),
                             ),
                           ),
                         ),

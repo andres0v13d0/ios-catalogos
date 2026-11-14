@@ -78,10 +78,7 @@ class FlyPrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             onTap: onPressed,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               child: content,
             ),
           ),

@@ -54,12 +54,14 @@ class CatalogPriceRuleProduct {
   final RuleOrigin? reglaOrigen;
 
   /// Menor precio ajustado (para "Desde $X" / vista previa).
-  num? get lowestAdjustedPrice =>
-      precioAjustado.isEmpty ? null : precioAjustado.values.reduce((a, b) => a < b ? a : b);
+  num? get lowestAdjustedPrice => precioAjustado.isEmpty
+      ? null
+      : precioAjustado.values.reduce((a, b) => a < b ? a : b);
 
   /// Menor precio del proveedor (para la línea "Proveedor $X" de la vista previa).
-  num? get lowestProviderPrice =>
-      precioProveedor.isEmpty ? null : precioProveedor.values.reduce((a, b) => a < b ? a : b);
+  num? get lowestProviderPrice => precioProveedor.isEmpty
+      ? null
+      : precioProveedor.values.reduce((a, b) => a < b ? a : b);
 
   factory CatalogPriceRuleProduct.fromJson(Map<String, dynamic> json) {
     return CatalogPriceRuleProduct(
@@ -106,7 +108,11 @@ class PriceRulesProductsPage {
       products: rawProducts is List
           ? rawProducts
                 .whereType<Map>()
-                .map((e) => CatalogPriceRuleProduct.fromJson(Map<String, dynamic>.from(e)))
+                .map(
+                  (e) => CatalogPriceRuleProduct.fromJson(
+                    Map<String, dynamic>.from(e),
+                  ),
+                )
                 .toList()
           : const <CatalogPriceRuleProduct>[],
     );
@@ -116,7 +122,10 @@ class PriceRulesProductsPage {
 /// Respuesta de `GET /reseller/app/catalogs/:catalogId/price-rules`: la regla
 /// de catálogo (si existe) y el mapa de reglas propias por producto.
 class PriceRulesSummary {
-  const PriceRulesSummary({required this.catalogRule, required this.productRules});
+  const PriceRulesSummary({
+    required this.catalogRule,
+    required this.productRules,
+  });
 
   final PriceRule? catalogRule;
 
@@ -134,7 +143,9 @@ class PriceRulesSummary {
           final productId = '${map['productId'] ?? ''}';
           final ruleRaw = map['rule'];
           if (productId.isNotEmpty && ruleRaw is Map) {
-            productRules[productId] = PriceRule.fromJson(Map<String, dynamic>.from(ruleRaw));
+            productRules[productId] = PriceRule.fromJson(
+              Map<String, dynamic>.from(ruleRaw),
+            );
           }
         }
       }

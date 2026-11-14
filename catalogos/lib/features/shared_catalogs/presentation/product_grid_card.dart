@@ -18,7 +18,10 @@ import 'product_thumbnail.dart';
 /// que la tarjeta, así que al llegar a pantalla ya está en disco.
 Future<void> precacheProductImage(BuildContext context, String url) {
   return precacheImage(
-    CachedNetworkImageProvider(url, cacheManager: ProductImageCacheManager.instance),
+    CachedNetworkImageProvider(
+      url,
+      cacheManager: ProductImageCacheManager.instance,
+    ),
     context,
   );
 }
@@ -85,112 +88,120 @@ class ProductGridCard extends StatelessWidget {
       // la cuadrícula en vez de solo la celda que cambió.
       child: RepaintBoundary(
         child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          onTap: onTap,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: HomePalette.cardBorder),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const <BoxShadow>[
-                BoxShadow(
-                  color: CatalogProductsPalette.cardShadow,
-                  offset: Offset(0, 12),
-                  blurRadius: 26,
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: <Widget>[
-                      Positioned.fill(
-                        child: ProductThumbnail(
-                          url: product.primaryThumbnail,
-                          memCachePixels: memCachePixels,
-                        ),
-                      ),
-                      if (markupBadgeLabel != null)
-                        Positioned(
-                          left: 8,
-                          bottom: 8,
-                          child: _MarkupBadge(label: markupBadgeLabel!),
-                        ),
-                      if (onEditPrice != null)
-                        Positioned(right: 6, top: 6, child: _EditPriceButton(onTap: onEditPrice!)),
-                    ],
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: HomePalette.cardBorder),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: CatalogProductsPalette.cardShadow,
+                    offset: Offset(0, 12),
+                    blurRadius: 26,
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        product.nombre,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.3,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        Positioned.fill(
+                          child: ProductThumbnail(
+                            url: product.primaryThumbnail,
+                            memCachePixels: memCachePixels,
+                          ),
                         ),
-                      ),
-                      if (showPrice)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text.rich(
-                            TextSpan(
-                              children: <InlineSpan>[
-                                const TextSpan(
-                                  text: 'Desde ',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AuthPalette.textMuted,
+                        if (markupBadgeLabel != null)
+                          Positioned(
+                            left: 8,
+                            bottom: 8,
+                            child: _MarkupBadge(label: markupBadgeLabel!),
+                          ),
+                        if (onEditPrice != null)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: _EditPriceButton(onTap: onEditPrice!),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          product.nombre,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.3,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        if (showPrice)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text.rich(
+                              TextSpan(
+                                children: <InlineSpan>[
+                                  const TextSpan(
+                                    text: 'Desde ',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AuthPalette.textMuted,
+                                    ),
                                   ),
-                                ),
-                                TextSpan(
-                                  text: '\$${formatCopPlain(lowest)}',
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
+                                  TextSpan(
+                                    text: '\$${formatCopPlain(lowest)}',
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      if (providerPriceLowest != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            'Proveedor \$${formatCopPlain(providerPriceLowest!)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11, height: 1.4, color: AuthPalette.textMuted),
+                        if (providerPriceLowest != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              'Proveedor \$${formatCopPlain(providerPriceLowest!)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                height: 1.4,
+                                color: AuthPalette.textMuted,
+                              ),
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -212,12 +223,20 @@ class _MarkupBadge extends StatelessWidget {
         color: AppColors.brand,
         borderRadius: BorderRadius.circular(999),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x5900FF94), offset: Offset(0, 6), blurRadius: 14),
+          BoxShadow(
+            color: Color(0x5900FF94),
+            offset: Offset(0, 6),
+            blurRadius: 14,
+          ),
         ],
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
+        ),
       ),
     );
   }
@@ -249,13 +268,19 @@ class _EditPriceButton extends StatelessWidget {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0x33001634), offset: Offset(0, 8), blurRadius: 18),
+                BoxShadow(
+                  color: Color(0x33001634),
+                  offset: Offset(0, 8),
+                  blurRadius: 18,
+                ),
               ],
             ),
             child: const SizedBox(
               width: 18,
               height: 18,
-              child: CustomPaint(painter: PencilPainter(color: AppColors.primary)),
+              child: CustomPaint(
+                painter: PencilPainter(color: AppColors.primary),
+              ),
             ),
           ),
         ),

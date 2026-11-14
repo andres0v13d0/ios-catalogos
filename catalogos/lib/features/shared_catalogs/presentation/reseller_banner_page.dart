@@ -27,9 +27,12 @@ class ResellerBannerPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ResellerBannerUiState state = ref.watch(resellerBannerControllerProvider(args));
-    final ResellerBannerController controller =
-        ref.read(resellerBannerControllerProvider(args).notifier);
+    final ResellerBannerUiState state = ref.watch(
+      resellerBannerControllerProvider(args),
+    );
+    final ResellerBannerController controller = ref.read(
+      resellerBannerControllerProvider(args).notifier,
+    );
     final double s = catalogScale(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -45,7 +48,11 @@ class ResellerBannerPage extends ConsumerWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: <double>[0.0, 0.55, 1.0],
-                    colors: <Color>[AppColors.primary, CatalogTokens.adjustGradientMid, AppColors.secondary],
+                    colors: <Color>[
+                      AppColors.primary,
+                      CatalogTokens.adjustGradientMid,
+                      AppColors.secondary,
+                    ],
                   ),
                 ),
               ),
@@ -59,7 +66,10 @@ class ResellerBannerPage extends ConsumerWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: <Color>[const Color(0x665DE0E6), const Color(0x665DE0E6).withAlpha(0)],
+                    colors: <Color>[
+                      const Color(0x665DE0E6),
+                      const Color(0x665DE0E6).withAlpha(0),
+                    ],
                     stops: const <double>[0.0, 0.68],
                   ),
                 ),
@@ -71,11 +81,19 @@ class ResellerBannerPage extends ConsumerWidget {
               width: 200 * s,
               height: 200 * s,
               child: const DecoratedBox(
-                decoration: BoxDecoration(shape: BoxShape.circle, color: Color(0x1F00FF94)),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0x1F00FF94),
+                ),
               ),
             ),
             SafeArea(
-              child: _Body(args: args, state: state, controller: controller, scale: s),
+              child: _Body(
+                args: args,
+                state: state,
+                controller: controller,
+                scale: s,
+              ),
             ),
           ],
         ),
@@ -85,7 +103,12 @@ class ResellerBannerPage extends ConsumerWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.args, required this.state, required this.controller, required this.scale});
+  const _Body({
+    required this.args,
+    required this.state,
+    required this.controller,
+    required this.scale,
+  });
 
   final ResellerBannerState args;
   final ResellerBannerUiState state;
@@ -106,7 +129,10 @@ class _Body extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(16 * s, 12 * s, 16 * s, 0),
           child: Row(
             children: <Widget>[
-              _BackButton(scale: s, onTap: () => Navigator.of(context).maybePop()),
+              _BackButton(
+                scale: s,
+                onTap: () => Navigator.of(context).maybePop(),
+              ),
               SizedBox(width: 12 * s),
               Expanded(
                 child: Column(
@@ -114,12 +140,21 @@ class _Body extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       'Banner del catálogo',
-                      style: TextStyle(fontSize: 18 * s, fontWeight: FontWeight.w600, color: Colors.white, height: 1.2),
+                      style: TextStyle(
+                        fontSize: 18 * s,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
                     ),
                     SizedBox(height: 2 * s),
                     Text(
                       'Vista previa del enlace',
-                      style: TextStyle(fontSize: 12 * s, color: CatalogTokens.subtitleOnDark, height: 1.3),
+                      style: TextStyle(
+                        fontSize: 12 * s,
+                        color: CatalogTokens.subtitleOnDark,
+                        height: 1.3,
+                      ),
                     ),
                   ],
                 ),
@@ -127,7 +162,9 @@ class _Body extends StatelessWidget {
               if (hasOwn)
                 _RemoveButton(
                   scale: s,
-                  onTap: state.isUploading ? null : () => _confirmRemove(context),
+                  onTap: state.isUploading
+                      ? null
+                      : () => _confirmRemove(context),
                 ),
             ],
           ),
@@ -143,15 +180,21 @@ class _Body extends StatelessWidget {
                 _WhatsAppPreviewCard(scale: s, banner: banner),
                 SizedBox(height: 18 * s),
 
-                if (!hasOwn) ..._idleNoBanner(context, s) else ..._withBanner(context, s, banner),
+                if (!hasOwn)
+                  ..._idleNoBanner(context, s)
+                else
+                  ..._withBanner(context, s, banner),
 
-                if (state.phase == ResellerBannerPhase.error && state.errorMessage != null) ...<Widget>[
+                if (state.phase == ResellerBannerPhase.error &&
+                    state.errorMessage != null) ...<Widget>[
                   SizedBox(height: 14 * s),
                   _ErrorNotice(
                     scale: s,
                     message: state.errorMessage!,
                     showSettings: state.permissionDenied,
-                    onRetry: state.isUploading ? null : () => controller.retry(),
+                    onRetry: state.isUploading
+                        ? null
+                        : () => controller.retry(),
                   ),
                 ],
               ],
@@ -165,12 +208,19 @@ class _Body extends StatelessWidget {
   List<Widget> _idleNoBanner(BuildContext context, double s) {
     return <Widget>[
       // Zona punteada "Sube tu banner"
-      _DashedDropZone(scale: s, onTap: state.isUploading ? null : () => controller.pickAndUpload()),
+      _DashedDropZone(
+        scale: s,
+        onTap: state.isUploading ? null : () => controller.pickAndUpload(),
+      ),
       SizedBox(height: 12 * s),
       Text(
         'Solo se usa como vista previa al compartir el enlace por WhatsApp. '
         'No aparece dentro de tu catálogo.',
-        style: TextStyle(fontSize: 12.5 * s, color: CatalogTokens.subtitleOnDark, height: 1.45),
+        style: TextStyle(
+          fontSize: 12.5 * s,
+          color: CatalogTokens.subtitleOnDark,
+          height: 1.45,
+        ),
       ),
       SizedBox(height: 18 * s),
       AuthGradientButton(
@@ -183,7 +233,11 @@ class _Body extends StatelessWidget {
     ];
   }
 
-  List<Widget> _withBanner(BuildContext context, double s, ResellerBannerState banner) {
+  List<Widget> _withBanner(
+    BuildContext context,
+    double s,
+    ResellerBannerState banner,
+  ) {
     return <Widget>[
       _SavedBannerCard(scale: s, banner: banner),
       SizedBox(height: 12 * s),
@@ -197,7 +251,12 @@ class _Body extends StatelessWidget {
         onPressed: () => controller.pickAndUpload(),
       ),
       SizedBox(height: 12 * s),
-      _DoneButton(scale: s, onTap: state.isUploading ? null : () => Navigator.of(context).maybePop()),
+      _DoneButton(
+        scale: s,
+        onTap: state.isUploading
+            ? null
+            : () => Navigator.of(context).maybePop(),
+      ),
     ];
   }
 
@@ -237,12 +296,17 @@ class _BackButton extends StatelessWidget {
               child: Container(
                 width: 44 * s,
                 height: 44 * s,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0x24FFFFFF)),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0x24FFFFFF),
+                ),
                 child: Center(
                   child: SizedBox(
                     width: 22 * s,
                     height: 22 * s,
-                    child: CustomPaint(painter: ChevronLeftPainter(color: Colors.white)),
+                    child: CustomPaint(
+                      painter: ChevronLeftPainter(color: Colors.white),
+                    ),
                   ),
                 ),
               ),
@@ -277,7 +341,11 @@ class _RemoveButton extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 14 * s, vertical: 8 * s),
             child: Text(
               'Quitar',
-              style: TextStyle(fontSize: 13 * s, fontWeight: FontWeight.w600, color: Colors.white),
+              style: TextStyle(
+                fontSize: 13 * s,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -298,7 +366,9 @@ class _WhatsAppPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final double s = scale;
     final String? imageUrl = banner.previewImageUrl;
-    final String title = banner.publicName.trim().isNotEmpty ? banner.publicName.trim() : 'Mi catálogo';
+    final String title = banner.publicName.trim().isNotEmpty
+        ? banner.publicName.trim()
+        : 'Mi catálogo';
     final String domain = _domainOf(banner.shareLink);
 
     return Container(
@@ -306,7 +376,11 @@ class _WhatsAppPreviewCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18 * s),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: CatalogTokens.darkCardShadow, offset: Offset(0, 12 * s), blurRadius: 28 * s),
+          BoxShadow(
+            color: CatalogTokens.darkCardShadow,
+            offset: Offset(0, 12 * s),
+            blurRadius: 28 * s,
+          ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -323,19 +397,28 @@ class _WhatsAppPreviewCard extends StatelessWidget {
                       child: SizedBox(
                         width: 40 * s,
                         height: 40 * s,
-                        child: CustomPaint(painter: ImageIconPainter(color: CatalogTokens.textMuted)),
+                        child: CustomPaint(
+                          painter: ImageIconPainter(
+                            color: CatalogTokens.textMuted,
+                          ),
+                        ),
                       ),
                     )
                   : CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
                       key: const Key('wa_preview_image'),
-                      placeholder: (c, _) => const ColoredBox(color: Color(0xFFEAF0FF)),
+                      placeholder: (c, _) =>
+                          const ColoredBox(color: Color(0xFFEAF0FF)),
                       errorWidget: (c, _, _) => Center(
                         child: SizedBox(
                           width: 40 * s,
                           height: 40 * s,
-                          child: CustomPaint(painter: ImageIconPainter(color: CatalogTokens.textMuted)),
+                          child: CustomPaint(
+                            painter: ImageIconPainter(
+                              color: CatalogTokens.textMuted,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -350,21 +433,33 @@ class _WhatsAppPreviewCard extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14 * s, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  style: TextStyle(
+                    fontSize: 14 * s,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
                 ),
                 SizedBox(height: 3 * s),
                 Text(
                   'Mira mi catálogo',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12 * s, color: CatalogTokens.textMuted, height: 1.35),
+                  style: TextStyle(
+                    fontSize: 12 * s,
+                    color: CatalogTokens.textMuted,
+                    height: 1.35,
+                  ),
                 ),
                 SizedBox(height: 6 * s),
                 Text(
                   domain,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11 * s, color: CatalogTokens.searchHint, letterSpacing: 0.2),
+                  style: TextStyle(
+                    fontSize: 11 * s,
+                    color: CatalogTokens.searchHint,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ],
             ),
@@ -392,7 +487,10 @@ class _DashedDropZone extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18 * s),
         child: CustomPaint(
-          painter: _DashedBorderPainter(radius: 18 * s, color: CatalogTokens.whiteOverlay30),
+          painter: _DashedBorderPainter(
+            radius: 18 * s,
+            color: CatalogTokens.whiteOverlay30,
+          ),
           child: Container(
             height: 120 * s,
             alignment: Alignment.center,
@@ -402,12 +500,18 @@ class _DashedDropZone extends StatelessWidget {
                 SizedBox(
                   width: 34 * s,
                   height: 34 * s,
-                  child: CustomPaint(painter: ImageIconPainter(color: Colors.white)),
+                  child: CustomPaint(
+                    painter: ImageIconPainter(color: Colors.white),
+                  ),
                 ),
                 SizedBox(height: 10 * s),
                 Text(
                   'Sube tu banner',
-                  style: TextStyle(fontSize: 14 * s, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 14 * s,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -428,10 +532,13 @@ class _SavedBannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double s = scale;
-    final String measures = (banner.ownBannerWidth != null && banner.ownBannerHeight != null)
+    final String measures =
+        (banner.ownBannerWidth != null && banner.ownBannerHeight != null)
         ? '${banner.ownBannerWidth} × ${banner.ownBannerHeight} px'
         : 'Imagen guardada';
-    final String? weight = banner.ownBannerBytes != null ? _formatBytes(banner.ownBannerBytes!) : null;
+    final String? weight = banner.ownBannerBytes != null
+        ? _formatBytes(banner.ownBannerBytes!)
+        : null;
 
     return Container(
       padding: EdgeInsets.all(14 * s),
@@ -446,7 +553,10 @@ class _SavedBannerCard extends StatelessWidget {
             width: 38 * s,
             height: 38 * s,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(color: Color(0x3800FF94), shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: Color(0x3800FF94),
+              shape: BoxShape.circle,
+            ),
             child: SizedBox(
               width: 20 * s,
               height: 20 * s,
@@ -460,12 +570,19 @@ class _SavedBannerCard extends StatelessWidget {
               children: <Widget>[
                 Text(
                   'Banner guardado',
-                  style: TextStyle(fontSize: 14 * s, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 14 * s,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
                 SizedBox(height: 2 * s),
                 Text(
                   weight == null ? measures : '$measures · $weight',
-                  style: TextStyle(fontSize: 12 * s, color: CatalogTokens.subtitleOnDark),
+                  style: TextStyle(
+                    fontSize: 12 * s,
+                    color: CatalogTokens.subtitleOnDark,
+                  ),
                 ),
               ],
             ),
@@ -488,7 +605,11 @@ class _CacheNotice extends StatelessWidget {
     return Text(
       'Si ya compartiste el enlace antes, WhatsApp puede seguir mostrando la imagen anterior '
       'durante un rato. Al reenviarlo verá la nueva.',
-      style: TextStyle(fontSize: 12 * s, color: CatalogTokens.subtitleOnDark, height: 1.45),
+      style: TextStyle(
+        fontSize: 12 * s,
+        color: CatalogTokens.subtitleOnDark,
+        height: 1.45,
+      ),
     );
   }
 }
@@ -517,7 +638,11 @@ class _DoneButton extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               'Listo',
-              style: TextStyle(fontSize: 15 * s, fontWeight: FontWeight.w600, color: Colors.white),
+              style: TextStyle(
+                fontSize: 15 * s,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -555,7 +680,11 @@ class _ErrorNotice extends StatelessWidget {
         children: <Widget>[
           Text(
             message,
-            style: TextStyle(fontSize: 13 * s, color: CatalogTokens.errorOnDark, height: 1.4),
+            style: TextStyle(
+              fontSize: 13 * s,
+              color: CatalogTokens.errorOnDark,
+              height: 1.4,
+            ),
           ),
           SizedBox(height: 10 * s),
           Row(
@@ -563,7 +692,11 @@ class _ErrorNotice extends StatelessWidget {
               _SmallAction(scale: s, label: 'Reintentar', onTap: onRetry),
               if (showSettings) ...<Widget>[
                 SizedBox(width: 10 * s),
-                _SmallAction(scale: s, label: 'Abrir ajustes', onTap: () => _openSettings()),
+                _SmallAction(
+                  scale: s,
+                  label: 'Abrir ajustes',
+                  onTap: () => _openSettings(),
+                ),
               ],
             ],
           ),
@@ -580,7 +713,11 @@ class _ErrorNotice extends StatelessWidget {
 }
 
 class _SmallAction extends StatelessWidget {
-  const _SmallAction({required this.scale, required this.label, required this.onTap});
+  const _SmallAction({
+    required this.scale,
+    required this.label,
+    required this.onTap,
+  });
 
   final double scale;
   final String label;
@@ -599,7 +736,11 @@ class _SmallAction extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 12 * s, vertical: 7 * s),
           child: Text(
             label,
-            style: TextStyle(fontSize: 12.5 * s, fontWeight: FontWeight.w600, color: Colors.white),
+            style: TextStyle(
+              fontSize: 12.5 * s,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
@@ -617,7 +758,13 @@ class _RemoveConfirmDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x33001634), offset: Offset(0, 18), blurRadius: 40)],
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x33001634),
+              offset: Offset(0, 18),
+              blurRadius: 40,
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -625,13 +772,21 @@ class _RemoveConfirmDialog extends StatelessWidget {
             const Text(
               '¿Quitar el banner?',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
               'Volverá a verse la imagen del proveedor en la vista previa del enlace.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: CatalogTokens.textMuted, height: 1.4),
+              style: TextStyle(
+                fontSize: 13,
+                color: CatalogTokens.textMuted,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 20),
             Row(
@@ -642,11 +797,17 @@ class _RemoveConfirmDialog extends StatelessWidget {
                     style: TextButton.styleFrom(
                       backgroundColor: const Color(0xFFF4F8FC),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: const Text(
                       'Cancelar',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -657,11 +818,17 @@ class _RemoveConfirmDialog extends StatelessWidget {
                     style: TextButton.styleFrom(
                       backgroundColor: const Color(0x1AFF4D4D),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: const Text(
                       'Quitar',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFD12E2E)),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFD12E2E),
+                      ),
                     ),
                   ),
                 ),

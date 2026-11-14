@@ -89,7 +89,7 @@ _pumpSettings(WidgetTester tester, {bool deleteSucceeds = true}) async {
         path: AppRoutes.accountSettings,
         builder: (context, _) => const AccountSettingsPage(),
       ),
-      GoRoute(path: AppRoutes.login, builder: (context, _) => const Text('login-stub')),
+      GoRoute(path: AppRoutes.buy, builder: (context, _) => const Text('login-stub')),
     ],
   );
 

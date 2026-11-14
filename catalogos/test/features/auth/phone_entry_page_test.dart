@@ -45,6 +45,19 @@ Widget _wrap(FakeAuthRepository repo, FakeAuthUserService authUser) {
 }
 
 void main() {
+  testWidgets('sin aceptar términos no se solicita el código',
+      (WidgetTester tester) async {
+    final repo = FakeAuthRepository();
+    await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField), '300 123 4567');
+    await tester.tap(find.text('Enviar código'), warnIfMissed: false);
+    await tester.pump();
+
+    expect(repo.requestCalls, isEmpty);
+  });
+
   testWidgets('número inválido muestra error de formato y no llama al backend',
       (WidgetTester tester) async {
     final repo = FakeAuthRepository();
@@ -54,6 +67,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField), '123');
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
     await tester.tap(find.text('Enviar código'));
     await tester.pump();
 
@@ -68,6 +83,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField), '300 123 4567');
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
     await tester.tap(find.text('Enviar código'));
     await tester.pump();
     await tester.pump();

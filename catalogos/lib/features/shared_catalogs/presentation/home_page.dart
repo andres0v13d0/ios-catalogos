@@ -1,7 +1,8 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,7 +13,8 @@ import '../../auth/presentation/auth_palette.dart';
 import '../../auth/presentation/auth_vector_icons.dart';
 import '../domain/catalog.dart';
 import 'catalog_carousel.dart';
-import 'home_hero.dart';
+import '../../../shared/widgets/brand_header.dart';
+import '../../visitor/poster_catalog_card.dart';
 import 'home_palette.dart';
 import 'onboarding_video.dart';
 import 'shared_catalogs_controller.dart';
@@ -89,10 +91,6 @@ class _HomePageState extends ConsumerState<HomePage>
     super.dispose();
   }
 
-  void _openSettings(BuildContext context) {
-    context.push(AppRoutes.accountSettings);
-  }
-
   void _openCatalog(Catalog catalog) {
     context.push(
       AppRoutes.catalogDetailPath(catalog.id),
@@ -106,244 +104,114 @@ class _HomePageState extends ConsumerState<HomePage>
       sharedCatalogsControllerProvider,
     );
     _syncOfflineBanner(asyncState.value?.fromCache ?? false);
-
     final MediaQueryData mediaQuery = MediaQuery.of(context);
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: MediaQuery(
-        // Limita el crecimiento del texto del sistema a 1.3x: a partir de
-        // ahí la tarjeta deja de poder compactarse más sin desbordarse.
-        data: mediaQuery.copyWith(
-          textScaler: mediaQuery.textScaler.clamp(maxScaleFactor: 1.3),
-        ),
-        child: Scaffold(
-          backgroundColor: HomePalette.screenBackground,
-          body: Stack(
-            children: <Widget>[
-              // El hero degradado arranca justo debajo de la barra de
-              // estado (dentro del SafeArea); esta franja repite su color
-              // inicial detrás de la barra de estado para que no quede un
-              // hueco blanco (iconos claros ilegibles sobre blanco).
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: mediaQuery.padding.top,
-                child: const ColoredBox(color: AppColors.primary),
-              ),
-              SafeArea(
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final double t = ((constraints.maxHeight - 640) / (844 - 640))
-                    .clamp(0.0, 1.0);
-                final double heroHeight = 200 + (260 - 200) * t;
-                final double overlap = 70 + (100 - 70) * t;
-                // Pantallas cortas (≤640dp de alto): compacta cabecera y
-                // tarjeta para que todo siga cabiendo sin desbordarse.
-                final bool compact = constraints.maxHeight <= 640;
+    final SharedCatalogsState? state = asyncState.value;
+    final int total = state?.catalogs.length ?? 0;
+    // Cifras de la cabecera: productos y productos nuevos de todos los
+    // catálogos (cada uno se lee aparte; "…" mientras llegan).
+    int products = 0;
+    int fresh = 0;
+    bool pending = false;
+    for (final Catalog c in state?.catalogs ?? const <Catalog>[]) {
+      final AsyncValue<({int products, int fresh})?> st = ref.watch(
+        catalogStatsProvider(c.id),
+      );
+      if (st.isLoading) {
+        pending = true;
+      } else {
+        products += st.value?.products ?? 0;
+        fresh += st.value?.fresh ?? 0;
+      }
+    }
+    Future<void> refresh() =>
+        ref.read(sharedCatalogsControllerProvider.notifier).refresh();
 
-                // No se usa `AsyncValue.when` directamente: Riverpod 3.x
-                // reintenta automáticamente un `build()` fallido manteniendo
-                // `isLoading == true` (con el error ya adjunto) mientras lo
-                // hace, así que `.when(loading:, error:, data:)` se quedaría
-                // mostrando el esqueleto de carga en vez del error. El propio
-                // controller solo deja un `hasError` real cuando NO hay caché
-                // utilizable que mostrar (si la hay, cae a `AsyncData` con
-                // `fromCache: true`), así que comprobar `hasError` primero es
-                // seguro y muestra el error de inmediato en vez de esperar a
-                // que se agoten los reintentos en silencio.
-                if (asyncState.hasError) {
-                  return _Scaffold(
-                    heroHeight: heroHeight,
-                    overlap: overlap,
-                    subtitle: '',
-                    dotsHeight: 0,
-                    compact: compact,
-                    intro: _introController,
-                    onOpenSettings: () => _openSettings(context),
-                    onPlayVideo: () => showOnboardingVideoModal(context),
-                    body: _ErrorBody(
-                      onRetry: () => ref
-                          .read(sharedCatalogsControllerProvider.notifier)
-                          .refresh(),
+    // No se usa `AsyncValue.when`: Riverpod 3.x reintenta un `build()` fallido
+    // manteniendo `isLoading == true` con el error adjunto; `hasError` primero
+    // muestra el error de inmediato (el controller solo deja un error real
+    // cuando no hay caché que mostrar).
+    final bool failed = asyncState.hasError;
+    final bool loading = !failed && (asyncState.isLoading || state == null);
+
+    return MediaQuery(
+      // Limita el texto del sistema a 1.3x: más allá la tarjeta no cabe.
+      data: mediaQuery.copyWith(
+        textScaler: mediaQuery.textScaler.clamp(maxScaleFactor: 1.3),
+      ),
+      child: Scaffold(
+        backgroundColor: HomePalette.screenBackground,
+        body: Column(
+          children: <Widget>[
+            BrandHeader(
+              title: 'Vender',
+              subtitle: total == 0
+                  ? 'Tus catálogos para compartir'
+                  : (total == 1
+                        ? 'Toca para ver sus productos'
+                        : 'Desliza para ver más'),
+              actions: <Widget>[
+                BrandHeaderButton(
+                  icon: LucideIcons.play,
+                  label: 'Ver video de ayuda',
+                  onTap: () => showOnboardingVideoModal(context),
+                ),
+              ],
+              child: total == 0
+                  ? null
+                  : Row(
+                      children: <Widget>[
+                        BrandKpi(
+                          '$total',
+                          total == 1 ? 'Catálogo' : 'Catálogos',
+                        ),
+                        const SizedBox(width: 8),
+                        BrandKpi(pending ? '…' : '$products', 'Productos'),
+                        const SizedBox(width: 8),
+                        BrandKpi(pending ? '…' : '$fresh', 'Nuevos'),
+                      ],
                     ),
-                    onRefresh: () => ref
-                        .read(sharedCatalogsControllerProvider.notifier)
-                        .refresh(),
-                  );
-                }
-
-                final SharedCatalogsState? state = asyncState.value;
-                if (asyncState.isLoading || state == null) {
-                  return _Scaffold(
-                    heroHeight: heroHeight,
-                    overlap: overlap,
-                    subtitle: '',
-                    dotsHeight: 0,
-                    compact: compact,
-                    intro: _introController,
-                    onOpenSettings: () => _openSettings(context),
-                    onPlayVideo: () => showOnboardingVideoModal(context),
-                    body: const _SkeletonCard(),
-                    onRefresh: null,
-                  );
-                }
-
-                {
-                  final int total = state.catalogs.length;
-                  final String subtitle = total == 0
-                      ? ''
-                      : (total == 1
-                            ? 'Toca para ver sus productos'
-                            : 'Desliza para ver más');
-                  final double dotsHeight = total > 1 ? 36 + (48 - 36) * t : 0;
-
-                  return _Scaffold(
-                    heroHeight: heroHeight,
-                    overlap: overlap,
-                    subtitle: subtitle,
-                    dotsHeight: dotsHeight,
-                    compact: compact,
-                    intro: _introController,
-                    onOpenSettings: () => _openSettings(context),
-                    onPlayVideo: () => showOnboardingVideoModal(context),
-                    offlineNotice: _showOfflineBanner,
-                    body: total == 0
-                        ? const _EmptyBody()
-                        : CatalogCarousel(
-                            catalogs: state.catalogs,
-                            dotsHeight: dotsHeight,
+            ),
+            if (_showOfflineBanner) const _OfflineBanner(),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints c) {
+                  final bool compact = c.maxHeight < 520;
+                  final Widget body = failed
+                      ? _ErrorBody(onRetry: refresh)
+                      : loading
+                      ? const _SkeletonCard()
+                      : total == 0
+                      ? const _EmptyBody()
+                      : Padding(
+                          padding: const EdgeInsets.only(top: 4, bottom: 8),
+                          child: CatalogCarousel(
+                            catalogs: state!.catalogs,
+                            dotsHeight: total > 1 ? 32 : 0,
                             compact: compact,
+                            cardBuilder: (Catalog cat, int _, bool compact) =>
+                                PosterCatalogCard(
+                                  key: Key('catalog_${cat.id}'),
+                                  catalog: cat,
+                                  compact: compact,
+                                  onTap: () => _openCatalog(cat),
+                                ),
                             onOpenCatalog: _openCatalog,
                           ),
-                    onRefresh: () => ref
-                        .read(sharedCatalogsControllerProvider.notifier)
-                        .refresh(),
+                        );
+                  if (failed || loading) return body;
+                  return RefreshIndicator(
+                    onRefresh: refresh,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(height: c.maxHeight, child: body),
+                    ),
                   );
-                }
-              },
-            ),
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-/// Composición común a todos los estados: hero curvo + cuerpo (carrusel,
-/// esqueleto, error o vacío) + aviso de "sin conexión" si aplica.
-class _Scaffold extends StatelessWidget {
-  const _Scaffold({
-    required this.heroHeight,
-    required this.overlap,
-    required this.subtitle,
-    required this.dotsHeight,
-    required this.intro,
-    required this.onOpenSettings,
-    required this.onPlayVideo,
-    required this.body,
-    required this.onRefresh,
-    this.compact = false,
-    this.offlineNotice = false,
-  });
-
-  final double heroHeight;
-  final double overlap;
-  final String subtitle;
-  final double dotsHeight;
-  final Animation<double> intro;
-  final VoidCallback onOpenSettings;
-  final VoidCallback onPlayVideo;
-  final Widget body;
-  final bool compact;
-  final bool offlineNotice;
-  final Future<void> Function()? onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    // Una sola medición del alto disponible (`constraints.maxHeight`, ya
-    // dentro del `SafeArea` del padre): el `Stack` y el `SizedBox` del
-    // scroll de abajo usan el mismo valor, para que nunca queden
-    // desalineados y el contenido siempre llene exactamente la pantalla
-    // (pull-to-refresh sin dejar scroll visible).
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double total = constraints.maxHeight;
-        final Widget content = SizedBox(
-          height: total,
-          child: Stack(
-            children: <Widget>[
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: heroHeight,
-                child: AnimatedBuilder(
-                  animation: intro,
-                  builder: (BuildContext context, Widget? child) {
-                    final double t = Curves.easeOut.transform(
-                      intro.value.clamp(0.0, 1.0),
-                    );
-                    return Opacity(
-                      opacity: t,
-                      child: Transform.translate(
-                        offset: Offset(0, (1 - t) * -16),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: HomeHero(
-                    height: heroHeight,
-                    subtitle: subtitle,
-                    onOpenSettings: onOpenSettings,
-                    onPlayVideo: onPlayVideo,
-                    compact: compact,
-                  ),
-                ),
-              ),
-              Positioned(
-                top: heroHeight - overlap,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: AnimatedBuilder(
-                  animation: intro,
-                  builder: (BuildContext context, Widget? child) {
-                    final double t = Curves.easeOut.transform(
-                      ((intro.value - 0.15) / 0.85).clamp(0.0, 1.0),
-                    );
-                    return Opacity(
-                      opacity: t,
-                      child: Transform.translate(
-                        offset: Offset(0, (1 - t) * 24),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Column(
-                    children: <Widget>[
-                      if (offlineNotice) const _OfflineBanner(),
-                      Expanded(child: body),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-
-        if (onRefresh == null) return content;
-
-        return RefreshIndicator(
-          onRefresh: onRefresh!,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(height: total, child: content),
-          ),
-        );
-      },
     );
   }
 }
@@ -359,7 +227,7 @@ class _OfflineBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: const Row(
         children: <Widget>[
-          Icon(Icons.cloud_off, size: 16, color: AuthPalette.textMuted),
+          Icon(LucideIcons.cloudOff, size: 16, color: AuthPalette.textMuted),
           SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -384,11 +252,7 @@ class _EmptyBody extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: const <Widget>[
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 40,
-              color: AuthPalette.textMuted,
-            ),
+            Icon(LucideIcons.package, size: 40, color: AuthPalette.textMuted),
             SizedBox(height: 16),
             Text(
               'Aún no tienes catálogos compartidos.',
@@ -420,7 +284,7 @@ class _ErrorBody extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             const Icon(
-              Icons.error_outline,
+              LucideIcons.circleAlert,
               size: 40,
               color: AuthPalette.textMuted,
             ),

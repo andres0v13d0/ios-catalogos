@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
@@ -81,6 +82,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   late final AnimationController _introController;
   _Country _country = _countries.first;
   bool _navigatedToOtp = false;
+  bool _accepted = false;
 
   /// Error de formato local (p. ej. número inválido), calculado con la misma
   /// [_validatePhone]/`normalizeToE164` de siempre. Se muestra en el mismo
@@ -115,6 +117,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   Future<void> _onSubmit() async {
     FocusScope.of(context).unfocus();
+    if (!_accepted) return;
     final String? formatError = _validatePhone(_phoneController.text);
     if (formatError != null) {
       setState(() => _formatError = formatError);
@@ -245,6 +248,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             errorMessage: displayError,
                             isSending: auth.isSending,
                             onSubmit: _onSubmit,
+                            accepted: _accepted,
+                            onAcceptedChanged: (v) => setState(() => _accepted = v),
                           ),
                         ),
                       ),
@@ -270,6 +275,8 @@ class _BottomSheet extends StatelessWidget {
     required this.errorMessage,
     required this.isSending,
     required this.onSubmit,
+    required this.accepted,
+    required this.onAcceptedChanged,
   });
 
   final AnimationController introController;
@@ -280,6 +287,8 @@ class _BottomSheet extends StatelessWidget {
   final String? errorMessage;
   final bool isSending;
   final VoidCallback onSubmit;
+  final bool accepted;
+  final ValueChanged<bool> onAcceptedChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -385,21 +394,42 @@ class _BottomSheet extends StatelessWidget {
               child: AuthGradientButton(
                 label: 'Enviar código',
                 iconPainter: const ArrowForwardPainter(color: AppColors.primary),
-                enabled: !isSending,
+                enabled: !isSending && accepted,
                 loading: isSending,
                 onPressed: onSubmit,
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Text(
-                'Al continuar aceptas los Términos y la Política de privacidad',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AuthPalette.textMuted,
-                  height: 1.5,
-                ),
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Semantics(
+                    label: 'Acepto los Términos, la Política de privacidad y el Tratamiento de datos',
+                    child: Checkbox(
+                      value: accepted,
+                      onChanged: (v) => onAcceptedChanged(v ?? false),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: <Widget>[
+                          const _LegalText('Acepto los '),
+                          const _LegalLink('Términos', 'terminos'),
+                          const _LegalText(', la '),
+                          const _LegalLink('Política de privacidad', 'privacidad'),
+                          const _LegalText(' y el '),
+                          const _LegalLink('Tratamiento de datos', 'tratamiento-datos'),
+                          const _LegalText('.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -518,3 +548,38 @@ class _PhoneField extends StatelessWidget {
   }
 }
 
+
+class _LegalText extends StatelessWidget {
+  const _LegalText(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(fontSize: 12, color: AuthPalette.textMuted, height: 1.5),
+      );
+}
+
+class _LegalLink extends StatelessWidget {
+  const _LegalLink(this.text, this.path);
+  final String text;
+  final String path;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: () => launchUrl(
+          Uri.parse('https://catalogos.flystock.com.co/$path'),
+          mode: LaunchMode.externalApplication,
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            height: 1.5,
+            fontWeight: FontWeight.w600,
+            decoration: TextDecoration.underline,
+            color: AppColors.primary,
+          ),
+        ),
+      );
+}

@@ -34,7 +34,8 @@ class ResellerPriceRulesRepository {
   /// (`Math.min(100, ...)` en el controller).
   static const int maxPageSize = 100;
 
-  String _rulesPath(String catalogId) => '/reseller/app/catalogs/$catalogId/price-rules';
+  String _rulesPath(String catalogId) =>
+      '/reseller/app/catalogs/$catalogId/price-rules';
   String _productRulePath(String catalogId, String productId) =>
       '/reseller/app/catalogs/$catalogId/products/$productId/price-rule';
 
@@ -51,7 +52,9 @@ class ResellerPriceRulesRepository {
         queryParameters: <String, dynamic>{'page': page, 'pageSize': pageSize},
       );
       rawBody = response.data;
-      return Ok<PriceRulesProductsPage>(PriceRulesProductsPage.fromJson(_asMap(rawBody)));
+      return Ok<PriceRulesProductsPage>(
+        PriceRulesProductsPage.fromJson(_asMap(rawBody)),
+      );
     } on DioException catch (e) {
       return Err<PriceRulesProductsPage>(_failureOf(e));
     } catch (e) {
@@ -84,7 +87,9 @@ class ResellerPriceRulesRepository {
     try {
       final response = await _dio.put<dynamic>(path, data: rule.toJson());
       rawBody = response.data;
-      return Ok<SavedCatalogRuleResult>(SavedCatalogRuleResult.fromJson(_asMap(rawBody)));
+      return Ok<SavedCatalogRuleResult>(
+        SavedCatalogRuleResult.fromJson(_asMap(rawBody)),
+      );
     } on DioException catch (e) {
       return Err<SavedCatalogRuleResult>(_failureOf(e));
     } catch (e) {
@@ -112,7 +117,9 @@ class ResellerPriceRulesRepository {
     try {
       final response = await _dio.put<dynamic>(path, data: rule.toJson());
       rawBody = response.data;
-      return Ok<SavedProductRuleResult>(SavedProductRuleResult.fromJson(_asMap(rawBody)));
+      return Ok<SavedProductRuleResult>(
+        SavedProductRuleResult.fromJson(_asMap(rawBody)),
+      );
     } on DioException catch (e) {
       return Err<SavedProductRuleResult>(_failureOf(e));
     } catch (e) {
@@ -121,7 +128,10 @@ class ResellerPriceRulesRepository {
     }
   }
 
-  Future<Result<void>> deleteProductRule(String catalogId, String productId) async {
+  Future<Result<void>> deleteProductRule(
+    String catalogId,
+    String productId,
+  ) async {
     try {
       await _dio.delete<dynamic>(_productRulePath(catalogId, productId));
       return const Ok<void>(null);
@@ -185,7 +195,7 @@ class ResellerPriceRulesRepository {
   }
 }
 
-final Provider<ResellerPriceRulesRepository> resellerPriceRulesRepositoryProvider =
-    Provider<ResellerPriceRulesRepository>(
-      (Ref ref) => ResellerPriceRulesRepository(ref.watch(dioProvider)),
-    );
+final Provider<ResellerPriceRulesRepository>
+resellerPriceRulesRepositoryProvider = Provider<ResellerPriceRulesRepository>(
+  (Ref ref) => ResellerPriceRulesRepository(ref.watch(dioProvider)),
+);

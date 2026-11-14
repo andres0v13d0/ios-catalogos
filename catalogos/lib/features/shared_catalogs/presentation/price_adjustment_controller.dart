@@ -163,7 +163,8 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
 
   final PriceAdjustmentArgs _args;
 
-  ResellerPriceRulesRepository get _repo => ref.read(resellerPriceRulesRepositoryProvider);
+  ResellerPriceRulesRepository get _repo =>
+      ref.read(resellerPriceRulesRepositoryProvider);
 
   @override
   PriceAdjustmentState build() {
@@ -202,7 +203,9 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
       final page = (pageResult as Ok<PriceRulesProductsPage>).value;
       if (page.products.isEmpty) {
         state = const PriceAdjustmentLoadError(
-          ServerFailure(message: 'Este catálogo aún no tiene productos para ajustar.'),
+          ServerFailure(
+            message: 'Este catálogo aún no tiene productos para ajustar.',
+          ),
         );
         return;
       }
@@ -292,7 +295,11 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
     final rule = PriceRule(mode: s.mode, value: s.value);
 
     if (_args.isSingleProduct) {
-      final result = await _repo.upsertProductRule(_args.catalogId, _args.singleProduct!.id, rule);
+      final result = await _repo.upsertProductRule(
+        _args.catalogId,
+        _args.singleProduct!.id,
+        rule,
+      );
       if (!ref.mounted) return false;
       switch (result) {
         case Ok<SavedProductRuleResult>(:final value):
@@ -323,7 +330,10 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
     state = s.copyWith(removing: true, actionError: null);
 
     final result = _args.isSingleProduct
-        ? await _repo.deleteProductRule(_args.catalogId, _args.singleProduct!.id)
+        ? await _repo.deleteProductRule(
+            _args.catalogId,
+            _args.singleProduct!.id,
+          )
         : await _repo.deleteCatalogRule(_args.catalogId);
 
     if (!ref.mounted) return false;
@@ -346,12 +356,16 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
     if (digits.isEmpty) return true;
     final int? n = int.tryParse(digits);
     if (n == null) return false;
-    final int max = mode == PriceRuleMode.percent ? kPercentValueMax : kFixedValueMax;
+    final int max = mode == PriceRuleMode.percent
+        ? kPercentValueMax
+        : kFixedValueMax;
     return n <= max;
   }
 }
 
 final priceAdjustmentControllerProvider =
-    NotifierProvider.family<PriceAdjustmentController, PriceAdjustmentState, PriceAdjustmentArgs>(
-      PriceAdjustmentController.new,
-    );
+    NotifierProvider.family<
+      PriceAdjustmentController,
+      PriceAdjustmentState,
+      PriceAdjustmentArgs
+    >(PriceAdjustmentController.new);

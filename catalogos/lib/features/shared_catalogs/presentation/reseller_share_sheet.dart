@@ -19,7 +19,8 @@ typedef NativeSharer = Future<void> Function(String text);
 Future<bool> _defaultLaunch(Uri uri) =>
     launchUrl(uri, mode: LaunchMode.externalApplication);
 
-Future<void> _defaultShare(String text) => SharePlus.instance.share(ShareParams(text: text));
+Future<void> _defaultShare(String text) =>
+    SharePlus.instance.share(ShareParams(text: text));
 
 /// Abre la hoja inferior "Compartir catálogo" (diseños Compartir-1/Compartir-2).
 ///
@@ -81,7 +82,9 @@ class _ResellerShareSheetState extends State<_ResellerShareSheet> {
 
   String get _shareMessage {
     final name = widget.banner.publicName.trim();
-    final titled = name.isEmpty ? 'Mira mi catálogo' : 'Mira mi catálogo: $name';
+    final titled = name.isEmpty
+        ? 'Mira mi catálogo'
+        : 'Mira mi catálogo: $name';
     return '$titled\n$_fullLink';
   }
 
@@ -104,7 +107,9 @@ class _ResellerShareSheetState extends State<_ResellerShareSheet> {
   }
 
   Future<void> _sendWhatsApp() async {
-    final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(_shareMessage)}');
+    final uri = Uri.parse(
+      'https://wa.me/?text=${Uri.encodeComponent(_shareMessage)}',
+    );
     bool ok = false;
     try {
       ok = await widget.launcher(uri);
@@ -118,7 +123,11 @@ class _ResellerShareSheetState extends State<_ResellerShareSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir WhatsApp. Intenta con "Más opciones".')),
+        const SnackBar(
+          content: Text(
+            'No se pudo abrir WhatsApp. Intenta con "Más opciones".',
+          ),
+        ),
       );
     }
   }
@@ -171,17 +180,30 @@ class _ResellerShareSheetState extends State<_ResellerShareSheet> {
                     ),
                     Text(
                       'Compartir catálogo',
-                      style: TextStyle(fontSize: 18 * s, fontWeight: FontWeight.w600, color: AppColors.primary),
+                      style: TextStyle(
+                        fontSize: 18 * s,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
                     ),
                     SizedBox(height: 4 * s),
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 13 * s, color: CatalogTokens.textMuted, height: 1.4),
+                      style: TextStyle(
+                        fontSize: 13 * s,
+                        color: CatalogTokens.textMuted,
+                        height: 1.4,
+                      ),
                     ),
                     SizedBox(height: 18 * s),
 
                     // Fila del enlace + Copiar
-                    _LinkRow(scale: s, displayLink: _displayLink, copied: _copied, onCopy: _copyLink),
+                    _LinkRow(
+                      scale: s,
+                      displayLink: _displayLink,
+                      copied: _copied,
+                      onCopy: _copyLink,
+                    ),
                     SizedBox(height: 18 * s),
 
                     // Vista previa de WhatsApp
@@ -195,7 +217,11 @@ class _ResellerShareSheetState extends State<_ResellerShareSheet> {
                         },
                         child: Text(
                           'Cambiar banner',
-                          style: TextStyle(fontSize: 13 * s, fontWeight: FontWeight.w600, color: AppColors.secondary),
+                          style: TextStyle(
+                            fontSize: 13 * s,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.secondary,
+                          ),
                         ),
                       ),
                     ),
@@ -228,7 +254,12 @@ class _ResellerShareSheetState extends State<_ResellerShareSheet> {
 }
 
 class _LinkRow extends StatelessWidget {
-  const _LinkRow({required this.scale, required this.displayLink, required this.copied, required this.onCopy});
+  const _LinkRow({
+    required this.scale,
+    required this.displayLink,
+    required this.copied,
+    required this.onCopy,
+  });
 
   final double scale;
   final String displayLink;
@@ -266,7 +297,10 @@ class _LinkRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10 * s),
                 onTap: copied ? null : onCopy,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14 * s, vertical: 9 * s),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 14 * s,
+                    vertical: 9 * s,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
@@ -274,7 +308,9 @@ class _LinkRow extends StatelessWidget {
                         SizedBox(
                           width: 15 * s,
                           height: 15 * s,
-                          child: CustomPaint(painter: CheckPainter(color: AppColors.primary)),
+                          child: CustomPaint(
+                            painter: CheckPainter(color: AppColors.primary),
+                          ),
                         ),
                         SizedBox(width: 6 * s),
                       ],
@@ -308,7 +344,9 @@ class _SharePreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final double s = scale;
     final String? imageUrl = banner.previewImageUrl;
-    final String title = banner.publicName.trim().isNotEmpty ? banner.publicName.trim() : 'Mi catálogo';
+    final String title = banner.publicName.trim().isNotEmpty
+        ? banner.publicName.trim()
+        : 'Mi catálogo';
     final String domain = _domainOf(banner.shareLink);
 
     return Container(
@@ -317,7 +355,11 @@ class _SharePreviewCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16 * s),
         border: Border.all(color: CatalogTokens.cardBorder),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: CatalogTokens.quickActionShadow, offset: Offset(0, 10 * s), blurRadius: 24 * s),
+          BoxShadow(
+            color: CatalogTokens.quickActionShadow,
+            offset: Offset(0, 10 * s),
+            blurRadius: 24 * s,
+          ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -333,19 +375,28 @@ class _SharePreviewCard extends StatelessWidget {
                       child: SizedBox(
                         width: 38 * s,
                         height: 38 * s,
-                        child: CustomPaint(painter: ImageIconPainter(color: CatalogTokens.textMuted)),
+                        child: CustomPaint(
+                          painter: ImageIconPainter(
+                            color: CatalogTokens.textMuted,
+                          ),
+                        ),
                       ),
                     )
                   : CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
                       key: const Key('share_preview_image'),
-                      placeholder: (c, _) => const ColoredBox(color: Color(0xFFEAF0FF)),
+                      placeholder: (c, _) =>
+                          const ColoredBox(color: Color(0xFFEAF0FF)),
                       errorWidget: (c, _, _) => Center(
                         child: SizedBox(
                           width: 38 * s,
                           height: 38 * s,
-                          child: CustomPaint(painter: ImageIconPainter(color: CatalogTokens.textMuted)),
+                          child: CustomPaint(
+                            painter: ImageIconPainter(
+                              color: CatalogTokens.textMuted,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -360,21 +411,33 @@ class _SharePreviewCard extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14 * s, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  style: TextStyle(
+                    fontSize: 14 * s,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
                 ),
                 SizedBox(height: 3 * s),
                 Text(
                   'Mira mi catálogo',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12 * s, color: CatalogTokens.textMuted, height: 1.35),
+                  style: TextStyle(
+                    fontSize: 12 * s,
+                    color: CatalogTokens.textMuted,
+                    height: 1.35,
+                  ),
                 ),
                 SizedBox(height: 6 * s),
                 Text(
                   domain,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11 * s, color: CatalogTokens.searchHint, letterSpacing: 0.2),
+                  style: TextStyle(
+                    fontSize: 11 * s,
+                    color: CatalogTokens.searchHint,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ],
             ),
@@ -407,7 +470,11 @@ class _WhatsAppButton extends StatelessWidget {
             colors: <Color>[AppColors.accent, AppColors.brand],
           ),
           boxShadow: <BoxShadow>[
-            BoxShadow(color: const Color.fromRGBO(0, 255, 148, 0.3), offset: Offset(0, 10 * s), blurRadius: 24 * s),
+            BoxShadow(
+              color: const Color.fromRGBO(0, 255, 148, 0.3),
+              offset: Offset(0, 10 * s),
+              blurRadius: 24 * s,
+            ),
           ],
         ),
         child: Material(
@@ -421,13 +488,19 @@ class _WhatsAppButton extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     'Enviar por WhatsApp',
-                    style: TextStyle(fontSize: 16 * s, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    style: TextStyle(
+                      fontSize: 16 * s,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                   SizedBox(width: 10 * s),
                   SizedBox(
                     width: 20 * s,
                     height: 20 * s,
-                    child: CustomPaint(painter: WhatsAppPainter(color: AppColors.primary)),
+                    child: CustomPaint(
+                      painter: WhatsAppPainter(color: AppColors.primary),
+                    ),
                   ),
                 ],
               ),
@@ -462,7 +535,11 @@ class _MoreOptionsButton extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               'Más opciones',
-              style: TextStyle(fontSize: 15 * s, fontWeight: FontWeight.w600, color: AppColors.primary),
+              style: TextStyle(
+                fontSize: 15 * s,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
             ),
           ),
         ),
@@ -485,7 +562,11 @@ class _CopiedToast extends StatelessWidget {
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(999),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: CatalogTokens.greenGlowShadow, offset: Offset(0, 6 * s), blurRadius: 16 * s),
+          BoxShadow(
+            color: CatalogTokens.greenGlowShadow,
+            offset: Offset(0, 6 * s),
+            blurRadius: 16 * s,
+          ),
         ],
       ),
       child: Row(
@@ -499,7 +580,11 @@ class _CopiedToast extends StatelessWidget {
           SizedBox(width: 8 * s),
           Text(
             '¡Enlace copiado!',
-            style: TextStyle(fontSize: 13 * s, fontWeight: FontWeight.w600, color: Colors.white),
+            style: TextStyle(
+              fontSize: 13 * s,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
         ],
       ),

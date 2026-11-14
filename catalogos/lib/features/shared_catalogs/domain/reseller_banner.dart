@@ -86,9 +86,15 @@ class ResellerBannerState {
       hasPriceRules: hasPriceRules,
       providerImageUrl: providerImageUrl,
       ownBannerUrl: clearOwnBanner ? null : (ownBannerUrl ?? this.ownBannerUrl),
-      ownBannerWidth: clearOwnBanner ? null : (ownBannerWidth ?? this.ownBannerWidth),
-      ownBannerHeight: clearOwnBanner ? null : (ownBannerHeight ?? this.ownBannerHeight),
-      ownBannerBytes: clearOwnBanner ? null : (ownBannerBytes ?? this.ownBannerBytes),
+      ownBannerWidth: clearOwnBanner
+          ? null
+          : (ownBannerWidth ?? this.ownBannerWidth),
+      ownBannerHeight: clearOwnBanner
+          ? null
+          : (ownBannerHeight ?? this.ownBannerHeight),
+      ownBannerBytes: clearOwnBanner
+          ? null
+          : (ownBannerBytes ?? this.ownBannerBytes),
     );
   }
 }
