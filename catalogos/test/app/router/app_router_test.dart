@@ -84,36 +84,38 @@ void main() {
       expect(router.state.matchedLocation, AppRoutes.account);
     });
 
-    testWidgets('redirige a /login al intentar entrar a una ruta privada sin sesión', (
-      WidgetTester tester,
-    ) async {
-      final GoRouter router = await _pumpApp(tester);
+    testWidgets(
+      'redirige a /login al intentar entrar a una ruta privada sin sesión',
+      (WidgetTester tester) async {
+        final GoRouter router = await _pumpApp(tester);
 
-      router.go(AppRoutes.accountSettings);
-      await tester.pumpAndSettle();
+        router.go(AppRoutes.accountSettings);
+        await tester.pumpAndSettle();
 
-      // El guard impide el acceso: terminamos en /login.
-      expect(router.state.matchedLocation, AppRoutes.login);
-      expect(find.byType(LoginPage), findsOneWidget);
-      expect(find.byType(BuyPage), findsNothing);
-    });
+        // El guard impide el acceso: terminamos en /login.
+        expect(router.state.matchedLocation, AppRoutes.login);
+        expect(find.byType(LoginPage), findsOneWidget);
+        expect(find.byType(BuyPage), findsNothing);
+      },
+    );
   });
 
   group('Navegación entre 2 rutas (con sesión)', () {
-    testWidgets('autenticado puede ver /comprar y no queda atrapado en /login', (
-      WidgetTester tester,
-    ) async {
-      final GoRouter router = await _pumpApp(
-        tester,
-        initialStatus: AuthStatus.signedIn,
-      );
+    testWidgets(
+      'autenticado puede ver /comprar y no queda atrapado en /login',
+      (WidgetTester tester) async {
+        final GoRouter router = await _pumpApp(
+          tester,
+          initialStatus: AuthStatus.signedIn,
+        );
 
-      // Con sesión, ir a /login redirige a /comprar.
-      router.go(AppRoutes.login);
-      await tester.pumpAndSettle();
-      expect(router.state.matchedLocation, AppRoutes.buy);
-      expect(find.byType(BuyPage), findsOneWidget);
-    });
+        // Con sesión, ir a /login redirige a /comprar.
+        router.go(AppRoutes.login);
+        await tester.pumpAndSettle();
+        expect(router.state.matchedLocation, AppRoutes.buy);
+        expect(find.byType(BuyPage), findsOneWidget);
+      },
+    );
 
     testWidgets('al iniciar sesión, el guard navega de /login a /comprar', (
       WidgetTester tester,

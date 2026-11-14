@@ -288,17 +288,6 @@ class _ProductCard extends ConsumerWidget {
                             ref
                                 .read(cartControllerProvider.notifier)
                                 .add(cartLineFor(catalog, p, q));
-                            ScaffoldMessenger.of(context)
-                              ..hideCurrentSnackBar()
-                              ..showSnackBar(
-                                SnackBar(
-                                  content: Text('Agregado al carrito · $q und'),
-                                  action: SnackBarAction(
-                                    label: 'Ver carrito',
-                                    onPressed: () => openCart(context, ref),
-                                  ),
-                                ),
-                              );
                           } else {
                             _open(context);
                           }
@@ -307,8 +296,8 @@ class _ProductCard extends ConsumerWidget {
                           width: 36,
                           height: 36,
                           child: Icon(
-                            LucideIcons.plus,
-                            size: 20,
+                            LucideIcons.shoppingCart,
+                            size: 18,
                             color: Colors.white,
                           ),
                         ),

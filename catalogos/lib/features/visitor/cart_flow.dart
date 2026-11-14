@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
@@ -78,34 +79,107 @@ String _initials(String s) {
 }
 
 /// Botón flotante del carrito con la cantidad de referencias; se oculta vacío.
-class FloatingCartButton extends ConsumerWidget {
+/// Al agregar algo, "salta" y el contador se ilumina (en vez de un aviso aparte).
+class FloatingCartButton extends ConsumerStatefulWidget {
   const FloatingCartButton({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FloatingCartButton> createState() => _FloatingCartButtonState();
+}
+
+class _FloatingCartButtonState extends ConsumerState<FloatingCartButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bump = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
+
+  @override
+  void dispose() {
+    _bump.dispose();
+    super.dispose();
+  }
+
+  static int _units(List<CartLine> l) =>
+      l.fold(0, (int a, CartLine x) => a + x.quantity);
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<List<CartLine>>(cartControllerProvider, (
+      List<CartLine>? prev,
+      List<CartLine> next,
+    ) {
+      if (_units(next) > _units(prev ?? const <CartLine>[])) {
+        _bump.forward(from: 0);
+      }
+    });
     final int n = ref.watch(cartControllerProvider).length;
     if (n == 0) return const SizedBox.shrink();
     return Semantics(
       button: true,
       label: 'Carrito, $n productos',
-      child: Material(
-        color: AppColors.primary,
-        shape: const CircleBorder(),
-        elevation: 6,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () => openCart(context, ref),
-          child: SizedBox(
-            width: 60,
-            height: 60,
-            child: Badge(
-              label: Text('$n'),
-              backgroundColor: AppColors.brand,
-              textColor: AppColors.primary,
-              child: const Icon(
-                LucideIcons.shoppingCart,
-                color: Colors.white,
-                size: 24,
+      child: AnimatedBuilder(
+        animation: _bump,
+        builder: (BuildContext context, Widget? child) {
+          // 0→1: sube a 1.25 y vuelve; el contador pasa de verde a su color.
+          final double t = _bump.value;
+          final double scale = 1 + 0.25 * math.sin(t * math.pi);
+          return Transform.scale(
+            scale: scale,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                child!,
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 22,
+                      minHeight: 22,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Color.lerp(
+                        AppColors.brand,
+                        AppColors.accent,
+                        math.sin(t * math.pi),
+                      ),
+                      shape: n > 9 ? BoxShape.rectangle : BoxShape.circle,
+                      borderRadius: n > 9 ? BorderRadius.circular(11) : null,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Text(
+                      '$n',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        child: Material(
+          color: AppColors.primary,
+          shape: const CircleBorder(),
+          elevation: 6,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => openCart(context, ref),
+            child: const SizedBox(
+              width: 60,
+              height: 60,
+              child: Center(
+                child: Icon(
+                  LucideIcons.shoppingCart,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
             ),
           ),

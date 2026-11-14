@@ -17,6 +17,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:catalogos/features/visitor/image_gallery.dart';
 
 import '../../helpers/memory_cache.dart';
 
@@ -217,9 +219,14 @@ void main() {
       tester,
       const VisitorProductPage(catalog: _cat, product: _variant),
     );
-    expect(find.text('6 und'), findsOneWidget);
-    expect(find.text('12 und'), findsOneWidget);
-    for (final String t in <String>['Negro', '32', '12 und']) {
+    // Pantalla alta para que se construyan todas las cantidades (lista perezosa).
+    tester.view.physicalSize = const Size(390, 2400);
+    await tester.pump();
+    // Solo el número de cada cantidad: sin "und" ni precio por unidad.
+    expect(find.text('6'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
+    expect(find.textContaining('und'), findsNothing);
+    for (final String t in <String>['Negro', '32', '12']) {
       await tester.ensureVisible(find.text(t));
       await tester.pump();
       await tester.tap(find.text(t));
@@ -232,6 +239,12 @@ void main() {
       (l.color, l.size, l.quantity, l.unitPrice),
       ('Negro', '32', 12, 46500),
     );
+    // Sigue en el detalle, sin aviso aparte, y el botón del carrito está ahí.
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.byType(VisitorProductPage), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(find.byType(FloatingCartButton), findsOneWidget);
+    expect(find.byIcon(LucideIcons.shoppingCart), findsOneWidget);
   });
 
   testWidgets(
@@ -422,4 +435,66 @@ void main() {
       expect(opened, isEmpty);
     },
   );
+
+  testWidgets('el botón del carrito salta al agregar y queda centrado', (
+    tester,
+  ) async {
+    final ProviderContainer c = await _pump(
+      tester,
+      const Scaffold(floatingActionButton: FloatingCartButton()),
+    );
+    expect(find.byType(FloatingCartButton), findsOneWidget);
+    expect(
+      find.byIcon(LucideIcons.shoppingCart),
+      findsNothing,
+    ); // vacío: oculto
+    c.read(cartControllerProvider.notifier).add(cartLineFor(_cat2, _plain, 6));
+    await tester.pump();
+    await tester.pump(
+      const Duration(milliseconds: 260),
+    ); // a mitad de la animación
+    double scale() => tester
+        .widget<Transform>(
+          find
+              .descendant(
+                of: find.byType(FloatingCartButton),
+                matching: find.byType(Transform),
+              )
+              .first,
+        )
+        .transform
+        .storage[0];
+    expect(find.byIcon(LucideIcons.shoppingCart), findsOneWidget);
+    expect(scale(), greaterThan(1.05)); // el botón está "saltando"
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(scale(), closeTo(1, 0.001));
+    // El ícono está en el centro del botón de 60x60.
+    final Offset icon = tester.getCenter(find.byIcon(LucideIcons.shoppingCart));
+    final Offset button = tester.getCenter(find.byType(InkWell).first);
+    expect((icon - button).distance, lessThan(1));
+  });
+
+  testWidgets('la galería ampliada se desliza entre todas las fotos', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (BuildContext c) => TextButton(
+            onPressed: () => showImageGallery(c, const <String>['a', 'b', 'c']),
+            child: const Text('abrir'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('abrir'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('1 / 3'), findsOneWidget);
+    await tester.drag(find.byType(PageView), const Offset(-600, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('2 / 3'), findsOneWidget);
+  });
 }

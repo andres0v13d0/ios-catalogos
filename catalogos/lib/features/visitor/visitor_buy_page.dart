@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_routes.dart';
 import '../../core/utils/money.dart';
 import '../buy/cart_controller.dart';
+import '../chat/ask_name_sheet.dart';
 import '../chat/chat_api.dart';
 import '../chat/conversation_page.dart';
 import '../../shared/widgets/brand_header.dart';
@@ -697,31 +698,9 @@ Future<void> openVisitorChat(
   try {
     final String id = await api.start(c.catalogId);
     if (!api.nameAsked && context.mounted) {
-      final TextEditingController ctrl = TextEditingController();
-      final String? name = await showDialog<String>(
-        context: context,
-        builder: (BuildContext d) => AlertDialog(
-          title: const Text('¿Cómo te llamas?'),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            maxLength: 60,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              hintText: 'Así te verá el proveedor (opcional)',
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(d),
-              child: const Text('Omitir'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(d, ctrl.text),
-              child: const Text('Continuar'),
-            ),
-          ],
-        ),
+      final String? name = await showAskNameSheet(
+        context,
+        providerName: c.providerName ?? c.name,
       );
       await api.markNameAsked();
       if (name != null && name.trim().isNotEmpty) {
