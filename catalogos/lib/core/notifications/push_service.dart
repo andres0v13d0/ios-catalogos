@@ -145,7 +145,7 @@ class PushService {
           sound: chat ? _chatSound : _sound,
         ),
         iOS: DarwinNotificationDetails(
-          sound: chat ? 'chat_message.mp3' : 'flymovil_notif.wav',
+          sound: chat ? 'chat_message.wav' : 'flymovil_notif.wav',
         ),
       ),
       payload: jsonEncode(m.data),

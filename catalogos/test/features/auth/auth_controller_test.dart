@@ -57,21 +57,25 @@ void main() {
       expect(state.errorMessage, isNull);
     });
 
-    test('un número inválido deja error de formato y NO llama al backend',
-        () async {
-      final repo = FakeAuthRepository();
-      final container =
-          buildContainer(repo: repo, authUser: FakeAuthUserService());
-      final controller = container.read(authControllerProvider.notifier);
+    test(
+      'un número inválido deja error de formato y NO llama al backend',
+      () async {
+        final repo = FakeAuthRepository();
+        final container = buildContainer(
+          repo: repo,
+          authUser: FakeAuthUserService(),
+        );
+        final controller = container.read(authControllerProvider.notifier);
 
-      final sent = await controller.sendCode(rawPhone: 'abc');
+        final sent = await controller.sendCode(rawPhone: 'abc');
 
-      expect(sent, isNull);
-      expect(repo.requestCalls, isEmpty);
-      final state = container.read(authControllerProvider);
-      expect(state.stage, AuthFlowStage.phoneEntry);
-      expect(state.errorMessage, isNotNull);
-    });
+        expect(sent, isNull);
+        expect(repo.requestCalls, isEmpty);
+        final state = container.read(authControllerProvider);
+        expect(state.stage, AuthFlowStage.phoneEntry);
+        expect(state.errorMessage, isNotNull);
+      },
+    );
 
     test('429 cooldown surfacea el mensaje y los segundos', () async {
       final repo = FakeAuthRepository(
@@ -80,8 +84,10 @@ void main() {
           retryAfterSeconds: 45,
         ),
       );
-      final container =
-          buildContainer(repo: repo, authUser: FakeAuthUserService());
+      final container = buildContainer(
+        repo: repo,
+        authUser: FakeAuthUserService(),
+      );
       final controller = container.read(authControllerProvider.notifier);
 
       final sent = await controller.sendCode(rawPhone: '3001234567');
@@ -95,36 +101,42 @@ void main() {
   });
 
   group('AuthController.verifyCode (tarea 1.10)', () {
-    test('código correcto → signInWithCustomToken con el customToken → signedIn',
-        () async {
-      final repo = FakeAuthRepository(
-        validCode: '123456',
-        customToken: 'ct-123',
-      );
-      final authUser = FakeAuthUserService(idToken: 'id-token-abc');
-      final container = buildContainer(repo: repo, authUser: authUser);
-      final controller = container.read(authControllerProvider.notifier);
+    test(
+      'código correcto → signInWithCustomToken con el customToken → signedIn',
+      () async {
+        final repo = FakeAuthRepository(
+          validCode: '123456',
+          customToken: 'ct-123',
+        );
+        final authUser = FakeAuthUserService(idToken: 'id-token-abc');
+        final container = buildContainer(repo: repo, authUser: authUser);
+        final controller = container.read(authControllerProvider.notifier);
 
-      await controller.sendCode(rawPhone: '3001234567');
-      final ok = await controller.verifyCode('123456');
+        await controller.sendCode(rawPhone: '3001234567');
+        final ok = await controller.verifyCode('123456');
 
-      expect(ok, isTrue);
-      // El controlador canjeó EXACTAMENTE el customToken recibido.
-      expect(authUser.customTokens, <String>['ct-123']);
-      expect(container.read(authControllerProvider).stage,
-          AuthFlowStage.signedIn);
-      expect(container.read(authStateProvider), AuthStatus.signedIn);
+        expect(ok, isTrue);
+        // El controlador canjeó EXACTAMENTE el customToken recibido.
+        expect(authUser.customTokens, <String>['ct-123']);
+        expect(
+          container.read(authControllerProvider).stage,
+          AuthFlowStage.signedIn,
+        );
+        expect(container.read(authStateProvider), AuthStatus.signedIn);
 
-      final session = container.read(authStateProvider.notifier).session;
-      expect(session, isNotNull);
-      expect(session!.idToken, 'id-token-abc');
-      expect(session.uid, 'uid-123');
-    });
+        final session = container.read(authStateProvider.notifier).session;
+        expect(session, isNotNull);
+        expect(session!.idToken, 'id-token-abc');
+        expect(session.uid, 'uid-123');
+      },
+    );
 
     test('isNewProfile se propaga al estado del flujo', () async {
       final repo = FakeAuthRepository(validCode: '123456', isNewProfile: true);
-      final container =
-          buildContainer(repo: repo, authUser: FakeAuthUserService());
+      final container = buildContainer(
+        repo: repo,
+        authUser: FakeAuthUserService(),
+      );
       final controller = container.read(authControllerProvider.notifier);
 
       await controller.sendCode(rawPhone: '3001234567');
@@ -160,8 +172,10 @@ void main() {
           retryAfterSeconds: 900,
         ),
       );
-      final container =
-          buildContainer(repo: repo, authUser: FakeAuthUserService());
+      final container = buildContainer(
+        repo: repo,
+        authUser: FakeAuthUserService(),
+      );
       final controller = container.read(authControllerProvider.notifier);
 
       await controller.sendCode(rawPhone: '3001234567');
@@ -174,49 +188,58 @@ void main() {
       expect(state.resendAvailableInSeconds, 900);
     });
 
-    test('fallo de signInWithCustomToken surfacea error y NO autentica',
-        () async {
-      final repo = FakeAuthRepository(validCode: '123456');
-      final authUser = FakeAuthUserService(failSignIn: true);
-      final container = buildContainer(repo: repo, authUser: authUser);
-      final controller = container.read(authControllerProvider.notifier);
+    test(
+      'fallo de signInWithCustomToken surfacea error y NO autentica',
+      () async {
+        final repo = FakeAuthRepository(validCode: '123456');
+        final authUser = FakeAuthUserService(failSignIn: true);
+        final container = buildContainer(repo: repo, authUser: authUser);
+        final controller = container.read(authControllerProvider.notifier);
 
-      await controller.sendCode(rawPhone: '3001234567');
-      final ok = await controller.verifyCode('123456');
+        await controller.sendCode(rawPhone: '3001234567');
+        final ok = await controller.verifyCode('123456');
 
-      expect(ok, isFalse);
-      expect(container.read(authStateProvider), AuthStatus.signedOut);
-      expect(container.read(authControllerProvider).stage,
-          AuthFlowStage.codeSent);
-      expect(container.read(authControllerProvider).errorMessage, isNotNull);
-    });
+        expect(ok, isFalse);
+        expect(container.read(authStateProvider), AuthStatus.signedOut);
+        expect(
+          container.read(authControllerProvider).stage,
+          AuthFlowStage.codeSent,
+        );
+        expect(container.read(authControllerProvider).errorMessage, isNotNull);
+      },
+    );
   });
 
   group('AuthController.resendCode (tarea 1.10)', () {
     test('reenvía llamando a resendCode con el mismo teléfono', () async {
       final repo = FakeAuthRepository();
-      final container =
-          buildContainer(repo: repo, authUser: FakeAuthUserService());
+      final container = buildContainer(
+        repo: repo,
+        authUser: FakeAuthUserService(),
+      );
       final controller = container.read(authControllerProvider.notifier);
 
       await controller.sendCode(rawPhone: '3001234567');
       await controller.resendCode();
 
       expect(repo.resendCalls, <String>['+573001234567']);
-      expect(container.read(authControllerProvider).stage,
-          AuthFlowStage.codeSent);
+      expect(
+        container.read(authControllerProvider).stage,
+        AuthFlowStage.codeSent,
+      );
     });
 
-    test('reenvío dentro del cooldown (429) surfacea el error + segundos',
-        () async {
+    test('reenvío dentro del cooldown (429) surfacea el error + segundos', () async {
       final repo = FakeAuthRepository(
         requestFailure: const LockedFailure(
           message: 'Aún no puedes reenviar.',
           retryAfterSeconds: 60,
         ),
       );
-      final container =
-          buildContainer(repo: repo, authUser: FakeAuthUserService());
+      final container = buildContainer(
+        repo: repo,
+        authUser: FakeAuthUserService(),
+      );
       final controller = container.read(authControllerProvider.notifier);
 
       // Primer envío también falla (mismo requestFailure), así que fijamos el

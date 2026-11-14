@@ -18,6 +18,7 @@ class BrandHeader extends StatelessWidget {
     this.subtitle,
     this.actions = const <Widget>[],
     this.leading,
+    this.titleSize = 26,
     this.child,
     this.sheetColor = Colors.white,
   });
@@ -28,6 +29,9 @@ class BrandHeader extends StatelessWidget {
 
   /// Botón al inicio de la fila del título (p. ej. volver).
   final Widget? leading;
+
+  /// Tamaño del título (más chico en pantallas con avatar, como el chat).
+  final double titleSize;
 
   /// Contenido bajo el título (chips, tarjetas, indicadores).
   final Widget? child;
@@ -85,8 +89,8 @@ class BrandHeader extends StatelessWidget {
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 26,
+                            style: TextStyle(
+                              fontSize: titleSize,
                               height: 1.2,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
@@ -219,7 +223,7 @@ class BrandChip extends StatelessWidget {
   );
 }
 
-/// Cifra con etiqueta para la cabecera (Pedidos, Vender). Va dentro de un `Row`.
+/// Cifra con etiqueta para la cabecera (Pedidos). Va dentro de un `Row`.
 class BrandKpi extends StatelessWidget {
   const BrandKpi(this.value, this.label, {super.key});
 

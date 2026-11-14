@@ -11,14 +11,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'helpers/memory_cache.dart';
 
 void main() {
-  testWidgets('La app arranca y, sin sesión, muestra Comprar',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(ProviderScope(
-      overrides: [localCacheProvider.overrideWithValue(MemoryCache())],
-      child: const RevendedoresApp(),
-    ));
+  testWidgets('La app arranca y, sin sesión, muestra Comprar', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [localCacheProvider.overrideWithValue(MemoryCache())],
+        child: const RevendedoresApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Aquí verás tus catálogos guardados'), findsOneWidget);
+    expect(
+      find.textContaining('Aquí verás tus catálogos guardados'),
+      findsOneWidget,
+    );
   });
 }

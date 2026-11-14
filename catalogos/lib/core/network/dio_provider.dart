@@ -13,9 +13,7 @@ import 'token_provider.dart';
 /// Los tests la sobreescriben con un fake (p. ej. [NoopAppCheckTokenSource])
 /// para no tocar Firebase.
 final Provider<AppCheckTokenSource> appCheckTokenSourceProvider =
-    Provider<AppCheckTokenSource>(
-  (Ref ref) => FirebaseAppCheckTokenSource(),
-);
+    Provider<AppCheckTokenSource>((Ref ref) => FirebaseAppCheckTokenSource());
 
 /// [TokenProvider] real de la app: deriva el `idToken` de Firebase a través del
 /// [AuthUserService] (tarea 1.12). Reemplaza al `StaticTokenProvider`/en-memoria

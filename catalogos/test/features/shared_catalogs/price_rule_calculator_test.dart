@@ -57,9 +57,12 @@ void main() {
     ];
 
     for (final v in vectors) {
-      test('(${v.price}, ${v.rule.mode.api} ${v.rule.value}) → ${v.expected}', () {
-        expect(applyPriceRule(v.price, v.rule), v.expected);
-      });
+      test(
+        '(${v.price}, ${v.rule.mode.api} ${v.rule.value}) → ${v.expected}',
+        () {
+          expect(applyPriceRule(v.price, v.rule), v.expected);
+        },
+      );
     }
   });
 
@@ -81,18 +84,27 @@ void main() {
 
     test('precio 0: el markup no genera un precio negativo ni inválido', () {
       expect(
-        applyPriceRule(0, const PriceRule(mode: PriceRuleMode.percent, value: 30)),
+        applyPriceRule(
+          0,
+          const PriceRule(mode: PriceRuleMode.percent, value: 30),
+        ),
         0,
       );
       expect(
-        applyPriceRule(0, const PriceRule(mode: PriceRuleMode.fixed, value: 100)),
+        applyPriceRule(
+          0,
+          const PriceRule(mode: PriceRuleMode.fixed, value: 100),
+        ),
         100,
       );
     });
 
     test('porcentaje máximo permitido (300%) calcula correcto', () {
       expect(
-        applyPriceRule(5000, const PriceRule(mode: PriceRuleMode.percent, value: 300)),
+        applyPriceRule(
+          5000,
+          const PriceRule(mode: PriceRuleMode.percent, value: 300),
+        ),
         20000,
       );
     });
@@ -107,28 +119,33 @@ void main() {
       );
     });
 
-    test(
-      'el resultado nunca tiene centavos y nunca es menor que el precio del proveedor',
-      () {
-        const prices = <num>[100, 999.99, 1440, 4449, 5000.01, 12999.50, 999999.99];
-        const rules = <PriceRule>[
-          PriceRule(mode: PriceRuleMode.percent, value: 1),
-          PriceRule(mode: PriceRuleMode.percent, value: 30),
-          PriceRule(mode: PriceRuleMode.percent, value: 300),
-          PriceRule(mode: PriceRuleMode.fixed, value: 1),
-          PriceRule(mode: PriceRuleMode.fixed, value: 449),
-          PriceRule(mode: PriceRuleMode.fixed, value: 10000000),
-        ];
+    test('el resultado nunca tiene centavos y nunca es menor que el precio del proveedor', () {
+      const prices = <num>[
+        100,
+        999.99,
+        1440,
+        4449,
+        5000.01,
+        12999.50,
+        999999.99,
+      ];
+      const rules = <PriceRule>[
+        PriceRule(mode: PriceRuleMode.percent, value: 1),
+        PriceRule(mode: PriceRuleMode.percent, value: 30),
+        PriceRule(mode: PriceRuleMode.percent, value: 300),
+        PriceRule(mode: PriceRuleMode.fixed, value: 1),
+        PriceRule(mode: PriceRuleMode.fixed, value: 449),
+        PriceRule(mode: PriceRuleMode.fixed, value: 10000000),
+      ];
 
-        for (final price in prices) {
-          for (final rule in rules) {
-            final result = applyPriceRule(price, rule);
-            expect(result % 100, 0);
-            expect(result, greaterThanOrEqualTo(price.truncate()));
-          }
+      for (final price in prices) {
+        for (final rule in rules) {
+          final result = applyPriceRule(price, rule);
+          expect(result % 100, 0);
+          expect(result, greaterThanOrEqualTo(price.truncate()));
         }
-      },
-    );
+      }
+    });
   });
 
   group('validatePriceRule — validación controlada', () {
@@ -155,8 +172,14 @@ void main() {
     });
 
     test('acepta los límites inclusive (1, 300, 1, 10.000.000)', () {
-      expect(() => validatePriceRule(PriceRuleMode.percent, 1), returnsNormally);
-      expect(() => validatePriceRule(PriceRuleMode.percent, 300), returnsNormally);
+      expect(
+        () => validatePriceRule(PriceRuleMode.percent, 1),
+        returnsNormally,
+      );
+      expect(
+        () => validatePriceRule(PriceRuleMode.percent, 300),
+        returnsNormally,
+      );
       expect(() => validatePriceRule(PriceRuleMode.fixed, 1), returnsNormally);
       expect(
         () => validatePriceRule(PriceRuleMode.fixed, 10000000),

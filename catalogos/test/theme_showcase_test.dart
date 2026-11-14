@@ -43,22 +43,20 @@ void main() {
   });
 
   group('ThemeShowcasePage (pantalla de muestra)', () {
-    testWidgets('renderiza tipografía Poppins y la paleta de color',
-        (WidgetTester tester) async {
+    testWidgets('renderiza tipografía Poppins y la paleta de color', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.themeData,
-          home: const ThemeShowcasePage(),
-        ),
+        MaterialApp(theme: AppTheme.themeData, home: const ThemeShowcasePage()),
       );
 
       // Tipografía: el texto de encabezado se renderiza con Poppins.
       expect(find.text('Tipografía Poppins'), findsOneWidget);
       final Text heading = tester.widget<Text>(find.text('Tipografía Poppins'));
-      final TextStyle effective = heading.style ??
-          DefaultTextStyle.of(
-            tester.element(find.text('Tipografía Poppins')),
-          ).style;
+      final TextStyle effective =
+          heading.style ??
+          DefaultTextStyle.of(tester.element(find.text('Tipografía Poppins')))
+              .style;
       expect(effective.fontFamily, contains('Poppins'));
 
       // Colores: hay muestras de cada color de marca.
@@ -68,13 +66,11 @@ void main() {
       expect(find.text('Brand'), findsOneWidget);
     });
 
-    testWidgets('el botón primario pinta el gradiente de marca',
-        (WidgetTester tester) async {
+    testWidgets('el botón primario pinta el gradiente de marca', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.themeData,
-          home: const ThemeShowcasePage(),
-        ),
+        MaterialApp(theme: AppTheme.themeData, home: const ThemeShowcasePage()),
       );
 
       expect(find.byType(FlyPrimaryButton), findsNWidgets(2));
@@ -88,8 +84,7 @@ void main() {
           .first;
 
       final DecoratedBox decorated = tester.widget<DecoratedBox>(gradientBox);
-      final BoxDecoration decoration =
-          decorated.decoration as BoxDecoration;
+      final BoxDecoration decoration = decorated.decoration as BoxDecoration;
       final LinearGradient gradient = decoration.gradient! as LinearGradient;
 
       expect(gradient.colors, <Color>[

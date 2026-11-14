@@ -17,6 +17,7 @@ class PriceAdjustmentArgs {
     required this.catalogId,
     required this.totalProductsHint,
     this.singleProduct,
+    this.subcategory,
   });
 
   final String catalogId;
@@ -29,7 +30,12 @@ class PriceAdjustmentArgs {
 
   final CatalogPriceRuleProduct? singleProduct;
 
+  /// Modo "una subcategoría": la regla aplica a los productos de esa
+  /// subcategoría (pierde contra la de producto, gana sobre la de catálogo).
+  final CatalogSubcategory? subcategory;
+
   bool get isSingleProduct => singleProduct != null;
+  bool get isSubcategory => subcategory != null;
 }
 
 sealed class PriceAdjustmentState {
@@ -139,6 +145,12 @@ class PriceAdjustmentSavedCatalog extends PriceAdjustmentState {
   final SavedCatalogRuleResult result;
 }
 
+class PriceAdjustmentSavedSubcategory extends PriceAdjustmentState {
+  const PriceAdjustmentSavedSubcategory(this.result, this.name);
+  final SavedSubcategoryRuleResult result;
+  final String name;
+}
+
 class PriceAdjustmentSavedProduct extends PriceAdjustmentState {
   const PriceAdjustmentSavedProduct(this.result);
   final SavedProductRuleResult result;
@@ -195,6 +207,7 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
         _args.catalogId,
         page: 1,
         pageSize: ResellerPriceRulesRepository.maxPageSize,
+        subcategoryId: _args.subcategory?.id,
       );
       if (pageResult is Err<PriceRulesProductsPage>) {
         state = PriceAdjustmentLoadError(pageResult.failure);
@@ -203,14 +216,14 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
       final page = (pageResult as Ok<PriceRulesProductsPage>).value;
       if (page.products.isEmpty) {
         state = const PriceAdjustmentLoadError(
-          ServerFailure(
-            message: 'Este catálogo aún no tiene productos para ajustar.',
-          ),
+          ServerFailure(message: 'Aquí aún no hay productos para ajustar.'),
         );
         return;
       }
       previewProducts = page.products;
-      existingRule = summary.catalogRule;
+      existingRule = _args.isSubcategory
+          ? summary.subcategoryRules[_args.subcategory!.id]
+          : summary.catalogRule;
       totalProducts = page.total;
       catalogRuleForProductMode = null;
     }
@@ -311,6 +324,26 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
       }
     }
 
+    if (_args.isSubcategory) {
+      final result = await _repo.upsertSubcategoryRule(
+        _args.catalogId,
+        _args.subcategory!.id,
+        rule,
+      );
+      if (!ref.mounted) return false;
+      switch (result) {
+        case Ok<SavedSubcategoryRuleResult>(:final value):
+          state = PriceAdjustmentSavedSubcategory(
+            value,
+            _args.subcategory!.name,
+          );
+          return true;
+        case Err<SavedSubcategoryRuleResult>(:final failure):
+          state = s.copyWith(saving: false, actionError: failure);
+          return false;
+      }
+    }
+
     final result = await _repo.upsertCatalogRule(_args.catalogId, rule);
     if (!ref.mounted) return false;
     switch (result) {
@@ -333,6 +366,11 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
         ? await _repo.deleteProductRule(
             _args.catalogId,
             _args.singleProduct!.id,
+          )
+        : _args.isSubcategory
+        ? await _repo.deleteSubcategoryRule(
+            _args.catalogId,
+            _args.subcategory!.id,
           )
         : await _repo.deleteCatalogRule(_args.catalogId);
 

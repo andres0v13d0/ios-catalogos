@@ -30,7 +30,7 @@ class NoopAppCheckTokenSource implements AppCheckTokenSource {
 /// Implementación de [AppCheckTokenSource] respaldada por `firebase_app_check`.
 class FirebaseAppCheckTokenSource implements AppCheckTokenSource {
   FirebaseAppCheckTokenSource({FirebaseAppCheck? appCheck})
-      : _appCheck = appCheck ?? FirebaseAppCheck.instance;
+    : _appCheck = appCheck ?? FirebaseAppCheck.instance;
 
   final FirebaseAppCheck _appCheck;
 

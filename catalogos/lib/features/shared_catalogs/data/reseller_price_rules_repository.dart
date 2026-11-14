@@ -43,13 +43,18 @@ class ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
+    String? subcategoryId,
   }) async {
     final path = '/reseller/app/catalogs/$catalogId/products';
     dynamic rawBody;
     try {
       final response = await _dio.get<dynamic>(
         path,
-        queryParameters: <String, dynamic>{'page': page, 'pageSize': pageSize},
+        queryParameters: <String, dynamic>{
+          'page': page,
+          'pageSize': pageSize,
+          'subcategoryId': ?subcategoryId,
+        },
       );
       rawBody = response.data;
       return Ok<PriceRulesProductsPage>(
@@ -125,6 +130,69 @@ class ResellerPriceRulesRepository {
     } catch (e) {
       logNetworkParseError(path, e, rawBody: rawBody, sink: _logSink);
       return Err<SavedProductRuleResult>(UnknownFailure(cause: e));
+    }
+  }
+
+  Future<Result<List<CatalogSubcategory>>> getSubcategories(
+    String catalogId,
+  ) async {
+    final path = '/reseller/app/catalogs/$catalogId/subcategories';
+    dynamic rawBody;
+    try {
+      final response = await _dio.get<dynamic>(path);
+      rawBody = response.data;
+      final list = rawBody is List ? rawBody : const <dynamic>[];
+      return Ok<List<CatalogSubcategory>>(
+        list
+            .whereType<Map>()
+            .map(
+              (e) => CatalogSubcategory.fromJson(Map<String, dynamic>.from(e)),
+            )
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return Err<List<CatalogSubcategory>>(_failureOf(e));
+    } catch (e) {
+      logNetworkParseError(path, e, rawBody: rawBody, sink: _logSink);
+      return Err<List<CatalogSubcategory>>(UnknownFailure(cause: e));
+    }
+  }
+
+  String _subcategoryRulePath(String catalogId, String subcategoryId) =>
+      '/reseller/app/catalogs/$catalogId/subcategories/$subcategoryId/price-rule';
+
+  Future<Result<SavedSubcategoryRuleResult>> upsertSubcategoryRule(
+    String catalogId,
+    String subcategoryId,
+    PriceRule rule,
+  ) async {
+    final path = _subcategoryRulePath(catalogId, subcategoryId);
+    dynamic rawBody;
+    try {
+      final response = await _dio.put<dynamic>(path, data: rule.toJson());
+      rawBody = response.data;
+      return Ok<SavedSubcategoryRuleResult>(
+        SavedSubcategoryRuleResult.fromJson(_asMap(rawBody)),
+      );
+    } on DioException catch (e) {
+      return Err<SavedSubcategoryRuleResult>(_failureOf(e));
+    } catch (e) {
+      logNetworkParseError(path, e, rawBody: rawBody, sink: _logSink);
+      return Err<SavedSubcategoryRuleResult>(UnknownFailure(cause: e));
+    }
+  }
+
+  Future<Result<void>> deleteSubcategoryRule(
+    String catalogId,
+    String subcategoryId,
+  ) async {
+    try {
+      await _dio.delete<dynamic>(
+        _subcategoryRulePath(catalogId, subcategoryId),
+      );
+      return const Ok<void>(null);
+    } on DioException catch (e) {
+      return Err<void>(_failureOf(e));
     }
   }
 

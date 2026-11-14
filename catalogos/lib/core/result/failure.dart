@@ -30,7 +30,8 @@ sealed class Failure {
 /// o cualquier error sin una respuesta HTTP del servidor.
 final class NetworkFailure extends Failure {
   const NetworkFailure({
-    super.message = 'No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.',
+    super.message =
+        'No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.',
     super.cause,
   });
 }
@@ -51,7 +52,8 @@ final class UnauthorizedFailure extends Failure {
 /// La UI debería aplicar backoff y un mensaje al usuario (diseño §2.6).
 final class RateLimitFailure extends Failure {
   const RateLimitFailure({
-    super.message = 'Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.',
+    super.message =
+        'Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.',
     this.retryAfter,
     super.cause,
   }) : super(statusCode: 429);

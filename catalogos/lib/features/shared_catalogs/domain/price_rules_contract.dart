@@ -10,12 +10,15 @@ import 'price_rule_calculator.dart';
 /// su propia regla, o la del catálogo (fallback). `null` = sin regla.
 enum RuleOrigin {
   product,
+  subcategory,
   catalog;
 
   static RuleOrigin? fromApi(String? raw) {
     switch (raw) {
       case 'product':
         return RuleOrigin.product;
+      case 'subcategory':
+        return RuleOrigin.subcategory;
       case 'catalog':
         return RuleOrigin.catalog;
       default:
@@ -125,9 +128,13 @@ class PriceRulesSummary {
   const PriceRulesSummary({
     required this.catalogRule,
     required this.productRules,
+    this.subcategoryRules = const <String, PriceRule>{},
   });
 
   final PriceRule? catalogRule;
+
+  /// `subcategoryId → regla` (solo subcategorías con regla propia).
+  final Map<String, PriceRule> subcategoryRules;
 
   /// `productId → regla propia` (solo productos con regla propia).
   final Map<String, PriceRule> productRules;
@@ -150,7 +157,21 @@ class PriceRulesSummary {
         }
       }
     }
+    final subcategoryRules = <String, PriceRule>{};
+    final rawSubRules = json['subcategoryRules'];
+    if (rawSubRules is List) {
+      for (final item in rawSubRules.whereType<Map>()) {
+        final id = '${item['subcategoryId'] ?? ''}';
+        final ruleRaw = item['rule'];
+        if (id.isNotEmpty && ruleRaw is Map) {
+          subcategoryRules[id] = PriceRule.fromJson(
+            Map<String, dynamic>.from(ruleRaw),
+          );
+        }
+      }
+    }
     return PriceRulesSummary(
+      subcategoryRules: subcategoryRules,
       catalogRule: rawCatalogRule is Map
           ? PriceRule.fromJson(Map<String, dynamic>.from(rawCatalogRule))
           : null,
@@ -191,6 +212,52 @@ class SavedProductRuleResult {
     return SavedProductRuleResult(
       rule: PriceRule.fromJson(Map<String, dynamic>.from(json['rule'] as Map)),
       productId: '${json['productId'] ?? ''}',
+    );
+  }
+}
+
+/// Subcategoría de un catálogo con su regla propia (si tiene), de
+/// `GET /reseller/app/catalogs/:catalogId/subcategories`.
+class CatalogSubcategory {
+  const CatalogSubcategory({
+    required this.id,
+    required this.name,
+    required this.productCount,
+    required this.rule,
+  });
+
+  final String id;
+  final String name;
+  final int productCount;
+  final PriceRule? rule;
+
+  factory CatalogSubcategory.fromJson(Map<String, dynamic> json) {
+    final rawRule = json['rule'];
+    return CatalogSubcategory(
+      id: '${json['id'] ?? ''}',
+      name: '${json['name'] ?? ''}',
+      productCount: _asInt(json['productCount']) ?? 0,
+      rule: rawRule is Map
+          ? PriceRule.fromJson(Map<String, dynamic>.from(rawRule))
+          : null,
+    );
+  }
+}
+
+/// Respuesta de `PUT .../subcategories/:subcategoryId/price-rule`.
+class SavedSubcategoryRuleResult {
+  const SavedSubcategoryRuleResult({
+    required this.rule,
+    required this.subcategoryId,
+  });
+
+  final PriceRule rule;
+  final String subcategoryId;
+
+  factory SavedSubcategoryRuleResult.fromJson(Map<String, dynamic> json) {
+    return SavedSubcategoryRuleResult(
+      rule: PriceRule.fromJson(Map<String, dynamic>.from(json['rule'] as Map)),
+      subcategoryId: '${json['subcategoryId'] ?? ''}',
     );
   }
 }

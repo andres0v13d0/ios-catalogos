@@ -45,7 +45,7 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
         .read(profileControllerProvider.notifier)
         .saveName(_nameController.text);
     if (ok && mounted) {
-      context.go(AppRoutes.home);
+      context.go(AppRoutes.buy);
     }
   }
 

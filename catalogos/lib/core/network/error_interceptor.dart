@@ -43,13 +43,13 @@ class ErrorInterceptor extends Interceptor {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
       DioExceptionType.receiveTimeout ||
-      DioExceptionType.transformTimeout =>
-        'TIMEOUT',
+      DioExceptionType.transformTimeout => 'TIMEOUT',
       DioExceptionType.connectionError => 'SIN_RED/CONEXION',
       DioExceptionType.badCertificate => 'TLS',
       DioExceptionType.cancel => 'CANCELADA',
       DioExceptionType.badResponse => 'HTTP $status',
-      DioExceptionType.unknown => err.response == null ? 'SIN_RED/TRANSPORTE' : 'HTTP $status',
+      DioExceptionType.unknown =>
+        err.response == null ? 'SIN_RED/TRANSPORTE' : 'HTTP $status',
     };
     // 401/403 suelen ser App Check (Play Integrity en release) o token.
     final String hint = (status == 401 || status == 403)
@@ -75,10 +75,7 @@ Failure mapDioExceptionToFailure(DioException err) {
     case DioExceptionType.connectionError:
       return NetworkFailure(cause: err);
     case DioExceptionType.cancel:
-      return NetworkFailure(
-        message: 'La solicitud fue cancelada.',
-        cause: err,
-      );
+      return NetworkFailure(message: 'La solicitud fue cancelada.', cause: err);
     case DioExceptionType.badCertificate:
       return NetworkFailure(
         message: 'No se pudo establecer una conexión segura.',

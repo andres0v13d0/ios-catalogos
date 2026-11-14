@@ -56,7 +56,8 @@ class _FakeOverlayController extends CatalogPriceOverlayController {
   _FakeOverlayController() : super(_catalogId);
 
   @override
-  Future<CatalogPriceOverlayState> build() async => CatalogPriceOverlayState.empty;
+  Future<CatalogPriceOverlayState> build() async =>
+      CatalogPriceOverlayState.empty;
 }
 
 Widget _wrap(List<Product> products) {
@@ -80,7 +81,8 @@ Widget _wrap(List<Product> products) {
       catalogDetailControllerProvider(_catalogId).overrideWith(
         () => _FakeDetailController(CatalogDetailState(detail: detail)),
       ),
-      catalogPriceOverlayControllerProvider(_catalogId).overrideWith(() => _FakeOverlayController()),
+      catalogPriceOverlayControllerProvider(_catalogId)
+          .overrideWith(() => _FakeOverlayController()),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -124,8 +126,9 @@ void main() {
     },
   );
 
-  testWidgets('cada tarjeta pide solo la primera imagen del producto',
-      (WidgetTester tester) async {
+  testWidgets('cada tarjeta pide solo la primera imagen del producto', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -167,7 +170,8 @@ void main() {
         // El scroll vertical de la pantalla (no el horizontal interno del
         // campo de búsqueda, ver home_page_responsive_test.dart).
         final Finder scrollable = find.byWidgetPredicate(
-          (Widget w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+          (Widget w) =>
+              w is Scrollable && w.axisDirection == AxisDirection.down,
         );
 
         // Varios arrastres rápidos y consecutivos, de punta a punta.

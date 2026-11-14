@@ -60,8 +60,9 @@ void main() {
       final response = await dio.get<Map<String, dynamic>>('/ping');
 
       expect(
-        response.requestOptions.headers
-            .containsKey(AppCheckInterceptor.appCheckHeader),
+        response.requestOptions.headers.containsKey(
+          AppCheckInterceptor.appCheckHeader,
+        ),
         isFalse,
       );
     });
@@ -74,8 +75,9 @@ void main() {
 
       expect(response.statusCode, 200);
       expect(
-        response.requestOptions.headers
-            .containsKey(AppCheckInterceptor.appCheckHeader),
+        response.requestOptions.headers.containsKey(
+          AppCheckInterceptor.appCheckHeader,
+        ),
         isFalse,
       );
     });

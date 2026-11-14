@@ -42,7 +42,12 @@ List<Product> _products(int count) => List<Product>.generate(
   count,
   (int i) => Product(
     id: 'p$i',
-    nombre: <String>['Camiseta Básica Algodón', 'Chaqueta Deportiva', 'Bolso de Mano', 'Gorra Clásica'][i % 4],
+    nombre: <String>[
+      'Camiseta Básica Algodón',
+      'Chaqueta Deportiva',
+      'Bolso de Mano',
+      'Gorra Clásica',
+    ][i % 4],
     precios: <String, num>{
       '1': <num>[26000, 110500, 16900, 5800][i % 4],
     },
@@ -64,7 +69,10 @@ class _FakeOverlayRepo extends ResellerPriceRulesRepository {
   @override
   Future<Result<PriceRulesSummary>> getRulesSummary(String catalogId) async =>
       const Ok<PriceRulesSummary>(
-        PriceRulesSummary(catalogRule: PriceRule(mode: PriceRuleMode.percent, value: 30), productRules: {}),
+        PriceRulesSummary(
+          catalogRule: PriceRule(mode: PriceRuleMode.percent, value: 30),
+          productRules: {},
+        ),
       );
 
   @override
@@ -72,6 +80,7 @@ class _FakeOverlayRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
+    String? subcategoryId,
   }) async => Ok<PriceRulesProductsPage>(
     PriceRulesProductsPage(
       total: 24,
@@ -81,10 +90,19 @@ class _FakeOverlayRepo extends ResellerPriceRulesRepository {
         for (int i = 0; i < 4; i++)
           CatalogPriceRuleProduct(
             id: 'p$i',
-            nombre: <String>['Camiseta Básica Algodón', 'Chaqueta Deportiva', 'Bolso de Mano', 'Gorra Clásica'][i],
+            nombre: <String>[
+              'Camiseta Básica Algodón',
+              'Chaqueta Deportiva',
+              'Bolso de Mano',
+              'Gorra Clásica',
+            ][i],
             imagen: null,
-            precioProveedor: <String, num>{'1': <num>[20000, 85000, 12999, 4449][i]},
-            precioAjustado: <String, num>{'1': <num>[26000, 110500, 16900, 5800][i]},
+            precioProveedor: <String, num>{
+              '1': <num>[20000, 85000, 12999, 4449][i],
+            },
+            precioAjustado: <String, num>{
+              '1': <num>[26000, 110500, 16900, 5800][i],
+            },
             reglaOrigen: RuleOrigin.catalog,
           ),
       ],
@@ -92,14 +110,16 @@ class _FakeOverlayRepo extends ResellerPriceRulesRepository {
   );
 
   @override
-  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(String catalogId, PriceRule rule) async =>
-      const Ok<SavedCatalogRuleResult>(
-        SavedCatalogRuleResult(
-          rule: PriceRule(mode: PriceRuleMode.percent, value: 30),
-          affectedProductIds: <String>['p0', 'p1', 'p2', 'p3'],
-          productsWithOwnRule: <String>['x'],
-        ),
-      );
+  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(
+    String catalogId,
+    PriceRule rule,
+  ) async => const Ok<SavedCatalogRuleResult>(
+    SavedCatalogRuleResult(
+      rule: PriceRule(mode: PriceRuleMode.percent, value: 30),
+      affectedProductIds: <String>['p0', 'p1', 'p2', 'p3'],
+      productsWithOwnRule: <String>['x'],
+    ),
+  );
 }
 
 Widget _wrapCatalogDetail() {
@@ -112,7 +132,10 @@ Widget _wrapCatalogDetail() {
   final router = GoRouter(
     initialLocation: '/catalog/$_catalogId',
     routes: <RouteBase>[
-      GoRoute(path: '/catalog/:id', builder: (context, _) => const CatalogDetailPage(catalogId: _catalogId)),
+      GoRoute(
+        path: '/catalog/:id',
+        builder: (context, _) => const CatalogDetailPage(catalogId: _catalogId),
+      ),
     ],
   );
   return ProviderScope(
@@ -120,7 +143,9 @@ Widget _wrapCatalogDetail() {
       catalogDetailControllerProvider(_catalogId).overrideWith(
         () => _FakeDetailController(CatalogDetailState(detail: detail)),
       ),
-      resellerPriceRulesRepositoryProvider.overrideWithValue(_FakeOverlayRepo()),
+      resellerPriceRulesRepositoryProvider.overrideWithValue(
+        _FakeOverlayRepo(),
+      ),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -131,12 +156,19 @@ Widget _wrapAdjust(PriceAdjustmentArgs args) {
     initialLocation: '/catalog',
     routes: <RouteBase>[
       GoRoute(path: '/catalog', builder: (context, _) => const Text('catalog')),
-      GoRoute(path: '/adjust', builder: (context, _) => PriceAdjustmentPage(args: args)),
+      GoRoute(
+        path: '/adjust',
+        builder: (context, _) => PriceAdjustmentPage(args: args),
+      ),
     ],
   );
   router.push('/adjust');
   return ProviderScope(
-    overrides: [resellerPriceRulesRepositoryProvider.overrideWithValue(_FakeOverlayRepo())],
+    overrides: [
+      resellerPriceRulesRepositoryProvider.overrideWithValue(
+        _FakeOverlayRepo(),
+      ),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -164,13 +196,19 @@ Widget _wrapCatalogDetailError() {
   final router = GoRouter(
     initialLocation: '/catalog/$_catalogId',
     routes: <RouteBase>[
-      GoRoute(path: '/catalog/:id', builder: (context, _) => const CatalogDetailPage(catalogId: _catalogId)),
+      GoRoute(
+        path: '/catalog/:id',
+        builder: (context, _) => const CatalogDetailPage(catalogId: _catalogId),
+      ),
     ],
   );
   return ProviderScope(
     overrides: [
-      catalogDetailControllerProvider(_catalogId).overrideWith(_FailingDetailController.new),
-      resellerPriceRulesRepositoryProvider.overrideWithValue(_FakeOverlayRepo()),
+      catalogDetailControllerProvider(_catalogId)
+          .overrideWith(_FailingDetailController.new),
+      resellerPriceRulesRepositoryProvider.overrideWithValue(
+        _FakeOverlayRepo(),
+      ),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -181,7 +219,9 @@ class _FailingAdjustRepo extends ResellerPriceRulesRepository {
   _FailingAdjustRepo() : super(Dio());
   @override
   Future<Result<PriceRulesSummary>> getRulesSummary(String catalogId) async =>
-      const Err<PriceRulesSummary>(ServerFailure(message: 'No pudimos cargar el ajuste de precios.'));
+      const Err<PriceRulesSummary>(
+        ServerFailure(message: 'No pudimos cargar el ajuste de precios.'),
+      );
 }
 
 Widget _wrapAdjustError(PriceAdjustmentArgs args) {
@@ -189,12 +229,19 @@ Widget _wrapAdjustError(PriceAdjustmentArgs args) {
     initialLocation: '/catalog',
     routes: <RouteBase>[
       GoRoute(path: '/catalog', builder: (context, _) => const Text('catalog')),
-      GoRoute(path: '/adjust', builder: (context, _) => PriceAdjustmentPage(args: args)),
+      GoRoute(
+        path: '/adjust',
+        builder: (context, _) => PriceAdjustmentPage(args: args),
+      ),
     ],
   );
   router.push('/adjust');
   return ProviderScope(
-    overrides: [resellerPriceRulesRepositoryProvider.overrideWithValue(_FailingAdjustRepo())],
+    overrides: [
+      resellerPriceRulesRepositoryProvider.overrideWithValue(
+        _FailingAdjustRepo(),
+      ),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -230,7 +277,10 @@ void main() {
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
-    await expectLater(find.byType(CatalogDetailPage), matchesGoldenFile('../_visual_out/productos_a.png'));
+    await expectLater(
+      find.byType(CatalogDetailPage),
+      matchesGoldenFile('../_visual_out/productos_a.png'),
+    );
   });
 
   testWidgets('productos-a-360x640', (WidgetTester tester) async {
@@ -258,72 +308,85 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      _wrapAdjust(const PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24)),
+      _wrapAdjust(
+        const PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24),
+      ),
     );
     await tester.pump();
     await tester.pump();
-    final controller = ProviderScope.containerOf(
-      tester.element(find.byType(PriceAdjustmentPage)),
-    ).read(priceAdjustmentControllerProvider(const PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24)).notifier);
+    final controller =
+        ProviderScope.containerOf(
+          tester.element(find.byType(PriceAdjustmentPage)),
+        ).read(
+          priceAdjustmentControllerProvider(
+            const PriceAdjustmentArgs(
+              catalogId: _catalogId,
+              totalProductsHint: 24,
+            ),
+          ).notifier,
+        );
     controller.onChipTap(30);
     await tester.pump();
-    await expectLater(find.byType(PriceAdjustmentPage), matchesGoldenFile('../_visual_out/ajustar_1.png'));
+    await expectLater(
+      find.byType(PriceAdjustmentPage),
+      matchesGoldenFile('../_visual_out/ajustar_1.png'),
+    );
   });
 
   testWidgets('ajustar-2-valorfijo', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    const args = PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24);
+    const args = PriceAdjustmentArgs(
+      catalogId: _catalogId,
+      totalProductsHint: 24,
+    );
     await tester.pumpWidget(_wrapAdjust(args));
     await tester.pump();
     await tester.pump();
-    final controller =
-        ProviderScope.containerOf(tester.element(find.byType(PriceAdjustmentPage))).read(priceAdjustmentControllerProvider(args).notifier);
+    final controller = ProviderScope.containerOf(
+      tester.element(find.byType(PriceAdjustmentPage)),
+    ).read(priceAdjustmentControllerProvider(args).notifier);
     controller.onModeChanged(PriceRuleMode.fixed);
     controller.onChipTap(5000);
     await tester.pump();
-    await expectLater(find.byType(PriceAdjustmentPage), matchesGoldenFile('../_visual_out/ajustar_2.png'));
+    await expectLater(
+      find.byType(PriceAdjustmentPage),
+      matchesGoldenFile('../_visual_out/ajustar_2.png'),
+    );
   });
 
   testWidgets('ajustar-3-producto', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    const args = PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24, singleProduct: _singleProduct);
+    const args = PriceAdjustmentArgs(
+      catalogId: _catalogId,
+      totalProductsHint: 24,
+      singleProduct: _singleProduct,
+    );
     await tester.pumpWidget(_wrapAdjust(args));
     await tester.pump();
     await tester.pump();
-    final controller = ProviderScope.containerOf(tester.element(find.byType(PriceAdjustmentPage))).read(priceAdjustmentControllerProvider(args).notifier);
+    final controller = ProviderScope.containerOf(
+      tester.element(find.byType(PriceAdjustmentPage)),
+    ).read(priceAdjustmentControllerProvider(args).notifier);
     controller.onChipTap(40);
     await tester.pump();
-    await expectLater(find.byType(PriceAdjustmentPage), matchesGoldenFile('../_visual_out/ajustar_3.png'));
+    await expectLater(
+      find.byType(PriceAdjustmentPage),
+      matchesGoldenFile('../_visual_out/ajustar_3.png'),
+    );
   });
 
   testWidgets('ajustar-4-listo', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    const args = PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24);
-    await tester.pumpWidget(_wrapAdjust(args));
-    await tester.pump();
-    await tester.pump();
-    final controller = ProviderScope.containerOf(tester.element(find.byType(PriceAdjustmentPage))).read(priceAdjustmentControllerProvider(args).notifier);
-    controller.onChipTap(30);
-    await tester.pump();
-    await controller.onSubmit();
-    await tester.pump();
-    // Avanza la animación de entrada (~450ms) para que el check ya esté
-    // dibujado y las ondas estén en una posición intermedia visible.
-    await tester.pump(const Duration(milliseconds: 700));
-    await expectLater(find.byType(PriceAdjustmentPage), matchesGoldenFile('../_visual_out/ajustar_4.png'));
-  });
-
-  testWidgets('ajustar-1-porcentaje-360x640', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(360, 640);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    const args = PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24);
+    const args = PriceAdjustmentArgs(
+      catalogId: _catalogId,
+      totalProductsHint: 24,
+    );
     await tester.pumpWidget(_wrapAdjust(args));
     await tester.pump();
     await tester.pump();
@@ -332,18 +395,54 @@ void main() {
     ).read(priceAdjustmentControllerProvider(args).notifier);
     controller.onChipTap(30);
     await tester.pump();
-    await expectLater(find.byType(PriceAdjustmentPage), matchesGoldenFile('../_visual_out/ajustar_1_360.png'));
+    await controller.onSubmit();
+    await tester.pump();
+    // Avanza la animación de entrada (~450ms) para que el check ya esté
+    // dibujado y las ondas estén en una posición intermedia visible.
+    await tester.pump(const Duration(milliseconds: 700));
+    await expectLater(
+      find.byType(PriceAdjustmentPage),
+      matchesGoldenFile('../_visual_out/ajustar_4.png'),
+    );
+  });
+
+  testWidgets('ajustar-1-porcentaje-360x640', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    const args = PriceAdjustmentArgs(
+      catalogId: _catalogId,
+      totalProductsHint: 24,
+    );
+    await tester.pumpWidget(_wrapAdjust(args));
+    await tester.pump();
+    await tester.pump();
+    final controller = ProviderScope.containerOf(
+      tester.element(find.byType(PriceAdjustmentPage)),
+    ).read(priceAdjustmentControllerProvider(args).notifier);
+    controller.onChipTap(30);
+    await tester.pump();
+    await expectLater(
+      find.byType(PriceAdjustmentPage),
+      matchesGoldenFile('../_visual_out/ajustar_1_360.png'),
+    );
   });
 
   testWidgets('ajustar-error', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    const args = PriceAdjustmentArgs(catalogId: _catalogId, totalProductsHint: 24);
+    const args = PriceAdjustmentArgs(
+      catalogId: _catalogId,
+      totalProductsHint: 24,
+    );
     await tester.pumpWidget(_wrapAdjustError(args));
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
-    await expectLater(find.byType(PriceAdjustmentPage), matchesGoldenFile('../_visual_out/ajustar_error.png'));
+    await expectLater(
+      find.byType(PriceAdjustmentPage),
+      matchesGoldenFile('../_visual_out/ajustar_error.png'),
+    );
   });
 }

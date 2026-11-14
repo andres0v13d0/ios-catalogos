@@ -19,7 +19,10 @@ import 'package:go_router/go_router.dart';
 class _FakeRepo extends ResellerPriceRulesRepository {
   _FakeRepo() : super(Dio());
 
-  PriceRulesSummary summary = const PriceRulesSummary(catalogRule: null, productRules: {});
+  PriceRulesSummary summary = const PriceRulesSummary(
+    catalogRule: null,
+    productRules: {},
+  );
   PriceRulesProductsPage page = const PriceRulesProductsPage(
     total: 2,
     page: 1,
@@ -51,7 +54,8 @@ class _FakeRepo extends ResellerPriceRulesRepository {
 
   /// Permite forzar el resultado de `upsertCatalogRule` en un test puntual
   /// (p. ej. simular un 409 después de que el editor ya cargó).
-  Future<Result<SavedCatalogRuleResult>> Function(PriceRule rule)? upsertCatalogRuleOverride;
+  Future<Result<SavedCatalogRuleResult>> Function(PriceRule rule)?
+  upsertCatalogRuleOverride;
 
   @override
   Future<Result<PriceRulesSummary>> getRulesSummary(String catalogId) async =>
@@ -62,11 +66,17 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
+    String? subcategoryId,
   }) async => Ok<PriceRulesProductsPage>(this.page);
 
   @override
-  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(String catalogId, PriceRule rule) async {
-    if (upsertCatalogRuleOverride != null) return upsertCatalogRuleOverride!(rule);
+  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(
+    String catalogId,
+    PriceRule rule,
+  ) async {
+    if (upsertCatalogRuleOverride != null) {
+      return upsertCatalogRuleOverride!(rule);
+    }
     final result = SavedCatalogRuleResult(
       rule: rule,
       affectedProductIds: const <String>['p1', 'p2'],
@@ -88,16 +98,24 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     String catalogId,
     String productId,
     PriceRule rule,
-  ) async => Ok<SavedProductRuleResult>(SavedProductRuleResult(rule: rule, productId: productId));
+  ) async => Ok<SavedProductRuleResult>(
+    SavedProductRuleResult(rule: rule, productId: productId),
+  );
 
   @override
-  Future<Result<void>> deleteProductRule(String catalogId, String productId) async {
+  Future<Result<void>> deleteProductRule(
+    String catalogId,
+    String productId,
+  ) async {
     deleteProductCalls++;
     return const Ok<void>(null);
   }
 }
 
-const PriceAdjustmentArgs _catalogArgs = PriceAdjustmentArgs(catalogId: 'cat-1', totalProductsHint: 2);
+const PriceAdjustmentArgs _catalogArgs = PriceAdjustmentArgs(
+  catalogId: 'cat-1',
+  totalProductsHint: 2,
+);
 
 const CatalogPriceRuleProduct _singleProduct = CatalogPriceRuleProduct(
   id: 'p9',
@@ -161,23 +179,31 @@ Future<GoRouter> _pumpAdjustPage(
 
 /// Tecla de dígito del teclado propio (desambigua del número grande, que
 /// también puede mostrar "0").
-Finder _digitKey(String digit) => find.byKey(ValueKey<String>('price_keypad_digit_$digit'));
+Finder _digitKey(String digit) =>
+    find.byKey(ValueKey<String>('price_keypad_digit_$digit'));
 
 void main() {
   group('modo catálogo completo', () {
-    testWidgets('muestra pestañas, vista previa y botón "Aplicar a N productos"', (
-      WidgetTester tester,
-    ) async {
-      await _pumpAdjustPage(tester, _FakeRepo(), _catalogArgs);
+    testWidgets(
+      'muestra pestañas, vista previa y botón "Aplicar a N productos"',
+      (WidgetTester tester) async {
+        await _pumpAdjustPage(tester, _FakeRepo(), _catalogArgs);
 
-      expect(find.text('Ajustar precios'), findsOneWidget);
-      expect(find.text('Catálogo completo · 2 productos'), findsOneWidget);
-      expect(find.text('Porcentaje'), findsOneWidget);
-      expect(find.text('Valor fijo'), findsOneWidget);
-      expect(find.text('Bolso de Mano'), findsOneWidget); // vista previa: primer producto
-      expect(find.text('Aplicar a 2 productos'), findsOneWidget);
-      expect(find.text('Quitar'), findsNothing); // sin regla existente: no se dibuja
-    });
+        expect(find.text('Ajustar precios'), findsOneWidget);
+        expect(find.text('Catálogo completo · 2 productos'), findsOneWidget);
+        expect(find.text('Porcentaje'), findsOneWidget);
+        expect(find.text('Valor fijo'), findsOneWidget);
+        expect(
+          find.text('Bolso de Mano'),
+          findsOneWidget,
+        ); // vista previa: primer producto
+        expect(find.text('Aplicar a 2 productos'), findsOneWidget);
+        expect(
+          find.text('Quitar'),
+          findsNothing,
+        ); // sin regla existente: no se dibuja
+      },
+    );
 
     testWidgets('teclado propio: dígitos arman el valor y habilitan el botón', (
       WidgetTester tester,
@@ -208,39 +234,49 @@ void main() {
       expect(find.text('Gorra Clásica'), findsOneWidget);
     });
 
-    testWidgets('Valor fijo: pestaña limpia el número y "000" solo aparece ahí', (
-      WidgetTester tester,
-    ) async {
-      await _pumpAdjustPage(tester, _FakeRepo(), _catalogArgs);
+    testWidgets(
+      'Valor fijo: pestaña limpia el número y "000" solo aparece ahí',
+      (WidgetTester tester) async {
+        await _pumpAdjustPage(tester, _FakeRepo(), _catalogArgs);
 
-      await tester.tap(find.text('30%'));
-      await tester.pump();
-      await tester.tap(find.text('Valor fijo'));
-      await tester.pump();
+        await tester.tap(find.text('30%'));
+        await tester.pump();
+        await tester.tap(find.text('Valor fijo'));
+        await tester.pump();
 
-      expect(find.text('30'), findsNothing); // se limpió al cambiar de pestaña
-      expect(find.text('000'), findsOneWidget);
-    });
+        expect(
+          find.text('30'),
+          findsNothing,
+        ); // se limpió al cambiar de pestaña
+        expect(find.text('000'), findsOneWidget);
+      },
+    );
 
-    testWidgets('guardar llama a upsertCatalogRule y muestra el estado "Listo"', (
-      WidgetTester tester,
-    ) async {
-      final repo = _FakeRepo();
-      await _pumpAdjustPage(tester, repo, _catalogArgs);
+    testWidgets(
+      'guardar llama a upsertCatalogRule y muestra el estado "Listo"',
+      (WidgetTester tester) async {
+        final repo = _FakeRepo();
+        await _pumpAdjustPage(tester, repo, _catalogArgs);
 
-      await tester.tap(find.text('30%'));
-      await tester.pump();
-      await tester.tap(find.text('Aplicar a 2 productos'));
-      // El estado "Listo" tiene ondas en BUCLE (`repeat()`), así que
-      // `pumpAndSettle` nunca asienta: se avanza un tiempo acotado para que
-      // resuelva el guardado y se dibuje la pantalla de éxito.
-      await tester.pump(); // resuelve el future de guardado
-      await tester.pump(const Duration(milliseconds: 700)); // entrada del check
+        await tester.tap(find.text('30%'));
+        await tester.pump();
+        await tester.tap(find.text('Aplicar a 2 productos'));
+        // El estado "Listo" tiene ondas en BUCLE (`repeat()`), así que
+        // `pumpAndSettle` nunca asienta: se avanza un tiempo acotado para que
+        // resuelva el guardado y se dibuje la pantalla de éxito.
+        await tester.pump(); // resuelve el future de guardado
+        await tester.pump(
+          const Duration(milliseconds: 700),
+        ); // entrada del check
 
-      expect(repo.lastCatalogResult?.rule, const PriceRule(mode: PriceRuleMode.percent, value: 30));
-      expect(find.text('Precios actualizados'), findsOneWidget);
-      expect(find.text('2'), findsOneWidget); // productos afectados
-    });
+        expect(
+          repo.lastCatalogResult?.rule,
+          const PriceRule(mode: PriceRuleMode.percent, value: 30),
+        );
+        expect(find.text('Precios actualizados'), findsOneWidget);
+        expect(find.text('2'), findsOneWidget); // productos afectados
+      },
+    );
 
     testWidgets('"Quitar" pide confirmación antes de borrar la regla', (
       WidgetTester tester,
@@ -277,33 +313,40 @@ void main() {
       singleProduct: _singleProduct,
     );
 
-    testWidgets('cabecera "Solo este producto" y botón "Guardar para este producto"', (
-      WidgetTester tester,
-    ) async {
-      await _pumpAdjustPage(tester, _FakeRepo(), args);
+    testWidgets(
+      'cabecera "Solo este producto" y botón "Guardar para este producto"',
+      (WidgetTester tester) async {
+        await _pumpAdjustPage(tester, _FakeRepo(), args);
 
-      expect(find.text('Solo este producto'), findsOneWidget);
-      expect(find.text('Camiseta Básica Algodón'), findsOneWidget);
-      expect(find.text('Guardar para este producto'), findsOneWidget);
-    });
+        expect(find.text('Solo este producto'), findsOneWidget);
+        expect(find.text('Camiseta Básica Algodón'), findsOneWidget);
+        expect(find.text('Guardar para este producto'), findsOneWidget);
+      },
+    );
 
-    testWidgets('"Usar el ajuste del catálogo" borra la regla propia sin confirmación', (
-      WidgetTester tester,
-    ) async {
-      final repo = _FakeRepo();
-      repo.summary = const PriceRulesSummary(
-        catalogRule: PriceRule(mode: PriceRuleMode.percent, value: 30),
-        productRules: {'p9': PriceRule(mode: PriceRuleMode.fixed, value: 5000)},
-      );
-      await _pumpAdjustPage(tester, repo, args);
+    testWidgets(
+      '"Usar el ajuste del catálogo" borra la regla propia sin confirmación',
+      (WidgetTester tester) async {
+        final repo = _FakeRepo();
+        repo.summary = const PriceRulesSummary(
+          catalogRule: PriceRule(mode: PriceRuleMode.percent, value: 30),
+          productRules: {
+            'p9': PriceRule(mode: PriceRuleMode.fixed, value: 5000),
+          },
+        );
+        await _pumpAdjustPage(tester, repo, args);
 
-      expect(find.textContaining('Usar el ajuste del catálogo'), findsOneWidget);
-      await tester.tap(find.text('Usar'));
-      await tester.pumpAndSettle();
+        expect(
+          find.textContaining('Usar el ajuste del catálogo'),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Usar'));
+        await tester.pumpAndSettle();
 
-      expect(repo.deleteProductCalls, 1);
-      expect(repo.deleteCatalogCalls, 0);
-    });
+        expect(repo.deleteProductCalls, 1);
+        expect(repo.deleteCatalogCalls, 0);
+      },
+    );
   });
 
   group('errores', () {
@@ -318,7 +361,9 @@ void main() {
 
       // Simula un fallo en el guardado sobreescribiendo el método tras el build.
       repo.upsertCatalogRuleOverride = (rule) async =>
-          const Err<SavedCatalogRuleResult>(ServerFailure(message: 'Conflicto', statusCode: 409));
+          const Err<SavedCatalogRuleResult>(
+            ServerFailure(message: 'Conflicto', statusCode: 409),
+          );
 
       await tester.tap(find.text('Aplicar a 2 productos'));
       await tester.pumpAndSettle();

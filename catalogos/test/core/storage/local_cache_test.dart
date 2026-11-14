@@ -26,15 +26,14 @@ void main() {
     }
   });
 
-  test('initLocalCache abre una caja y devuelve una LocalCache usable',
-      () async {
-    final cache = await initLocalCache(
-      boxName: 'test_box',
-      initHive: false,
-    );
-    expect(cache, isA<LocalCache>());
-    await cache.close();
-  });
+  test(
+    'initLocalCache abre una caja y devuelve una LocalCache usable',
+    () async {
+      final cache = await initLocalCache(boxName: 'test_box', initHive: false);
+      expect(cache, isA<LocalCache>());
+      await cache.close();
+    },
+  );
 
   test('put/get almacena y recupera valores', () async {
     final cache = await initLocalCache(boxName: 'test_box', initHive: false);
@@ -82,8 +81,10 @@ void main() {
     await cache.put('token', 'abc');
     await cache.close();
 
-    final reopened =
-        await initLocalCache(boxName: 'persist_box', initHive: false);
+    final reopened = await initLocalCache(
+      boxName: 'persist_box',
+      initHive: false,
+    );
     expect(reopened.get('token'), 'abc');
     await reopened.close();
   });

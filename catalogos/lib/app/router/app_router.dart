@@ -9,7 +9,6 @@ import '../../features/profile/presentation/account_settings_page.dart';
 import '../../features/profile/presentation/complete_profile_page.dart';
 import '../../features/profile/presentation/profile_controller.dart';
 import '../../features/shared_catalogs/presentation/catalog_detail_page.dart';
-import '../../features/shared_catalogs/presentation/home_page.dart';
 import '../../features/shared_catalogs/presentation/price_adjustment_controller.dart';
 import '../../features/shared_catalogs/presentation/price_adjustment_page.dart';
 import '../../features/shared_catalogs/presentation/product_detail_page.dart';
@@ -19,7 +18,7 @@ import '../../features/orders/presentation/orders_page.dart';
 import '../../features/buy/buy_page.dart';
 import '../../features/account/account_tab.dart';
 import '../../features/chat/chat_tab.dart';
-import '../../features/visitor/visitor_buy_page.dart';
+import '../../features/visitor/visitor_catalog_page.dart';
 import '../../features/chat/conversation_page.dart';
 import 'app_routes.dart';
 import 'main_shell.dart';
@@ -28,7 +27,7 @@ import 'main_shell.dart';
 ///
 /// El `redirect` lee el [authStateProvider] (placeholder de Fase 0.5):
 /// - Si no hay sesión y la ruta destino no es `/login`, redirige a `/login`.
-/// - Si hay sesión y el usuario está en `/login`, lo lleva a `/home`.
+/// - Si hay sesión y el usuario está en `/login`, lo lleva a `/comprar`.
 ///
 /// El router se expone como provider para que su `redirect` reaccione a los
 /// cambios del estado de auth: envolvemos el `Ref` en un
@@ -53,16 +52,18 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
           location == AppRoutes.buy ||
           location.startsWith('/comprar/c/') ||
           location.startsWith(AppRoutes.chat) ||
+          location == AppRoutes.orders ||
           location == AppRoutes.account;
 
-      // Sin sesión: Pedidos, Vender y el resto exigen cuenta de revendedor.
+      // Sin sesión: el resto exige cuenta de revendedor (Pedidos solo
+      // muestra los del propio celular).
       if (!signedIn) {
         return isPublic ? null : AppRoutes.login;
       }
 
-      // Con sesión: no permanecer en el flujo de auth; ir a home.
+      // Con sesión: no permanecer en el flujo de auth; ir a Comprar.
       if (goingToAuthFlow) {
-        return AppRoutes.home;
+        return AppRoutes.buy;
       }
 
       // Guard de "perfil incompleto" (tarea 1.13), compuesto con el de auth:
@@ -81,7 +82,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
 
       // Perfil completo: no permanecer en la pantalla de completar perfil.
       if (profileStatus == ProfileStatus.complete && onCompleteProfile) {
-        return AppRoutes.home;
+        return AppRoutes.buy;
       }
 
       return null;
@@ -144,16 +145,6 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.home,
-                name: 'home',
-                builder: (BuildContext context, GoRouterState state) =>
-                    const HomePage(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
                 path: AppRoutes.account,
                 name: 'account',
                 builder: (BuildContext context, GoRouterState state) =>
@@ -185,21 +176,17 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         builder: (BuildContext context, GoRouterState state) =>
             ConversationPage(
               conversationId: state.pathParameters['id'] ?? '',
-              title: state.extra is String ? state.extra! as String : null,
+              info: state.extra is ConversationInfo
+                  ? state.extra! as ConversationInfo
+                  : state.extra is String
+                  ? ConversationInfo(title: state.extra! as String)
+                  : null,
             ),
       ),
       GoRoute(
         path: AppRoutes.visitorCatalog,
         builder: (BuildContext context, GoRouterState state) =>
             VisitorCatalogPage(code: state.pathParameters['code'] ?? ''),
-      ),
-      GoRoute(
-        path: AppRoutes.buyCatalog,
-        name: 'buyCatalog',
-        builder: (BuildContext context, GoRouterState state) => BuyCatalogPage(
-          catalogId: state.pathParameters['id'] ?? '',
-          title: state.extra is String ? state.extra! as String : null,
-        ),
       ),
       GoRoute(
         path: AppRoutes.adjustPrices,

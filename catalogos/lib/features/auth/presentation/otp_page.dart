@@ -1,4 +1,5 @@
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'dart:async';
 import 'dart:ui' show FlutterView;
 
@@ -81,8 +82,9 @@ class _OtpPageState extends ConsumerState<OtpPage>
 
   void _startCooldown({int? seconds}) {
     _timer?.cancel();
-    final total =
-        (seconds != null && seconds > 0) ? seconds : kResendCooldown.inSeconds;
+    final total = (seconds != null && seconds > 0)
+        ? seconds
+        : kResendCooldown.inSeconds;
     setState(() => _secondsRemaining = total);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining <= 1) {
@@ -188,10 +190,11 @@ class _OtpPageState extends ConsumerState<OtpPage>
     // Al autenticar, el guard de go_router redirige a /home automáticamente.
     ref.listen<AuthFlowState>(authControllerProvider, (previous, next) {
       if (next.stage == AuthFlowStage.signedIn) {
-        context.go(AppRoutes.home);
+        context.go(AppRoutes.buy);
         return;
       }
-      if (next.errorMessage != null && next.errorMessage != previous?.errorMessage) {
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage) {
         setState(() => _hasError = true);
         _shakeController.forward(from: 0);
         if (next.errorMessage != _lastAnnouncedError) {
@@ -223,14 +226,18 @@ class _OtpPageState extends ConsumerState<OtpPage>
               top: -40,
               width: 380,
               height: 380,
-              child: AuthRadialGlow(color: Color(0x665DE0E6)), // rgba(93,224,230,0.4)
+              child: AuthRadialGlow(
+                color: Color(0x665DE0E6),
+              ), // rgba(93,224,230,0.4)
             ),
             const Positioned(
               right: -70,
               top: 420,
               width: 200,
               height: 200,
-              child: AuthFlatGlow(color: Color(0x2400FF94)), // rgba(0,255,148,0.14)
+              child: AuthFlatGlow(
+                color: Color(0x2400FF94),
+              ), // rgba(0,255,148,0.14)
             ),
             SafeArea(
               child: LayoutBuilder(
@@ -239,15 +246,18 @@ class _OtpPageState extends ConsumerState<OtpPage>
                   // tamaño de referencia (844dp+). Solo compacta encabezado y
                   // casillas; las teclas del teclado NUNCA bajan de 52dp
                   // (accesibilidad, ya cumplen el mínimo de 48dp).
-                  final double t =
-                      ((constraints.maxHeight - 640) / (844 - 640)).clamp(0.0, 1.0);
+                  final double t = ((constraints.maxHeight - 640) / (844 - 640))
+                      .clamp(0.0, 1.0);
 
                   return Column(
                     children: <Widget>[
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Padding(
-                          padding: EdgeInsets.only(left: 16, top: _lerp(6, 16, t)),
+                          padding: EdgeInsets.only(
+                            left: 16,
+                            top: _lerp(6, 16, t),
+                          ),
                           child: _BackButton(onTap: _goBack),
                         ),
                       ),
@@ -306,7 +316,9 @@ class _OtpPageState extends ConsumerState<OtpPage>
                             SizedBox(height: _lerp(10, 16, t)),
                             AuthGradientButton(
                               label: 'Verificar',
-                              iconPainter: const CheckPainter(color: AppColors.primary),
+                              iconPainter: const CheckPainter(
+                                color: AppColors.primary,
+                              ),
                               enabled: _code.length == 6,
                               loading: isVerifying,
                               onPressed: _verify,
@@ -373,7 +385,9 @@ class _BackButton extends StatelessWidget {
                 child: const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CustomPaint(painter: ChevronLeftPainter(color: Colors.white)),
+                  child: CustomPaint(
+                    painter: ChevronLeftPainter(color: Colors.white),
+                  ),
                 ),
               ),
             ),
@@ -449,7 +463,9 @@ class _Header extends StatelessWidget {
             child: SizedBox(
               width: iconGlyphSize,
               height: iconGlyphSize,
-              child: const CustomPaint(painter: WhatsAppPainter(color: AppColors.primary)),
+              child: const CustomPaint(
+                painter: WhatsAppPainter(color: AppColors.primary),
+              ),
             ),
           ),
         ),
@@ -475,10 +491,15 @@ class _Header extends StatelessWidget {
                 color: AuthPalette.textMutedOnDark,
               ),
               children: <InlineSpan>[
-                const TextSpan(text: 'Escribe el código de 6 dígitos que enviamos al '),
+                const TextSpan(
+                  text: 'Escribe el código de 6 dígitos que enviamos al ',
+                ),
                 TextSpan(
                   text: phoneDisplay,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -539,7 +560,10 @@ class _CooldownOrResend extends StatelessWidget {
             const TextSpan(text: 'Puedes pedir otro código en '),
             TextSpan(
               text: mmss,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
           ],
         ),

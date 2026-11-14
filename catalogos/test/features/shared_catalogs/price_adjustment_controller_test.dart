@@ -16,7 +16,10 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeRepo extends ResellerPriceRulesRepository {
   _FakeRepo() : super(Dio());
 
-  PriceRulesSummary summary = const PriceRulesSummary(catalogRule: null, productRules: {});
+  PriceRulesSummary summary = const PriceRulesSummary(
+    catalogRule: null,
+    productRules: {},
+  );
   PriceRulesProductsPage page = const PriceRulesProductsPage(
     total: 1,
     page: 1,
@@ -42,6 +45,9 @@ class _FakeRepo extends ResellerPriceRulesRepository {
   int deleteCatalogCalls = 0;
   int deleteProductCalls = 0;
   String? lastDeleteProductId;
+  String? lastProductsSubcategoryId;
+  String? lastSubRuleId;
+  String? lastDeleteSubId;
 
   @override
   Future<Result<PriceRulesSummary>> getRulesSummary(String catalogId) async {
@@ -54,14 +60,21 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
+    String? subcategoryId,
   }) async {
+    lastProductsSubcategoryId = subcategoryId;
     return Ok<PriceRulesProductsPage>(this.page);
   }
 
   @override
-  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(String catalogId, PriceRule rule) async {
+  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(
+    String catalogId,
+    PriceRule rule,
+  ) async {
     upsertCatalogCalls++;
-    if (upsertCatalogError != null) return Err<SavedCatalogRuleResult>(upsertCatalogError!);
+    if (upsertCatalogError != null) {
+      return Err<SavedCatalogRuleResult>(upsertCatalogError!);
+    }
     return Ok<SavedCatalogRuleResult>(
       SavedCatalogRuleResult(
         rule: rule,
@@ -79,17 +92,45 @@ class _FakeRepo extends ResellerPriceRulesRepository {
   }
 
   @override
+  Future<Result<SavedSubcategoryRuleResult>> upsertSubcategoryRule(
+    String catalogId,
+    String subcategoryId,
+    PriceRule rule,
+  ) async {
+    lastSubRuleId = subcategoryId;
+    return Ok<SavedSubcategoryRuleResult>(
+      SavedSubcategoryRuleResult(rule: rule, subcategoryId: subcategoryId),
+    );
+  }
+
+  @override
+  Future<Result<void>> deleteSubcategoryRule(
+    String catalogId,
+    String subcategoryId,
+  ) async {
+    lastDeleteSubId = subcategoryId;
+    return const Ok<void>(null);
+  }
+
+  @override
   Future<Result<SavedProductRuleResult>> upsertProductRule(
     String catalogId,
     String productId,
     PriceRule rule,
   ) async {
-    if (upsertProductError != null) return Err<SavedProductRuleResult>(upsertProductError!);
-    return Ok<SavedProductRuleResult>(SavedProductRuleResult(rule: rule, productId: productId));
+    if (upsertProductError != null) {
+      return Err<SavedProductRuleResult>(upsertProductError!);
+    }
+    return Ok<SavedProductRuleResult>(
+      SavedProductRuleResult(rule: rule, productId: productId),
+    );
   }
 
   @override
-  Future<Result<void>> deleteProductRule(String catalogId, String productId) async {
+  Future<Result<void>> deleteProductRule(
+    String catalogId,
+    String productId,
+  ) async {
     deleteProductCalls++;
     lastDeleteProductId = productId;
     if (deleteError != null) return Err<void>(deleteError!);
@@ -120,11 +161,62 @@ void main() {
 
   Future<PriceAdjustmentReady> readReady(PriceAdjustmentArgs args) async {
     container.read(priceAdjustmentControllerProvider(args));
-    while (container.read(priceAdjustmentControllerProvider(args)) is PriceAdjustmentLoading) {
+    while (container.read(priceAdjustmentControllerProvider(args))
+        is PriceAdjustmentLoading) {
       await Future<void>.delayed(Duration.zero);
     }
-    return container.read(priceAdjustmentControllerProvider(args)) as PriceAdjustmentReady;
+    return container.read(priceAdjustmentControllerProvider(args))
+        as PriceAdjustmentReady;
   }
+
+  group('modo subcategoría', () {
+    const CatalogSubcategory sub = CatalogSubcategory(
+      id: 's1',
+      name: 'Camisetas',
+      productCount: 3,
+      rule: null,
+    );
+    const args = PriceAdjustmentArgs(
+      catalogId: 'cat-1',
+      totalProductsHint: 10,
+      subcategory: sub,
+    );
+
+    test(
+      'carga los productos de la subcategoría y precarga su regla',
+      () async {
+        repo.summary = const PriceRulesSummary(
+          catalogRule: PriceRule(mode: PriceRuleMode.percent, value: 30),
+          productRules: {},
+          subcategoryRules: {
+            's1': PriceRule(mode: PriceRuleMode.fixed, value: 4000),
+          },
+        );
+        final ready = await readReady(args);
+        expect(repo.lastProductsSubcategoryId, 's1');
+        expect(ready.mode, PriceRuleMode.fixed);
+        expect(ready.rawDigits, '4000');
+        expect(ready.hasOwnRule, isTrue);
+      },
+    );
+
+    test(
+      'guardar usa el endpoint de subcategoría y quitar borra solo esa regla',
+      () async {
+        final ready = await readReady(args);
+        expect(ready.hasOwnRule, isFalse);
+        final ctrl = container.read(
+          priceAdjustmentControllerProvider(args).notifier,
+        )..onChipTap(10);
+        expect(await ctrl.onSubmit(), isTrue);
+        expect(repo.lastSubRuleId, 's1');
+        expect(
+          container.read(priceAdjustmentControllerProvider(args)),
+          isA<PriceAdjustmentSavedSubcategory>(),
+        );
+      },
+    );
+  });
 
   group('carga inicial', () {
     test('modo catálogo: usa page.total y precarga el modo/valor de la regla existente', () async {
@@ -132,7 +224,10 @@ void main() {
         catalogRule: PriceRule(mode: PriceRuleMode.fixed, value: 5000),
         productRules: {},
       );
-      const args = PriceAdjustmentArgs(catalogId: 'cat-1', totalProductsHint: 999);
+      const args = PriceAdjustmentArgs(
+        catalogId: 'cat-1',
+        totalProductsHint: 999,
+      );
 
       final ready = await readReady(args);
 
@@ -142,30 +237,42 @@ void main() {
       expect(ready.hasOwnRule, isTrue);
     });
 
-    test('modo un solo producto: usa el producto pasado, sin pedirlo a la red', () async {
-      const args = PriceAdjustmentArgs(
-        catalogId: 'cat-1',
-        totalProductsHint: 24,
-        singleProduct: _singleProduct,
-      );
+    test(
+      'modo un solo producto: usa el producto pasado, sin pedirlo a la red',
+      () async {
+        const args = PriceAdjustmentArgs(
+          catalogId: 'cat-1',
+          totalProductsHint: 24,
+          singleProduct: _singleProduct,
+        );
 
-      final ready = await readReady(args);
+        final ready = await readReady(args);
 
-      expect(ready.previewProducts, <CatalogPriceRuleProduct>[_singleProduct]);
-      expect(ready.totalProducts, 24);
-      expect(ready.hasOwnRule, isFalse);
-    });
+        expect(ready.previewProducts, <CatalogPriceRuleProduct>[
+          _singleProduct,
+        ]);
+        expect(ready.totalProducts, 24);
+        expect(ready.hasOwnRule, isFalse);
+      },
+    );
 
     test('error de red al cargar → LoadError', () async {
       repo.summaryError = const NetworkFailure();
-      const args = PriceAdjustmentArgs(catalogId: 'cat-1', totalProductsHint: 1);
+      const args = PriceAdjustmentArgs(
+        catalogId: 'cat-1',
+        totalProductsHint: 1,
+      );
 
       container.read(priceAdjustmentControllerProvider(args));
-      while (container.read(priceAdjustmentControllerProvider(args)) is PriceAdjustmentLoading) {
+      while (container.read(priceAdjustmentControllerProvider(args))
+          is PriceAdjustmentLoading) {
         await Future<void>.delayed(Duration.zero);
       }
 
-      expect(container.read(priceAdjustmentControllerProvider(args)), isA<PriceAdjustmentLoadError>());
+      expect(
+        container.read(priceAdjustmentControllerProvider(args)),
+        isA<PriceAdjustmentLoadError>(),
+      );
     });
   });
 
@@ -175,10 +282,14 @@ void main() {
 
     setUp(() async {
       await readReady(args);
-      controller = container.read(priceAdjustmentControllerProvider(args).notifier);
+      controller = container.read(
+        priceAdjustmentControllerProvider(args).notifier,
+      );
     });
 
-    PriceAdjustmentReady ready() => container.read(priceAdjustmentControllerProvider(args)) as PriceAdjustmentReady;
+    PriceAdjustmentReady ready() =>
+        container.read(priceAdjustmentControllerProvider(args))
+            as PriceAdjustmentReady;
 
     test('porcentaje: no deja escribir más allá de 300', () {
       controller.onDigit('3');
@@ -237,45 +348,65 @@ void main() {
 
     test('onSubmit éxito → PriceAdjustmentSavedCatalog', () async {
       await readReady(args);
-      final controller = container.read(priceAdjustmentControllerProvider(args).notifier);
+      final controller = container.read(
+        priceAdjustmentControllerProvider(args).notifier,
+      );
       controller.onChipTap(30);
 
       final ok = await controller.onSubmit();
 
       expect(ok, isTrue);
-      expect(container.read(priceAdjustmentControllerProvider(args)), isA<PriceAdjustmentSavedCatalog>());
+      expect(
+        container.read(priceAdjustmentControllerProvider(args)),
+        isA<PriceAdjustmentSavedCatalog>(),
+      );
       expect(repo.upsertCatalogCalls, 1);
     });
 
-    test('onSubmit 409 → vuelve a Ready con actionError, sin perder el borrador', () async {
-      repo.upsertCatalogError = const ServerFailure(
-        message: 'Este catálogo no muestra precios.',
-        statusCode: 409,
-      );
-      await readReady(args);
-      final controller = container.read(priceAdjustmentControllerProvider(args).notifier);
-      controller.onChipTap(30);
+    test(
+      'onSubmit 409 → vuelve a Ready con actionError, sin perder el borrador',
+      () async {
+        repo.upsertCatalogError = const ServerFailure(
+          message: 'Este catálogo no muestra precios.',
+          statusCode: 409,
+        );
+        await readReady(args);
+        final controller = container.read(
+          priceAdjustmentControllerProvider(args).notifier,
+        );
+        controller.onChipTap(30);
 
-      final ok = await controller.onSubmit();
+        final ok = await controller.onSubmit();
 
-      expect(ok, isFalse);
-      final ready = container.read(priceAdjustmentControllerProvider(args)) as PriceAdjustmentReady;
-      expect(ready.actionError?.statusCode, 409);
-      expect(ready.rawDigits, '30'); // el borrador no se pierde
-      expect(ready.saving, isFalse);
-    });
+        expect(ok, isFalse);
+        final ready = container.read(
+          priceAdjustmentControllerProvider(args),
+        ) as PriceAdjustmentReady;
+        expect(ready.actionError?.statusCode, 409);
+        expect(ready.rawDigits, '30'); // el borrador no se pierde
+        expect(ready.saving, isFalse);
+      },
+    );
 
-    test('onRemove éxito → PriceAdjustmentRemoved, borra solo la de catálogo', () async {
-      await readReady(args);
-      final controller = container.read(priceAdjustmentControllerProvider(args).notifier);
+    test(
+      'onRemove éxito → PriceAdjustmentRemoved, borra solo la de catálogo',
+      () async {
+        await readReady(args);
+        final controller = container.read(
+          priceAdjustmentControllerProvider(args).notifier,
+        );
 
-      final ok = await controller.onRemove();
+        final ok = await controller.onRemove();
 
-      expect(ok, isTrue);
-      expect(container.read(priceAdjustmentControllerProvider(args)), isA<PriceAdjustmentRemoved>());
-      expect(repo.deleteCatalogCalls, 1);
-      expect(repo.deleteProductCalls, 0);
-    });
+        expect(ok, isTrue);
+        expect(
+          container.read(priceAdjustmentControllerProvider(args)),
+          isA<PriceAdjustmentRemoved>(),
+        );
+        expect(repo.deleteCatalogCalls, 1);
+        expect(repo.deleteProductCalls, 0);
+      },
+    );
   });
 
   group('guardar y quitar — modo un solo producto', () {
@@ -287,26 +418,35 @@ void main() {
 
     test('onSubmit llama upsertProductRule con el id del producto', () async {
       await readReady(args);
-      final controller = container.read(priceAdjustmentControllerProvider(args).notifier);
+      final controller = container.read(
+        priceAdjustmentControllerProvider(args).notifier,
+      );
       controller.onChipTap(40);
 
       final ok = await controller.onSubmit();
 
       expect(ok, isTrue);
-      final saved = container.read(priceAdjustmentControllerProvider(args)) as PriceAdjustmentSavedProduct;
+      final saved = container.read(
+        priceAdjustmentControllerProvider(args),
+      ) as PriceAdjustmentSavedProduct;
       expect(saved.result.productId, 'p9');
     });
 
-    test('onUseCatalogRule borra la regla propia del producto (no la de catálogo)', () async {
-      await readReady(args);
-      final controller = container.read(priceAdjustmentControllerProvider(args).notifier);
+    test(
+      'onUseCatalogRule borra la regla propia del producto (no la de catálogo)',
+      () async {
+        await readReady(args);
+        final controller = container.read(
+          priceAdjustmentControllerProvider(args).notifier,
+        );
 
-      final ok = await controller.onUseCatalogRule();
+        final ok = await controller.onUseCatalogRule();
 
-      expect(ok, isTrue);
-      expect(repo.deleteProductCalls, 1);
-      expect(repo.lastDeleteProductId, 'p9');
-      expect(repo.deleteCatalogCalls, 0);
-    });
+        expect(ok, isTrue);
+        expect(repo.deleteProductCalls, 1);
+        expect(repo.lastDeleteProductId, 'p9');
+        expect(repo.deleteCatalogCalls, 0);
+      },
+    );
   });
 }

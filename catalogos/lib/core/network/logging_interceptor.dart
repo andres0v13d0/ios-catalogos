@@ -60,8 +60,8 @@ class LoggingInterceptor extends Interceptor {
   // campos privados, por eso no se usan initializing formals.
   // ignore_for_file: prefer_initializing_formals
   LoggingInterceptor({Environment? environment, NetLogSink? sink})
-      : _environment = environment,
-        _sink = sink;
+    : _environment = environment,
+      _sink = sink;
 
   /// Entorno inyectable para tests; si es `null` se resuelve en caliente a
   /// [Environment.current] para no capturar el valor en el constructor.
@@ -84,12 +84,17 @@ class LoggingInterceptor extends Interceptor {
   }
 
   @override
-  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
     // Deliberadamente NO se vuelca el cuerpo de las respuestas correctas (ruido).
     // Solo una línea mínima a modo de traza, también gated por entorno.
     if (_enabled) {
       final req = response.requestOptions;
-      _emit('[NET] <-- ${response.statusCode ?? 'n/a'} ${req.method} ${req.uri}');
+      _emit(
+        '[NET] <-- ${response.statusCode ?? 'n/a'} ${req.method} ${req.uri}',
+      );
     }
     handler.next(response);
   }

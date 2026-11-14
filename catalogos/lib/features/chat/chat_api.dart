@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/dio_client.dart';
+import 'support_faq.dart';
 import '../../core/notifications/push_service.dart';
 import '../../core/network/dio_provider.dart';
 import '../../core/network/token_provider.dart';
@@ -72,8 +73,12 @@ class ChatConversation {
     this.lastMessage,
     this.lastMessageAt,
     this.unread = 0,
+    this.isSupport = false,
+    this.catalogId,
   });
 
+  final bool isSupport;
+  final String? catalogId;
   final String id;
   final String title;
   final String? subtitle;
@@ -84,8 +89,12 @@ class ChatConversation {
 
   factory ChatConversation.fromJson(Map<String, dynamic> j) => ChatConversation(
     id: j['id'] as String,
-    title: (j['providerName'] as String?) ?? 'Mayorista',
-    subtitle: j['catalogName'] as String?,
+    isSupport: j['isSupport'] == true,
+    catalogId: j['catalogId'] as String?,
+    title: j['isSupport'] == true
+        ? kSupportTitle
+        : (j['providerName'] as String?) ?? 'Mayorista',
+    subtitle: j['isSupport'] == true ? null : j['catalogName'] as String?,
     logoUrl: j['logoUrl'] as String?,
     lastMessage: _preview(
       j['lastMessage'] as String?,
@@ -108,26 +117,41 @@ class ChatMessage {
     required this.text,
     required this.mine,
     required this.createdAt,
+    this.type = 'TEXT',
+    this.fileUrl,
+    this.metadata,
+    this.fileExpired = false,
   });
 
   final String id;
   final String text;
   final bool mine;
   final DateTime createdAt;
+  final String type;
+  final String? fileUrl;
+  final Map<String, dynamic>? metadata;
+  final bool fileExpired;
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
     id: j['id'] as String,
     text: _preview(j['message'] as String?, j['messageType'] as String?) ?? '',
     mine: j['isMine'] as bool? ?? false,
+    type: j['messageType'] as String? ?? 'TEXT',
+    fileUrl: j['fileUrl'] as String?,
+    metadata: (j['metadata'] as Map?)?.cast<String, dynamic>(),
+    fileExpired: j['fileExpired'] as bool? ?? false,
     createdAt:
         DateTime.tryParse('${j['createdAt']}')?.toLocal() ?? DateTime.now(),
   );
 }
 
 class ChatApi {
-  ChatApi(this._dio, this._cache);
+  ChatApi(this._dio, this._cache, [Dio? authDio]) : _authDio = authDio ?? _dio;
 
   final Dio _dio;
+
+  /// Dio con la sesión de cuenta (Firebase): solo ese puede pedir subir fotos.
+  final Dio _authDio;
   final LocalCache _cache;
 
   Future<List<ChatConversation>> conversations() async {
@@ -172,6 +196,46 @@ class ChatApi {
     data: <String, dynamic>{'message': text, 'messageType': 'TEXT'},
   );
 
+  Future<void> sendProduct(String id, Map<String, dynamic> product) =>
+      _dio.post<dynamic>(
+        '/conversations/$id/messages',
+        data: <String, dynamic>{
+          'message': product['name'],
+          'messageType': 'PRODUCT',
+          'metadata': product,
+        },
+      );
+
+  /// Sube la foto al almacenamiento (URL firmada) y la envía. Requiere cuenta.
+  Future<void> sendImage(String id, String filename, List<int> bytes) async {
+    final String lower = filename.toLowerCase();
+    final String mime = lower.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    final Response<Map<String, dynamic>> r = await _authDio
+        .post<Map<String, dynamic>>(
+          '/chat/upload',
+          data: <String, dynamic>{'filename': filename, 'mimeType': mime},
+        );
+    // PUT directo al almacenamiento: sin nuestros encabezados de sesión.
+    await Dio().put<dynamic>(
+      r.data!['signedUrl'] as String,
+      data: Stream<List<int>>.fromIterable(<List<int>>[bytes]),
+      options: Options(
+        headers: <String, dynamic>{
+          'Content-Type': mime,
+          'Content-Length': bytes.length,
+        },
+      ),
+    );
+    await _dio.post<dynamic>(
+      '/conversations/$id/messages',
+      data: <String, dynamic>{
+        'message': '📷 Foto',
+        'messageType': 'IMAGE',
+        'fileUrl': r.data!['finalUrl'],
+      },
+    );
+  }
+
   Future<void> markRead(String id) =>
       _dio.post<dynamic>('/conversations/$id/read');
 
@@ -187,8 +251,11 @@ class ChatApi {
 }
 
 final Provider<ChatApi> chatApiProvider = Provider<ChatApi>(
-  (Ref ref) =>
-      ChatApi(ref.watch(chatDioProvider), ref.read(localCacheProvider)),
+  (Ref ref) => ChatApi(
+    ref.watch(chatDioProvider),
+    ref.read(localCacheProvider),
+    ref.watch(dioProvider),
+  ),
 );
 
 final conversationsProvider =

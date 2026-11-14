@@ -12,6 +12,9 @@ class CartLine {
     this.unitPrice,
     this.color,
     this.size,
+    this.imageUrl,
+    this.priceMap = const <int, int>{},
+    this.minTotal = 1,
   });
 
   final String catalogId;
@@ -22,8 +25,42 @@ class CartLine {
   final num? unitPrice;
   final String? color;
   final String? size;
+  final String? imageUrl;
+
+  /// Cantidad → precio unitario del producto (lo que configura el proveedor).
+  final Map<int, int> priceMap;
+  final int minTotal;
 
   String get key => '$catalogId|$productId|${color ?? ''}|${size ?? ''}';
+
+  /// Cantidades que ofrece el proveedor para este producto.
+  List<int> get quantityOptions {
+    final List<int> o = priceMap.keys.where((int q) => q >= minTotal).toList()
+      ..sort();
+    return o.isEmpty ? <int>[quantity] : o;
+  }
+
+  /// Precio unitario para [q]: el del mayor umbral que no la supere.
+  num? priceFor(int q) {
+    if (priceMap.isEmpty) return unitPrice;
+    final List<MapEntry<int, int>> e = priceMap.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    int chosen = e.first.value;
+    for (final MapEntry<int, int> x in e) {
+      if (q >= x.key) chosen = x.value;
+    }
+    return chosen;
+  }
+
+  num get lineTotal => (unitPrice ?? 0) * quantity;
+
+  String? get variantLabel {
+    final List<String> parts = <String>[
+      if (color != null && color!.isNotEmpty) color!,
+      if (size != null && size!.isNotEmpty) 'Talla $size',
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
 
   CartLine withQuantity(int q) => CartLine(
     catalogId: catalogId,
@@ -31,9 +68,12 @@ class CartLine {
     productId: productId,
     name: name,
     quantity: q,
-    unitPrice: unitPrice,
+    unitPrice: priceFor(q),
     color: color,
     size: size,
+    imageUrl: imageUrl,
+    priceMap: priceMap,
+    minTotal: minTotal,
   );
 }
 
@@ -43,6 +83,8 @@ class CartController extends Notifier<List<CartLine>> {
   @override
   List<CartLine> build() => const <CartLine>[];
 
+  /// Agrega la línea; si ya existe el mismo producto/variante, reemplaza su
+  /// cantidad (las cantidades son las que ofrece el proveedor, no se suman).
   void add(CartLine line) {
     final int i = state.indexWhere((CartLine l) => l.key == line.key);
     if (i == -1) {
@@ -50,12 +92,19 @@ class CartController extends Notifier<List<CartLine>> {
       return;
     }
     final List<CartLine> next = <CartLine>[...state];
-    next[i] = state[i].withQuantity(state[i].quantity + line.quantity);
+    next[i] = line;
     state = next;
   }
 
+  void setQuantity(String key, int q) => state = <CartLine>[
+    for (final CartLine l in state) l.key == key ? l.withQuantity(q) : l,
+  ];
+
   void remove(String key) =>
       state = state.where((CartLine l) => l.key != key).toList();
+
+  void removeCatalog(String catalogId) =>
+      state = state.where((CartLine l) => l.catalogId != catalogId).toList();
 
   void clear() => state = const <CartLine>[];
 }

@@ -37,6 +37,7 @@ class PriceAdjustmentPage extends ConsumerWidget {
       context: context,
       builder: (BuildContext dialogContext) => _RemoveConfirmationDialog(
         isSingleProduct: args.isSingleProduct,
+        subcategoryName: args.subcategory?.name,
         onCancel: () => Navigator.of(dialogContext).pop(false),
         onConfirm: () => Navigator.of(dialogContext).pop(true),
       ),
@@ -159,6 +160,22 @@ class PriceAdjustmentPage extends ConsumerWidget {
                         ],
                         onBack: () => Navigator.of(context).pop(true),
                       ),
+                      PriceAdjustmentSavedSubcategory(
+                        :final result,
+                        :final name,
+                      ) =>
+                        _DoneBody(
+                          title: 'Precios actualizados',
+                          subtitleRule: result.rule,
+                          rows: <(String, String)>[
+                            ('Subcategoría', name),
+                            (
+                              'Ajuste de la subcategoría',
+                              _ruleLabel(result.rule),
+                            ),
+                          ],
+                          onBack: () => Navigator.of(context).pop(true),
+                        ),
                       PriceAdjustmentSavedProduct(:final result) => _DoneBody(
                         title: 'Precio actualizado',
                         subtitleRule: result.rule,
@@ -346,6 +363,9 @@ class _EditorBody extends StatelessWidget {
                             : _CatalogWideTopBar(
                                 scale: s,
                                 totalProducts: state.totalProducts,
+                                scopeLabel: args.subcategory == null
+                                    ? 'Catálogo completo'
+                                    : 'Subcategoría ${args.subcategory!.name}',
                                 hasOwnRule: state.hasOwnRule,
                                 removing: state.removing,
                                 onBack: () => Navigator.of(context).pop(false),
@@ -423,6 +443,8 @@ class _EditorBody extends StatelessWidget {
                         child: AuthGradientButton(
                           label: args.isSingleProduct
                               ? 'Guardar para este producto'
+                              : args.isSubcategory
+                              ? 'Aplicar a ${state.totalProducts} producto${state.totalProducts == 1 ? '' : 's'} de ${args.subcategory!.name}'
                               : 'Aplicar a ${state.totalProducts} producto${state.totalProducts == 1 ? '' : 's'}',
                           iconPainter: const CheckPainter(
                             color: AppColors.primary,
@@ -461,6 +483,7 @@ class _CatalogWideTopBar extends StatelessWidget {
   const _CatalogWideTopBar({
     required this.scale,
     required this.totalProducts,
+    required this.scopeLabel,
     required this.hasOwnRule,
     required this.removing,
     required this.onBack,
@@ -469,6 +492,7 @@ class _CatalogWideTopBar extends StatelessWidget {
 
   final double scale;
   final int totalProducts;
+  final String scopeLabel;
   final bool hasOwnRule;
   final bool removing;
   final VoidCallback onBack;
@@ -499,7 +523,7 @@ class _CatalogWideTopBar extends StatelessWidget {
                 ),
               ),
               Text(
-                'Catálogo completo · $totalProducts producto${totalProducts == 1 ? '' : 's'}',
+                '$scopeLabel · $totalProducts producto${totalProducts == 1 ? '' : 's'}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1773,9 +1797,11 @@ class _RemoveConfirmationDialog extends StatelessWidget {
     required this.isSingleProduct,
     required this.onCancel,
     required this.onConfirm,
+    this.subcategoryName,
   });
 
   final bool isSingleProduct;
+  final String? subcategoryName;
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
 
@@ -1815,6 +1841,8 @@ class _RemoveConfirmationDialog extends StatelessWidget {
             Text(
               isSingleProduct
                   ? 'Este producto dejará de tener un ajuste propio. Si el catálogo tiene un ajuste general, ese seguirá aplicando.'
+                  : subcategoryName != null
+                  ? 'Se eliminará el ajuste de la subcategoría $subcategoryName. Los productos con ajuste propio no se ven afectados; los demás vuelven al ajuste del catálogo.'
                   : 'Se eliminará el ajuste de todo el catálogo. Los productos con un ajuste propio no se ven afectados.',
               style: const TextStyle(
                 fontSize: 14,

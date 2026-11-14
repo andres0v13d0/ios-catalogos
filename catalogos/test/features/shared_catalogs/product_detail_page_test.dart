@@ -35,7 +35,9 @@ Product _product({
   ],
   colores: colores,
   tallas: tallas,
-  precios: withPrices ? const <String, num>{'1': 45000, '6': 40000} : const <String, num>{},
+  precios: withPrices
+      ? const <String, num>{'1': 45000, '6': 40000}
+      : const <String, num>{},
 );
 
 /// Overlay fijo (familia): devuelve el [fixedState] dado sin tocar red.
@@ -64,7 +66,10 @@ Future<void> _pumpDetail(
   final GoRouter router = GoRouter(
     initialLocation: '/catalog',
     routes: <RouteBase>[
-      GoRoute(path: '/catalog', builder: (context, _) => const Text('catalog-stub')),
+      GoRoute(
+        path: '/catalog',
+        builder: (context, _) => const Text('catalog-stub'),
+      ),
       GoRoute(
         path: '/detail',
         builder: (context, _) => ProductDetailPage(args: args),
@@ -72,7 +77,8 @@ Future<void> _pumpDetail(
       GoRoute(
         path: AppRoutes.adjustPrices,
         builder: (context, state) {
-          final PriceAdjustmentArgs adjustArgs = state.extra! as PriceAdjustmentArgs;
+          final PriceAdjustmentArgs adjustArgs =
+              state.extra! as PriceAdjustmentArgs;
           return Text('adjust-stub-${adjustArgs.singleProduct?.id}');
         },
       ),
@@ -82,9 +88,8 @@ Future<void> _pumpDetail(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        catalogPriceOverlayControllerProvider(
-          _catalogId,
-        ).overrideWith(() => _FakeOverlayController(overlay)),
+        catalogPriceOverlayControllerProvider(_catalogId)
+            .overrideWith(() => _FakeOverlayController(overlay)),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -95,34 +100,36 @@ Future<void> _pumpDetail(
 }
 
 void main() {
-  testWidgets(
-    'muestra nombre, "Desde \$X", colores y tallas',
-    (WidgetTester tester) async {
-      await _pumpDetail(
-        tester,
-        args: ProductDetailArgs(
-          catalogId: _catalogId,
-          product: _product(
-            colores: const <Variant>[Variant(id: 'rojo', name: 'Rojo')],
-            tallas: const <Variant>[Variant(id: 'm', name: 'M'), Variant(id: 'l', name: 'L')],
-          ),
-          priceHidden: false,
-          totalProducts: 1,
+  testWidgets('muestra nombre, "Desde \$X", colores y tallas', (
+    WidgetTester tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      args: ProductDetailArgs(
+        catalogId: _catalogId,
+        product: _product(
+          colores: const <Variant>[Variant(id: 'rojo', name: 'Rojo')],
+          tallas: const <Variant>[
+            Variant(id: 'm', name: 'M'),
+            Variant(id: 'l', name: 'L'),
+          ],
         ),
-      );
+        priceHidden: false,
+        totalProducts: 1,
+      ),
+    );
 
-      // Aparece tanto en la cabecera como en el título del cuerpo.
-      expect(find.text('Bolso de Mano'), findsNWidgets(2));
-      // El precio grande es el texto EXACTO "$40.000"; la fila "Desde 6
-      // unidades: $40.000" del detalle por cantidad lo contiene también, así
-      // que se distinguen por igualdad exacta en vez de "contains".
-      expect(find.text(r'$40.000'), findsOneWidget);
-      expect(find.textContaining('Desde 6 unidades'), findsOneWidget);
-      expect(find.text('Rojo'), findsOneWidget);
-      expect(find.text('M'), findsOneWidget);
-      expect(find.text('L'), findsOneWidget);
-    },
-  );
+    // Aparece tanto en la cabecera como en el título del cuerpo.
+    expect(find.text('Bolso de Mano'), findsNWidgets(2));
+    // El precio grande es el texto EXACTO "$40.000"; la fila "Desde 6
+    // unidades: $40.000" del detalle por cantidad lo contiene también, así
+    // que se distinguen por igualdad exacta en vez de "contains".
+    expect(find.text(r'$40.000'), findsOneWidget);
+    expect(find.textContaining('Desde 6 unidades'), findsOneWidget);
+    expect(find.text('Rojo'), findsOneWidget);
+    expect(find.text('M'), findsOneWidget);
+    expect(find.text('L'), findsOneWidget);
+  });
 
   testWidgets(
     'catálogo "sin precios": oculta el precio y no hay botón de editar',
@@ -142,22 +149,21 @@ void main() {
     },
   );
 
-  testWidgets(
-    'sin overlay cargado para el producto: no hay botón de editar',
-    (WidgetTester tester) async {
-      await _pumpDetail(
-        tester,
-        args: ProductDetailArgs(
-          catalogId: _catalogId,
-          product: _product(),
-          priceHidden: false,
-          totalProducts: 1,
-        ),
-      );
+  testWidgets('sin overlay cargado para el producto: no hay botón de editar', (
+    WidgetTester tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      args: ProductDetailArgs(
+        catalogId: _catalogId,
+        product: _product(),
+        priceHidden: false,
+        totalProducts: 1,
+      ),
+    );
 
-      expect(find.text('Editar precio'), findsNothing);
-    },
-  );
+    expect(find.text('Editar precio'), findsNothing);
+  });
 
   testWidgets(
     'con ajuste visible: muestra la insignia y "Editar precio" abre Ajustar precios',

@@ -32,11 +32,7 @@ class AuthGradientBackground extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           stops: <double>[0.0, midStop, 1.0],
-          colors: <Color>[
-            AppColors.primary,
-            midColor,
-            AppColors.secondary,
-          ],
+          colors: <Color>[AppColors.primary, midColor, AppColors.secondary],
         ),
       ),
     );

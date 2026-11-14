@@ -34,7 +34,10 @@ const String defaultCountryCode = '57';
 /// normalizeToE164('+573001234567');     // "+573001234567"
 /// normalizeToE164('abc');               // null
 /// ```
-String? normalizeToE164(String? input, {String countryCode = defaultCountryCode}) {
+String? normalizeToE164(
+  String? input, {
+  String countryCode = defaultCountryCode,
+}) {
   if (input == null) return null;
 
   final trimmed = input.trim();

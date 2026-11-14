@@ -21,6 +21,22 @@ class ResellerOrdersController extends AsyncNotifier<List<ResellerOrder>> {
 
   Future<void> refresh() async => state = await AsyncValue.guard(_load);
 
+  /// Guarda la nota privada del pedido; devuelve el error o `null` si salió bien.
+  Future<String?> setNote(String id, String notes) async {
+    final Result<ResellerOrder> res = await _repo.setNote(id, notes);
+    switch (res) {
+      case Ok<ResellerOrder>(:final value):
+        state = AsyncData<List<ResellerOrder>>(
+          (state.value ?? const <ResellerOrder>[])
+              .map((ResellerOrder o) => o.id == id ? value : o)
+              .toList(),
+        );
+        return null;
+      case Err<ResellerOrder>(:final failure):
+        return failure.message;
+    }
+  }
+
   /// Confirma o anula; devuelve el mensaje de error o `null` si salió bien.
   Future<String?> setStatus(String id, OrderStatus status) async {
     final Result<ResellerOrder> res = await _repo.setStatus(id, status);

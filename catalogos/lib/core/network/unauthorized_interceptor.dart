@@ -34,7 +34,7 @@ class UnauthorizedInterceptor extends Interceptor {
   /// (Opcional) Reejecuta la petición original con el token refrescado.
   /// Normalmente lo provee `dioProvider` usando el propio `Dio`.
   final Future<Response<dynamic>> Function(RequestOptions options)?
-      retryRequest;
+  retryRequest;
 
   /// Clave en `extra` para marcar que la petición ya se reintentó.
   static const String retriedKey = 'unauthorized_retry_attempted';
@@ -44,8 +44,8 @@ class UnauthorizedInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    final isUnauthorized = err.error is UnauthorizedFailure ||
-        err.response?.statusCode == 401;
+    final isUnauthorized =
+        err.error is UnauthorizedFailure || err.response?.statusCode == 401;
 
     if (!isUnauthorized) {
       handler.next(err);
@@ -68,7 +68,8 @@ class UnauthorizedInterceptor extends Interceptor {
         } on DioException catch (retryErr) {
           // El reintento también falló; continúa a la política de logout si
           // sigue siendo 401.
-          final retryUnauthorized = retryErr.error is UnauthorizedFailure ||
+          final retryUnauthorized =
+              retryErr.error is UnauthorizedFailure ||
               retryErr.response?.statusCode == 401;
           if (retryUnauthorized) {
             await onUnauthorized();

@@ -64,14 +64,21 @@ class _OtpCodeBoxesState extends State<OtpCodeBoxes>
   double _entranceFor(int index) {
     final double start = index * 0.08;
     final double end = (start + 0.4).clamp(0.0, 1.0);
-    final double raw = ((widget.entrance.value - start) / (end - start)).clamp(0.0, 1.0);
+    final double raw = ((widget.entrance.value - start) / (end - start)).clamp(
+      0.0,
+      1.0,
+    );
     return Curves.easeOutBack.transform(raw);
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge(<Listenable>[widget.shake, widget.entrance, _blink]),
+      animation: Listenable.merge(<Listenable>[
+        widget.shake,
+        widget.entrance,
+        _blink,
+      ]),
       builder: (context, _) {
         // Sacudida: oscilación horizontal de amplitud decreciente, completa
         // en el tiempo de `widget.shake` (lo dimensiona OtpPage, ≤350ms).

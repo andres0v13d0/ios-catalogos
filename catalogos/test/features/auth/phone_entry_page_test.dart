@@ -45,8 +45,9 @@ Widget _wrap(FakeAuthRepository repo, FakeAuthUserService authUser) {
 }
 
 void main() {
-  testWidgets('sin aceptar términos no se solicita el código',
-      (WidgetTester tester) async {
+  testWidgets('sin aceptar términos no se solicita el código', (
+    WidgetTester tester,
+  ) async {
     final repo = FakeAuthRepository();
     await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
     await tester.pumpAndSettle();
@@ -58,37 +59,44 @@ void main() {
     expect(repo.requestCalls, isEmpty);
   });
 
-  testWidgets('número inválido muestra error de formato y no llama al backend',
-      (WidgetTester tester) async {
-    final repo = FakeAuthRepository();
-    await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
-    // Deja asentar la animación de entrada (rediseño "B", máx. 600ms) antes
-    // de interactuar, para que la hoja inferior esté en su posición final.
-    await tester.pumpAndSettle();
+  testWidgets(
+    'número inválido muestra error de formato y no llama al backend',
+    (WidgetTester tester) async {
+      final repo = FakeAuthRepository();
+      await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
+      // Deja asentar la animación de entrada (rediseño "B", máx. 600ms) antes
+      // de interactuar, para que la hoja inferior esté en su posición final.
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField), '123');
-    await tester.tap(find.byType(Checkbox));
-    await tester.pump();
-    await tester.tap(find.text('Enviar código'));
-    await tester.pump();
+      await tester.enterText(find.byType(TextFormField), '123');
+      await tester.tap(find.byType(Checkbox));
+      await tester.pump();
+      await tester.tap(find.text('Enviar código'));
+      await tester.pump();
 
-    expect(find.text('Ingresa un número de teléfono válido.'), findsOneWidget);
-    expect(repo.requestCalls, isEmpty);
-  });
+      expect(
+        find.text('Ingresa un número de teléfono válido.'),
+        findsOneWidget,
+      );
+      expect(repo.requestCalls, isEmpty);
+    },
+  );
 
-  testWidgets('número válido solicita el código con el E.164 normalizado (+57)',
-      (WidgetTester tester) async {
-    final repo = FakeAuthRepository();
-    await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'número válido solicita el código con el E.164 normalizado (+57)',
+    (WidgetTester tester) async {
+      final repo = FakeAuthRepository();
+      await tester.pumpWidget(_wrap(repo, FakeAuthUserService()));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField), '300 123 4567');
-    await tester.tap(find.byType(Checkbox));
-    await tester.pump();
-    await tester.tap(find.text('Enviar código'));
-    await tester.pump();
-    await tester.pump();
+      await tester.enterText(find.byType(TextFormField), '300 123 4567');
+      await tester.tap(find.byType(Checkbox));
+      await tester.pump();
+      await tester.tap(find.text('Enviar código'));
+      await tester.pump();
+      await tester.pump();
 
-    expect(repo.requestCalls, <String>['+573001234567']);
-  });
+      expect(repo.requestCalls, <String>['+573001234567']);
+    },
+  );
 }

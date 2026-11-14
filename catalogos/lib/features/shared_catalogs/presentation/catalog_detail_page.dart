@@ -18,6 +18,9 @@ import '../domain/catalog_detail.dart';
 import '../domain/price_rule_calculator.dart';
 import '../domain/price_rules_contract.dart';
 import '../domain/reseller_banner.dart';
+import '../data/reseller_price_rules_repository.dart';
+import '../../../core/result/result.dart';
+import 'adjust_scope_sheet.dart';
 import 'catalog_design_tokens.dart';
 import 'catalog_detail_controller.dart';
 import 'catalog_detail_filter.dart';
@@ -102,7 +105,7 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(AppRoutes.home);
+      context.go(AppRoutes.buy);
     }
   }
 
@@ -132,11 +135,32 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
   }
 
   Future<void> _openCatalogWideAdjust(int totalProducts) async {
+    // Si el catálogo tiene subcategorías se pregunta el alcance; si falla la
+    // consulta o no hay, se abre el ajuste de todo el catálogo como siempre.
+    CatalogSubcategory? subcategory;
+    final subs = await ref
+        .read(resellerPriceRulesRepositoryProvider)
+        .getSubcategories(widget.catalogId);
+    if (!mounted) return;
+    if (subs case Ok<List<CatalogSubcategory>>(:final value)
+        when value.isNotEmpty) {
+      final AdjustScope? scope = await showAdjustScopeSheet(
+        context,
+        subcategories: value,
+        catalogRule: ref
+            .read(catalogPriceOverlayControllerProvider(widget.catalogId))
+            .value
+            ?.catalogRule,
+      );
+      if (scope == null || !mounted) return;
+      subcategory = scope.subcategory;
+    }
     final bool? changed = await context.push<bool>(
       AppRoutes.adjustPricesPath(widget.catalogId),
       extra: PriceAdjustmentArgs(
         catalogId: widget.catalogId,
         totalProductsHint: totalProducts,
+        subcategory: subcategory,
       ),
     );
     if (changed ?? false) {

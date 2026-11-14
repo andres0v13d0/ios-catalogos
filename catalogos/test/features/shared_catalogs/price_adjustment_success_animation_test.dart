@@ -27,7 +27,10 @@ class _FakeRepo extends ResellerPriceRulesRepository {
   @override
   Future<Result<PriceRulesSummary>> getRulesSummary(String catalogId) async =>
       const Ok<PriceRulesSummary>(
-        PriceRulesSummary(catalogRule: PriceRule(mode: PriceRuleMode.percent, value: 30), productRules: {}),
+        PriceRulesSummary(
+          catalogRule: PriceRule(mode: PriceRuleMode.percent, value: 30),
+          productRules: {},
+        ),
       );
 
   @override
@@ -35,6 +38,7 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
+    String? subcategoryId,
   }) async => const Ok<PriceRulesProductsPage>(
     PriceRulesProductsPage(
       total: 24,
@@ -54,14 +58,16 @@ class _FakeRepo extends ResellerPriceRulesRepository {
   );
 
   @override
-  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(String catalogId, PriceRule rule) async =>
-      const Ok<SavedCatalogRuleResult>(
-        SavedCatalogRuleResult(
-          rule: PriceRule(mode: PriceRuleMode.percent, value: 30),
-          affectedProductIds: <String>['p1'],
-          productsWithOwnRule: <String>[],
-        ),
-      );
+  Future<Result<SavedCatalogRuleResult>> upsertCatalogRule(
+    String catalogId,
+    PriceRule rule,
+  ) async => const Ok<SavedCatalogRuleResult>(
+    SavedCatalogRuleResult(
+      rule: PriceRule(mode: PriceRuleMode.percent, value: 30),
+      affectedProductIds: <String>['p1'],
+      productsWithOwnRule: <String>[],
+    ),
+  );
 }
 
 const _args = PriceAdjustmentArgs(catalogId: 'cat-1', totalProductsHint: 24);
@@ -71,12 +77,17 @@ Widget _wrap({required bool disableAnimations}) {
     initialLocation: '/catalog',
     routes: <RouteBase>[
       GoRoute(path: '/catalog', builder: (context, _) => const Text('catalog')),
-      GoRoute(path: '/adjust', builder: (context, _) => const PriceAdjustmentPage(args: _args)),
+      GoRoute(
+        path: '/adjust',
+        builder: (context, _) => const PriceAdjustmentPage(args: _args),
+      ),
     ],
   );
   router.push('/adjust');
   return ProviderScope(
-    overrides: [resellerPriceRulesRepositoryProvider.overrideWithValue(_FakeRepo())],
+    overrides: [
+      resellerPriceRulesRepositoryProvider.overrideWithValue(_FakeRepo()),
+    ],
     child: Builder(
       builder: (BuildContext context) {
         final MediaQueryData base = MediaQueryData.fromView(View.of(context));
@@ -104,30 +115,39 @@ Future<void> _reachDone(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('las ondas se animan y hacen bucle (sigue corriendo tras un periodo)', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
+  testWidgets(
+    'las ondas se animan y hacen bucle (sigue corriendo tras un periodo)',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
 
-    await _reachDone(tester);
+      await _reachDone(tester);
 
-    // Hay una animación en curso (entrada + ondas en bucle).
-    expect(tester.hasRunningAnimations, isTrue);
+      // Hay una animación en curso (entrada + ondas en bucle).
+      expect(tester.hasRunningAnimations, isTrue);
 
-    // Captura dos frames separados en el tiempo: deben diferir (las ondas se
-    // mueven). Comparamos las fases vía RepaintBoundary -> el CustomPaint se
-    // repinta, así que basta con comprobar que sigue habiendo animación tras
-    // avanzar más de un periodo completo (2.4s): el bucle no se detiene.
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(tester.hasRunningAnimations, isTrue);
+      // Captura dos frames separados en el tiempo: deben diferir (las ondas se
+      // mueven). Comparamos las fases vía RepaintBoundary -> el CustomPaint se
+      // repinta, así que basta con comprobar que sigue habiendo animación tras
+      // avanzar más de un periodo completo (2.4s): el bucle no se detiene.
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(tester.hasRunningAnimations, isTrue);
 
-    await tester.pump(const Duration(milliseconds: 2600)); // > un periodo
-    expect(tester.hasRunningAnimations, isTrue, reason: 'las ondas deben repetirse en bucle');
+      await tester.pump(const Duration(milliseconds: 2600)); // > un periodo
+      expect(
+        tester.hasRunningAnimations,
+        isTrue,
+        reason: 'las ondas deben repetirse en bucle',
+      );
 
-    expect(tester.takeException(), isNull);
-  });
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('con disableAnimations NO hay animación en bucle', (WidgetTester tester) async {
+  testWidgets('con disableAnimations NO hay animación en bucle', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -156,18 +176,20 @@ void main() {
     Size(390, 844),
     Size(430, 932),
   ]) {
-    testWidgets('estado "Listo" sin overflow en ${size.width.toInt()}x${size.height.toInt()}',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      'estado "Listo" sin overflow en ${size.width.toInt()}x${size.height.toInt()}',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await _reachDone(tester);
-      await tester.pump(const Duration(milliseconds: 800));
+        await _reachDone(tester);
+        await tester.pump(const Duration(milliseconds: 800));
 
-      expect(tester.takeException(), isNull);
-      // El check y el título están presentes (pantalla "Listo" renderizada).
-      expect(find.text('Precios actualizados'), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        // El check y el título están presentes (pantalla "Listo" renderizada).
+        expect(find.text('Precios actualizados'), findsOneWidget);
+      },
+    );
   }
 }

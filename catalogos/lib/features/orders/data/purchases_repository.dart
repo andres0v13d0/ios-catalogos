@@ -8,6 +8,7 @@ import '../../../core/network/error_interceptor.dart';
 import '../../../core/result/failure.dart';
 import '../../../core/result/result.dart';
 import '../../buy/cart_controller.dart';
+import '../../visitor/visitor_catalogs.dart' show SubmittedOrder;
 import '../domain/reseller_order.dart';
 
 /// UUID v4 para la idempotencia del carrito (sin dependencia nueva).
@@ -86,6 +87,63 @@ class PurchasesRepository {
       );
     } catch (e) {
       return Err<void>(UnknownFailure(cause: e));
+    }
+  }
+
+  /// Envía las líneas de UN catálogo como compra del revendedor y devuelve ese
+  /// pedido. Con el mismo [groupId] un reintento no duplica el pedido.
+  Future<Result<SubmittedOrder>> submitOne(
+    String groupId,
+    List<CartLine> lines, {
+    String? notes,
+  }) async {
+    try {
+      final Response<dynamic> r = await _dio.post<dynamic>(
+        '/reseller/app/purchases',
+        data: <String, dynamic>{
+          'clientGroupId': groupId,
+          'items': <Map<String, dynamic>>[
+            for (final CartLine l in lines)
+              <String, dynamic>{
+                'catalogId': l.catalogId,
+                'productId': l.productId,
+                'quantity': l.quantity,
+                if (l.color != null) 'color': l.color,
+                if (l.size != null) 'size': l.size,
+              },
+          ],
+          if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        },
+      );
+      final List<dynamic> orders =
+          ((r.data as Map)['orders'] as List<dynamic>?) ?? const <dynamic>[];
+      final Map<String, dynamic> o = orders.isEmpty
+          ? const <String, dynamic>{}
+          : Map<String, dynamic>.from(orders.first as Map);
+      return Ok<SubmittedOrder>(
+        SubmittedOrder(
+          orderId: o['orderId'] as String?,
+          number: (o['providerOrderNumber'] as num?)?.toInt() ?? 0,
+          total: (o['total'] as num?) ?? 0,
+        ),
+      );
+    } on DioException catch (e) {
+      final Object? body = e.response?.data;
+      final Object? m = body is Map ? body['message'] : null;
+      final String? msg = m is String
+          ? m
+          : (m is List && m.isNotEmpty ? '${m.first}' : null);
+      return Err<SubmittedOrder>(
+        msg != null
+            ? ServerFailure(
+                message: msg,
+                statusCode: e.response?.statusCode,
+                cause: e,
+              )
+            : _failureOf(e),
+      );
+    } catch (e) {
+      return Err<SubmittedOrder>(UnknownFailure(cause: e));
     }
   }
 

@@ -27,11 +27,7 @@ enum AuthStatus {
 
 /// Sesión del revendedor autenticado.
 class AuthSession {
-  const AuthSession({
-    required this.uid,
-    this.idToken,
-    this.phoneNumber,
-  });
+  const AuthSession({required this.uid, this.idToken, this.phoneNumber});
 
   /// UID de Firebase.
   final String uid;
@@ -133,5 +129,6 @@ final Provider<AuthUserService> authUserServiceProvider =
     Provider<AuthUserService>((Ref ref) => FirebaseAuthUserService());
 
 /// Provider del [SessionStore] (secure storage). Los tests lo sobreescriben.
-final Provider<SessionStore> sessionStoreProvider =
-    Provider<SessionStore>((Ref ref) => SecureSessionStore());
+final Provider<SessionStore> sessionStoreProvider = Provider<SessionStore>(
+  (Ref ref) => SecureSessionStore(),
+);

@@ -22,50 +22,47 @@ void main() {
       return client;
     }
 
-    test('adjunta "Authorization: Bearer <idToken>" cuando hay token',
-        () async {
-      dio = buildDio(StaticTokenProvider(token: 'id-token-123'));
+    test(
+      'adjunta "Authorization: Bearer <idToken>" cuando hay token',
+      () async {
+        dio = buildDio(StaticTokenProvider(token: 'id-token-123'));
 
-      // Responde eco de las cabeceras recibidas para poder verificarlas.
-      adapter.onGet(
-        '/me',
-        (server) => server.reply(200, {'ok': true}),
-      );
+        // Responde eco de las cabeceras recibidas para poder verificarlas.
+        adapter.onGet('/me', (server) => server.reply(200, {'ok': true}));
 
-      final response = await dio.get<Map<String, dynamic>>('/me');
+        final response = await dio.get<Map<String, dynamic>>('/me');
 
-      final sentAuth =
-          response.requestOptions.headers[AuthInterceptor.authorizationHeader];
-      expect(sentAuth, 'Bearer id-token-123');
-    });
+        final sentAuth = response
+            .requestOptions
+            .headers[AuthInterceptor.authorizationHeader];
+        expect(sentAuth, 'Bearer id-token-123');
+      },
+    );
 
-    test('no adjunta Authorization cuando no hay token (sesión ausente)',
-        () async {
-      dio = buildDio(StaticTokenProvider(token: null));
+    test(
+      'no adjunta Authorization cuando no hay token (sesión ausente)',
+      () async {
+        dio = buildDio(StaticTokenProvider(token: null));
 
-      adapter.onGet(
-        '/me',
-        (server) => server.reply(200, {'ok': true}),
-      );
+        adapter.onGet('/me', (server) => server.reply(200, {'ok': true}));
 
-      final response = await dio.get<Map<String, dynamic>>('/me');
+        final response = await dio.get<Map<String, dynamic>>('/me');
 
-      expect(
-        response.requestOptions.headers
-            .containsKey(AuthInterceptor.authorizationHeader),
-        isFalse,
-      );
-    });
+        expect(
+          response.requestOptions.headers.containsKey(
+            AuthInterceptor.authorizationHeader,
+          ),
+          isFalse,
+        );
+      },
+    );
 
     test('actualiza el token tras setToken (p. ej. login posterior)', () async {
       final provider = StaticTokenProvider(token: null);
       dio = buildDio(provider);
       provider.setToken('fresh-token');
 
-      adapter.onGet(
-        '/me',
-        (server) => server.reply(200, {'ok': true}),
-      );
+      adapter.onGet('/me', (server) => server.reply(200, {'ok': true}));
 
       final response = await dio.get<Map<String, dynamic>>('/me');
 

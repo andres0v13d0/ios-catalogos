@@ -55,6 +55,9 @@ class ResellerOrder {
     required this.saleTotal,
     required this.createdAt,
     required this.items,
+    this.buyerName,
+    this.buyerNote,
+    this.resellerNote,
   });
 
   final String id;
@@ -65,12 +68,27 @@ class ResellerOrder {
   final DateTime createdAt;
   final List<ResellerOrderItem> items;
 
+  /// Nombre del cliente (opcional) y nota que dejó al pedir.
+  final String? buyerName;
+  final String? buyerNote;
+
+  /// Nota privada del revendedor (la escribe él; el proveedor no la ve).
+  final String? resellerNote;
+
   /// Ganancia del revendedor (precio al cliente menos costo del proveedor).
   num get profit => saleTotal - costTotal;
 
   factory ResellerOrder.fromJson(Map<String, dynamic> j) {
     final num cost = num.tryParse('${j['totalAmount']}') ?? 0;
+    String? text(Object? v) {
+      final String t = '${v ?? ''}'.trim();
+      return t.isEmpty || t == 'null' ? null : t;
+    }
+
     return ResellerOrder(
+      buyerName: text(j['buyerNombre']),
+      buyerNote: text(j['notes']),
+      resellerNote: text(j['resellerNotes']),
       id: '${j['id']}',
       number: (j['providerOrderNumber'] as num?)?.toInt() ?? 0,
       status: OrderStatus.parse(j['status']),

@@ -22,8 +22,8 @@ abstract interface class TokenProvider {
 /// [resolver].
 class StaticTokenProvider implements TokenProvider {
   StaticTokenProvider({String? token, Future<String?> Function()? resolver})
-      : _token = token,
-        _resolver = resolver;
+    : _token = token,
+      _resolver = resolver;
 
   String? _token;
   final Future<String?> Function()? _resolver;

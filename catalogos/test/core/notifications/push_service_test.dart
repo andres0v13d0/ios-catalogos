@@ -2,7 +2,7 @@ import 'package:catalogos/app/app.dart';
 import 'package:catalogos/core/notifications/push_service.dart';
 import 'package:catalogos/core/storage/storage.dart';
 import 'package:catalogos/features/chat/conversation_page.dart';
-import 'package:catalogos/features/visitor/visitor_buy_page.dart';
+import 'package:catalogos/features/visitor/visitor_catalog_page.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

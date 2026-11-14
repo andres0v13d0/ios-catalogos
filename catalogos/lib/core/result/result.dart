@@ -25,27 +25,24 @@ sealed class Result<T> {
 
   /// Valor en caso de éxito o `null` si es un fallo.
   T? get valueOrNull => switch (this) {
-        Ok<T>(:final value) => value,
-        Err<T>() => null,
-      };
+    Ok<T>(:final value) => value,
+    Err<T>() => null,
+  };
 
   /// Fallo en caso de error o `null` si es un éxito.
   Failure? get failureOrNull => switch (this) {
-        Ok<T>() => null,
-        Err<T>(:final failure) => failure,
-      };
+    Ok<T>() => null,
+    Err<T>(:final failure) => failure,
+  };
 
   /// Transforma el valor de éxito preservando el fallo.
   Result<R> map<R>(R Function(T value) transform) => switch (this) {
-        Ok<T>(:final value) => Ok<R>(transform(value)),
-        Err<T>(:final failure) => Err<R>(failure),
-      };
+    Ok<T>(:final value) => Ok<R>(transform(value)),
+    Err<T>(:final failure) => Err<R>(failure),
+  };
 
   /// Colapsa el resultado a un único valor manejando ambos casos.
-  R fold<R>(
-    R Function(T value) onOk,
-    R Function(Failure failure) onErr,
-  ) =>
+  R fold<R>(R Function(T value) onOk, R Function(Failure failure) onErr) =>
       switch (this) {
         Ok<T>(:final value) => onOk(value),
         Err<T>(:final failure) => onErr(failure),

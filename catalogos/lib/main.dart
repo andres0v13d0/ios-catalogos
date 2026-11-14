@@ -62,9 +62,7 @@ Future<void> main() async {
   // persistido, restauramos `AuthStatus.signedIn` ANTES de montar la UI, para
   // que el router no rebote a `/login` tras un reinicio.
   final ProviderContainer container = ProviderContainer(
-    overrides: [
-      localCacheProvider.overrideWithValue(localCache),
-    ],
+    overrides: [localCacheProvider.overrideWithValue(localCache)],
   );
   await container.read(authStateProvider.notifier).restoreSession();
 
@@ -72,9 +70,7 @@ Future<void> main() async {
   // guard de "perfil incompleto" (tarea 1.13) esté resuelto al montar la UI.
   // No bloqueamos el arranque: se dispara en segundo plano.
   if (container.read(authStateProvider) == AuthStatus.signedIn) {
-    unawaited(
-      container.read(profileControllerProvider.notifier).loadProfile(),
-    );
+    unawaited(container.read(profileControllerProvider.notifier).loadProfile());
   }
 
   runApp(

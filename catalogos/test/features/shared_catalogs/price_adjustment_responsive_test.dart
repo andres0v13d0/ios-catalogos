@@ -36,6 +36,7 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
+    String? subcategoryId,
   }) async => const Ok<PriceRulesProductsPage>(
     PriceRulesProductsPage(
       total: 24,
@@ -44,7 +45,8 @@ class _FakeRepo extends ResellerPriceRulesRepository {
       products: <CatalogPriceRuleProduct>[
         CatalogPriceRuleProduct(
           id: 'p1',
-          nombre: 'Bolso de Mano con un nombre bastante largo para forzar truncado',
+          nombre:
+              'Bolso de Mano con un nombre bastante largo para forzar truncado',
           imagen: null,
           precioProveedor: <String, num>{'1': 12999},
           precioAjustado: <String, num>{'1': 16900},
@@ -77,12 +79,17 @@ Widget _wrap(PriceAdjustmentArgs args) {
     initialLocation: '/catalog',
     routes: <RouteBase>[
       GoRoute(path: '/catalog', builder: (context, _) => const Text('catalog')),
-      GoRoute(path: '/adjust', builder: (context, _) => PriceAdjustmentPage(args: args)),
+      GoRoute(
+        path: '/adjust',
+        builder: (context, _) => PriceAdjustmentPage(args: args),
+      ),
     ],
   );
   router.push('/adjust');
   return ProviderScope(
-    overrides: [resellerPriceRulesRepositoryProvider.overrideWithValue(_FakeRepo())],
+    overrides: [
+      resellerPriceRulesRepositoryProvider.overrideWithValue(_FakeRepo()),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -109,7 +116,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MediaQuery(
-        data: MediaQueryData(size: size, textScaler: TextScaler.linear(textScale)),
+        data: MediaQueryData(
+          size: size,
+          textScaler: TextScaler.linear(textScale),
+        ),
         child: _wrap(args),
       ),
     );
@@ -126,13 +136,27 @@ void main() {
           await pumpAt(
             tester,
             size: size,
-            args: const PriceAdjustmentArgs(catalogId: 'cat-1', totalProductsHint: 24),
+            args: const PriceAdjustmentArgs(
+              catalogId: 'cat-1',
+              totalProductsHint: 24,
+            ),
             textScale: scale,
           );
 
           expect(tester.takeException(), isNull);
           // Teclado completo: los 9 dígitos + 0 + borrar siempre presentes.
-          for (final d in <String>['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']) {
+          for (final d in <String>[
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
+            '0',
+          ]) {
             expect(
               find.byKey(ValueKey<String>('price_keypad_digit_$d')),
               findsOneWidget,
@@ -167,8 +191,22 @@ void main() {
           );
 
           expect(tester.takeException(), isNull);
-          for (final d in <String>['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']) {
-            expect(find.byKey(ValueKey<String>('price_keypad_digit_$d')), findsOneWidget);
+          for (final d in <String>[
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
+            '0',
+          ]) {
+            expect(
+              find.byKey(ValueKey<String>('price_keypad_digit_$d')),
+              findsOneWidget,
+            );
           }
           expect(find.text('Guardar para este producto'), findsOneWidget);
           expect(find.text('Solo este producto'), findsOneWidget);
@@ -182,7 +220,10 @@ void main() {
           await pumpAt(
             tester,
             size: size,
-            args: const PriceAdjustmentArgs(catalogId: 'cat-1', totalProductsHint: 24),
+            args: const PriceAdjustmentArgs(
+              catalogId: 'cat-1',
+              totalProductsHint: 24,
+            ),
             textScale: scale,
           );
 

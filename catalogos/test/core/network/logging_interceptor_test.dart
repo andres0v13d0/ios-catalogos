@@ -70,10 +70,7 @@ void main() {
 
     test('500 → log con status=500 y ServerFailure propagado', () async {
       final (dio, adapter) = buildDio(devEnv);
-      adapter.onGet(
-        '/x',
-        (server) => server.reply(500, {'error': 'boom'}),
-      );
+      adapter.onGet('/x', (server) => server.reply(500, {'error': 'boom'}));
 
       Failure? propagated;
       try {
@@ -118,10 +115,7 @@ void main() {
     test('cuerpo largo se trunca con longitud original anotada', () async {
       final (dio, adapter) = buildDio(devEnv);
       final longValue = 'x' * 1000;
-      adapter.onGet(
-        '/big',
-        (server) => server.reply(400, {'data': longValue}),
-      );
+      adapter.onGet('/big', (server) => server.reply(400, {'data': longValue}));
 
       try {
         await dio.get<dynamic>('/big');

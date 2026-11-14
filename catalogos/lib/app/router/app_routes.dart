@@ -2,7 +2,7 @@
 ///
 /// Centraliza los paths para evitar strings mágicos repartidos por la UI.
 /// En Fase 0.5 definimos las dos rutas mínimas que exige el CA:
-/// `/login` (no autenticado) y `/home` (autenticado). Fases posteriores
+/// `/login` (no autenticado) y `/comprar` (autenticado). Fases posteriores
 /// añadirán rutas de pedidos, clientes, catálogos generales, etc.
 abstract final class AppRoutes {
   const AppRoutes._();
@@ -37,16 +37,9 @@ abstract final class AppRoutes {
   static String visitorCatalogPath(String code) => '/comprar/c/$code';
 
   /// Productos de un catálogo en modo comprador (precios originales).
-  static const String buyCatalog = '/comprar/catalogo/:id';
-
-  static String buyCatalogPath(String catalogId) =>
-      '/comprar/catalogo/$catalogId';
 
   /// Pestaña "Pedidos": recibidos de clientes y compras propias.
   static const String orders = '/pedidos';
-
-  /// Pestaña "Vender" (home actual de catálogos, autenticada).
-  static const String home = '/home';
 
   /// Ruta "Cuenta": número del revendedor, cerrar sesión, eliminar cuenta.
   static const String accountSettings = '/account-settings';

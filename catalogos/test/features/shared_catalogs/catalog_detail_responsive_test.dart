@@ -54,7 +54,8 @@ class _FakeOverlayController extends CatalogPriceOverlayController {
   _FakeOverlayController() : super(_catalogId);
 
   @override
-  Future<CatalogPriceOverlayState> build() async => CatalogPriceOverlayState.empty;
+  Future<CatalogPriceOverlayState> build() async =>
+      CatalogPriceOverlayState.empty;
 }
 
 /// Overlay POBLADO: cada producto tiene precio del proveedor Y ajustado
@@ -74,7 +75,9 @@ class _FakeOverlayWithRules extends CatalogPriceOverlayController {
           nombre: p.nombre,
           imagen: null,
           precioProveedor: <String, num>{'1': 20000},
-          precioAjustado: <String, num>{'1': 26000}, // +30%, distinto del proveedor
+          precioAjustado: <String, num>{
+            '1': 26000,
+          }, // +30%, distinto del proveedor
           reglaOrigen: RuleOrigin.catalog,
         ),
     },

@@ -132,13 +132,13 @@ class BackendAuthRepository implements AuthRepository {
     switch (statusCode) {
       case 400:
         return ValidationFailure(
-          message: _backendMessage(body) ??
-              'El código ingresado no es válido. Verifícalo e inténtalo de nuevo.',
+          message: _backendMessage(body) ?? 'El código ingresado no es válido. Verifícalo e inténtalo de nuevo.',
           cause: e,
         );
       case 429:
         return LockedFailure(
-          message: _backendMessage(body) ??
+          message:
+              _backendMessage(body) ??
               'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
           retryAfterSeconds: _secondsFrom(body),
           cause: e,
@@ -183,6 +183,7 @@ class BackendAuthRepository implements AuthRepository {
 
 /// Provider del [AuthRepository] real, construido con el [Dio] de la app.
 /// Los tests lo sobreescriben con un fake (o con un Dio + DioAdapter mock).
-final Provider<AuthRepository> authRepositoryProvider = Provider<AuthRepository>(
-  (Ref ref) => BackendAuthRepository(ref.watch(dioProvider)),
-);
+final Provider<AuthRepository> authRepositoryProvider =
+    Provider<AuthRepository>(
+      (Ref ref) => BackendAuthRepository(ref.watch(dioProvider)),
+    );

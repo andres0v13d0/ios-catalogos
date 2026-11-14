@@ -208,8 +208,9 @@ class AuthController extends Notifier<AuthFlowState> {
     switch (result) {
       case Ok<VerifyCodeResult>(:final value):
         try {
-          final signIn =
-              await _authUserService.signInWithCustomToken(value.customToken);
+          final signIn = await _authUserService.signInWithCustomToken(
+            value.customToken,
+          );
           _promoteSession(signIn, isNewProfile: value.isNewProfile);
           return true;
         } on SignInWithCustomTokenException catch (e) {
@@ -238,7 +239,9 @@ class AuthController extends Notifier<AuthFlowState> {
       failure is LockedFailure ? failure.retryAfterSeconds : null;
 
   void _promoteSession(SignInResult result, {required bool isNewProfile}) {
-    ref.read(authStateProvider.notifier).signInWithToken(
+    ref
+        .read(authStateProvider.notifier)
+        .signInWithToken(
           uid: result.uid,
           idToken: result.idToken,
           phoneNumber: result.phoneNumber ?? state.phoneNumberE164,

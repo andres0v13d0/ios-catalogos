@@ -25,13 +25,14 @@ class FakeAuthRepository implements AuthRepository {
     this.requestFailure,
     this.verifyFailure,
     Reseller? reseller,
-  }) : reseller = reseller ??
-            const Reseller(
-              id: 7,
-              telefonoE164: '+573001234567',
-              countryCode: 'CO',
-              nombre: 'Juan',
-            );
+  }) : reseller =
+           reseller ??
+           const Reseller(
+             id: 7,
+             telefonoE164: '+573001234567',
+             countryCode: 'CO',
+             nombre: 'Juan',
+           );
 
   /// Código considerado correcto en [verifyCode].
   final String validCode;
@@ -56,9 +57,9 @@ class FakeAuthRepository implements AuthRepository {
       <({String phone, String code})>[];
 
   RequestCodeResult get _ok => RequestCodeResult(
-        expiresInSeconds: expiresInSeconds,
-        resendAvailableInSeconds: resendAvailableInSeconds,
-      );
+    expiresInSeconds: expiresInSeconds,
+    resendAvailableInSeconds: resendAvailableInSeconds,
+  );
 
   @override
   Future<Result<RequestCodeResult>> requestCode({

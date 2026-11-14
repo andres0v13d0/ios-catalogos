@@ -47,10 +47,7 @@ void main() {
 
   group('normalizeToE164 — códigos de país alternativos', () {
     test('usa el countryCode indicado para números nacionales', () {
-      expect(
-        normalizeToE164('4155552671', countryCode: '1'),
-        '+14155552671',
-      );
+      expect(normalizeToE164('4155552671', countryCode: '1'), '+14155552671');
     });
 
     test('Ecuador: descarta el 0 troncal del móvil (09xx -> +593 9xx)', () {

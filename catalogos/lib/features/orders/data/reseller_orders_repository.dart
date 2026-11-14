@@ -56,6 +56,23 @@ class ResellerOrdersRepository {
     }
   }
 
+  /// Nota privada del revendedor; texto vacío la borra.
+  Future<Result<ResellerOrder>> setNote(String id, String notes) async {
+    try {
+      final Response<dynamic> r = await _dio.patch<dynamic>(
+        '/reseller/app/orders/$id/notes',
+        data: <String, dynamic>{'notes': notes},
+      );
+      return Ok<ResellerOrder>(
+        ResellerOrder.fromJson(Map<String, dynamic>.from(r.data as Map)),
+      );
+    } on DioException catch (e) {
+      return Err<ResellerOrder>(_failureOf(e));
+    } catch (e) {
+      return Err<ResellerOrder>(UnknownFailure(cause: e));
+    }
+  }
+
   Failure _failureOf(DioException e) {
     final Object? attached = e.error;
     if (attached is Failure) return attached;

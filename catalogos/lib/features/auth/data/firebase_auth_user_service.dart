@@ -11,7 +11,7 @@ import '../domain/auth_user_service.dart';
 /// Firebase real.
 class FirebaseAuthUserService implements AuthUserService {
   FirebaseAuthUserService({FirebaseAuth? auth})
-      : _auth = auth ?? FirebaseAuth.instance;
+    : _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseAuth _auth;
 

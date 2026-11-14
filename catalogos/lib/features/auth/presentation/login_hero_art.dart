@@ -28,7 +28,11 @@ class LoginHeroArt extends StatelessWidget {
     return curve.transform(raw);
   }
 
-  Widget _popIn({required double progress, double angleDeg = 0, required Widget child}) {
+  Widget _popIn({
+    required double progress,
+    double angleDeg = 0,
+    required Widget child,
+  }) {
     final double opacity = progress.clamp(0.0, 1.0);
     final double scale = 0.7 + 0.3 * progress;
     return Opacity(
@@ -62,7 +66,9 @@ class LoginHeroArt extends StatelessWidget {
             top: 60,
             width: 410,
             height: 410,
-            child: AuthRadialGlow(color: Color(0x735DE0E6)), // rgba(93,224,230,0.45)
+            child: AuthRadialGlow(
+              color: Color(0x735DE0E6),
+            ), // rgba(93,224,230,0.45)
           ),
           // Círculo verde de fondo.
           const Positioned(
@@ -70,7 +76,9 @@ class LoginHeroArt extends StatelessWidget {
             top: 250,
             width: 150,
             height: 150,
-            child: AuthFlatGlow(color: Color(0x2E00FF94)), // rgba(0,255,148,0.18)
+            child: AuthFlatGlow(
+              color: Color(0x2E00FF94),
+            ), // rgba(0,255,148,0.18)
           ),
 
           // Cabecera: cubo + "FLYmovil".
@@ -78,10 +86,7 @@ class LoginHeroArt extends StatelessWidget {
             left: 0,
             right: 0,
             top: 48,
-            child: Opacity(
-              opacity: headerT,
-              child: const _HeroHeader(),
-            ),
+            child: Opacity(opacity: headerT, child: const _HeroHeader()),
           ),
 
           // Tarjeta izquierda (detrás).
@@ -150,10 +155,7 @@ class LoginHeroArt extends StatelessWidget {
           Positioned(
             right: 34,
             top: 332,
-            child: _popIn(
-              progress: labelsT,
-              child: const _CartBadge(),
-            ),
+            child: _popIn(progress: labelsT, child: const _CartBadge()),
           ),
         ],
       ),
@@ -199,11 +201,17 @@ class _HeroHeader extends StatelessWidget {
             children: <InlineSpan>[
               TextSpan(
                 text: 'FLY',
-                style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
               TextSpan(
                 text: '+',
-                style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.accent),
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.accent,
+                ),
               ),
             ],
           ),

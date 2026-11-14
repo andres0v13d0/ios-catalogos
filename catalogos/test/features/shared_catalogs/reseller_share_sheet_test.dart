@@ -5,24 +5,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:catalogos/features/shared_catalogs/domain/reseller_banner.dart';
 import 'package:catalogos/features/shared_catalogs/presentation/reseller_share_sheet.dart';
 
-ResellerBannerState _state({bool withBanner = false, bool hasPriceRules = false}) => ResellerBannerState(
-      catalogId: '7bbdc15f-d5dc-4277-a015-0358e6e3d2c7',
-      shareLink: 'https://share.minymol.com/NYyndtvhMda0',
-      publicName: 'Colección Primavera',
-      hasPriceRules: hasPriceRules,
-      ownBannerUrl: withBanner ? 'https://cdn.minymol.com/catalog-banners/og/mine.jpg' : null,
-      providerImageUrl: 'https://cdn.minymol.com/banners/proveedor.jpg',
-    );
+ResellerBannerState _state({
+  bool withBanner = false,
+  bool hasPriceRules = false,
+}) => ResellerBannerState(
+  catalogId: '7bbdc15f-d5dc-4277-a015-0358e6e3d2c7',
+  shareLink: 'https://share.minymol.com/NYyndtvhMda0',
+  publicName: 'Colección Primavera',
+  hasPriceRules: hasPriceRules,
+  ownBannerUrl: withBanner
+      ? 'https://cdn.minymol.com/catalog-banners/og/mine.jpg'
+      : null,
+  providerImageUrl: 'https://cdn.minymol.com/banners/proveedor.jpg',
+);
 
 void main() {
   setUp(() {
     // Captura las escrituras al portapapeles sin plugin real.
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (MethodCall call) async {
-        return null; // Clipboard.setData / HapticFeedback => no-op.
-      },
-    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (
+          MethodCall call,
+        ) async {
+          return null; // Clipboard.setData / HapticFeedback => no-op.
+        });
   });
 
   Future<void> openSheet(
@@ -67,15 +72,23 @@ void main() {
 
   testWidgets('subtítulo cambia según haya reglas de precio', (tester) async {
     await openSheet(tester, banner: _state(hasPriceRules: true));
-    expect(find.text('Tus clientes verán tus precios ajustados.'), findsOneWidget);
+    expect(
+      find.text('Tus clientes verán tus precios ajustados.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('sin reglas de precio: subtítulo del proveedor', (tester) async {
     await openSheet(tester, banner: _state(hasPriceRules: false));
-    expect(find.text('Tus clientes verán el catálogo del proveedor.'), findsOneWidget);
+    expect(
+      find.text('Tus clientes verán el catálogo del proveedor.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('Copiar -> "Copiado" + aviso "¡Enlace copiado!" que desaparece', (tester) async {
+  testWidgets('Copiar -> "Copiado" + aviso "¡Enlace copiado!" que desaparece', (
+    tester,
+  ) async {
     await openSheet(tester, banner: _state());
 
     expect(find.text('Compartir catálogo'), findsOneWidget);
@@ -95,7 +108,9 @@ void main() {
     expect(find.text('¡Enlace copiado!'), findsNothing);
   });
 
-  testWidgets('Enviar por WhatsApp usa wa.me con el texto y el enlace', (tester) async {
+  testWidgets('Enviar por WhatsApp usa wa.me con el texto y el enlace', (
+    tester,
+  ) async {
     final launched = <Uri>[];
     await openSheet(tester, banner: _state(), launched: launched);
 
@@ -109,9 +124,16 @@ void main() {
     expect(text, contains('share.minymol.com/NYyndtvhMda0'));
   });
 
-  testWidgets('si WhatsApp no abre, cae a la hoja nativa de compartir', (tester) async {
+  testWidgets('si WhatsApp no abre, cae a la hoja nativa de compartir', (
+    tester,
+  ) async {
     final shared = <String>[];
-    await openSheet(tester, banner: _state(), shared: shared, launchSucceeds: false);
+    await openSheet(
+      tester,
+      banner: _state(),
+      shared: shared,
+      launchSucceeds: false,
+    );
 
     await tester.tap(find.text('Enviar por WhatsApp'));
     await tester.pump();
@@ -120,11 +142,16 @@ void main() {
     expect(shared.first, contains('share.minymol.com/NYyndtvhMda0'));
   });
 
-  testWidgets('con banner propio, el enlace copiado incluye ?v= (rompe caché)', (tester) async {
+  testWidgets('con banner propio, el enlace copiado incluye ?v= (rompe caché)', (
+    tester,
+  ) async {
     final banner = _state(withBanner: true);
     // El enlace completo que se comparte debe incluir el parámetro de versión.
     expect(banner.shareLinkWithCacheBust, contains('?v='));
-    expect(banner.shareLinkWithCacheBust, startsWith('https://share.minymol.com/NYyndtvhMda0'));
+    expect(
+      banner.shareLinkWithCacheBust,
+      startsWith('https://share.minymol.com/NYyndtvhMda0'),
+    );
 
     // Sin banner propio, no se añade ?v=.
     expect(_state().shareLinkWithCacheBust, isNot(contains('?v=')));

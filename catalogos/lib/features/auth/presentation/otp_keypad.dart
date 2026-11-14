@@ -32,11 +32,7 @@ class OtpKeypad extends StatelessWidget {
   final EdgeInsets padding;
   final double gap;
 
-  static const List<String> _digitRows = <String>[
-    '123',
-    '456',
-    '789',
-  ];
+  static const List<String> _digitRows = <String>['123', '456', '789'];
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +90,11 @@ class OtpKeypad extends StatelessWidget {
 }
 
 class _KeypadRow extends StatelessWidget {
-  const _KeypadRow({required this.children, required this.height, required this.gap});
+  const _KeypadRow({
+    required this.children,
+    required this.height,
+    required this.gap,
+  });
 
   final List<Widget> children;
   final double height;
@@ -207,7 +207,9 @@ class _BackspaceKey extends StatelessWidget {
               child: SizedBox(
                 width: 26,
                 height: 26,
-                child: CustomPaint(painter: BackspacePainter(color: Colors.white)),
+                child: CustomPaint(
+                  painter: BackspacePainter(color: Colors.white),
+                ),
               ),
             ),
           ),

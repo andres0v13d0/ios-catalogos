@@ -36,8 +36,11 @@ void main() {
         await dio.get<dynamic>('/resource');
         fail('Se esperaba una DioException para el status $status');
       } on DioException catch (e) {
-        expect(e.error, isA<Failure>(),
-            reason: 'El ErrorInterceptor debe adjuntar un Failure');
+        expect(
+          e.error,
+          isA<Failure>(),
+          reason: 'El ErrorInterceptor debe adjuntar un Failure',
+        );
         return e.error as Failure;
       }
     }
@@ -95,7 +98,10 @@ void main() {
 
       final failure = mapDioExceptionToFailure(err);
       expect(failure, isA<RateLimitFailure>());
-      expect((failure as RateLimitFailure).retryAfter, const Duration(seconds: 30));
+      expect(
+        (failure as RateLimitFailure).retryAfter,
+        const Duration(seconds: 30),
+      );
     });
 
     test('timeout de conexión → NetworkFailure', () {

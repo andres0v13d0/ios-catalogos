@@ -5,12 +5,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/brand_header.dart';
+import '../../auth/presentation/auth_state_provider.dart';
+import '../../visitor/visitor_orders.dart';
 import '../domain/reseller_order.dart';
-import '../../buy/cart_controller.dart';
 import 'orders_controller.dart';
 import 'purchases_controller.dart';
 
-/// Pestaña "Pedidos": Recibidos (de mis clientes) y Mis compras (próximamente).
+/// Pestaña "Pedidos": con sesión, Recibidos (de mis clientes) y Mis compras;
+/// sin sesión, solo los pedidos hechos en este celular.
 class OrdersPage extends ConsumerStatefulWidget {
   const OrdersPage({super.key});
 
@@ -24,6 +26,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!ref.watch(isSignedInProvider)) return const VisitorOrdersPage();
     final List<ResellerOrder> orders =
         ref.watch(resellerOrdersControllerProvider).value ??
         const <ResellerOrder>[];
@@ -77,7 +80,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           ),
           Expanded(
             child: _purchases
-                ? const Center(child: Text('Próximamente'))
+                ? const _PurchasesList()
                 : _ReceivedOrders(
                     filter: _filter,
                     onFilter: (OrderStatus? s) => setState(() => _filter = s),
@@ -320,7 +323,41 @@ class _OrderSheet extends ConsumerStatefulWidget {
 
 class _OrderSheetState extends ConsumerState<_OrderSheet> {
   bool _busy = false;
+  bool _savingNote = false;
   String? _error;
+  late final TextEditingController _note = TextEditingController(
+    text: ref
+        .read(resellerOrdersControllerProvider)
+        .value
+        ?.where((ResellerOrder o) => o.id == widget.orderId)
+        .firstOrNull
+        ?.resellerNote,
+  );
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveNote() async {
+    setState(() {
+      _savingNote = true;
+      _error = null;
+    });
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final String? err = await ref
+        .read(resellerOrdersControllerProvider.notifier)
+        .setNote(widget.orderId, _note.text);
+    if (!mounted) return;
+    setState(() {
+      _savingNote = false;
+      _error = err;
+    });
+    if (err == null) {
+      messenger.showSnackBar(const SnackBar(content: Text('Nota guardada.')));
+    }
+  }
 
   Future<void> _set(OrderStatus s) async {
     setState(() {
@@ -349,8 +386,13 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
         order.status == OrderStatus.pending ||
         order.status == OrderStatus.confirmed;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,6 +403,9 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
             ),
             const SizedBox(height: 4),
             Text(order.status.label),
+            if (order.buyerName != null) Text('Cliente: ${order.buyerName}'),
+            if (order.buyerNote != null)
+              Text('Nota del cliente: ${order.buyerNote}'),
             const Divider(height: 24),
             for (final ResellerOrderItem it in order.items)
               Padding(
@@ -377,6 +422,32 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
             Text(
               'Tu ganancia: ${formatCop(order.profit)}',
               style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _note,
+              minLines: 1,
+              maxLines: 4,
+              maxLength: 1000,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Mi nota (solo tú la ves)',
+                hintText: 'Ej.: entregar a Laura',
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _savingNote ? null : _saveNote,
+                icon: _savingNote
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(LucideIcons.save, size: 18),
+                label: const Text('Guardar nota'),
+              ),
             ),
             if (_error != null)
               Padding(
@@ -416,137 +487,92 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
   }
 }
 
-/// "Mis compras": carrito pendiente de enviar + pedidos ya enviados a proveedores.
-class _MyPurchases extends ConsumerStatefulWidget {
-  const _MyPurchases();
+/// "Mis compras": pedidos que el revendedor hizo a proveedores (guardados en su cuenta).
+class _PurchasesList extends ConsumerWidget {
+  const _PurchasesList();
 
   @override
-  ConsumerState<_MyPurchases> createState() => _MyPurchasesState();
-}
-
-class _MyPurchasesState extends ConsumerState<_MyPurchases> {
-  bool _sending = false;
-  String? _error;
-
-  Future<void> _send() async {
-    setState(() {
-      _sending = true;
-      _error = null;
-    });
-    final String? err = await ref
-        .read(purchasesControllerProvider.notifier)
-        .submitCart();
-    if (!mounted) return;
-    setState(() {
-      _sending = false;
-      _error = err;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final List<CartLine> cart = ref.watch(cartControllerProvider);
-    final AsyncValue<List<ResellerOrder>> sent = ref.watch(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<ResellerOrder>> async = ref.watch(
       purchasesControllerProvider,
     );
-    final num estimate = cart.fold<num>(
-      0,
-      (num a, CartLine l) => a + (l.unitPrice ?? 0) * l.quantity,
-    );
-    return RefreshIndicator(
-      onRefresh: () => ref.read(purchasesControllerProvider.notifier).refresh(),
-      child: ListView(
-        padding: const EdgeInsets.all(12),
-        children: <Widget>[
-          Text('Carrito', style: Theme.of(context).textTheme.titleMedium),
-          if (cart.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Vacío. Agrega productos desde la pestaña Comprar.'),
-            )
-          else
-            Card(
-              child: Column(
-                children: <Widget>[
-                  for (final CartLine l in cart)
-                    ListTile(
-                      title: Text('${l.quantity} × ${l.name}'),
-                      subtitle: Text(
-                        <String>[l.catalogName, ?l.color, ?l.size].join(' · '),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(LucideIcons.trash2),
-                        onPressed: () => ref
-                            .read(cartControllerProvider.notifier)
-                            .remove(l.key),
-                      ),
-                    ),
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (Object e, _) => Center(
+        child: TextButton(
+          onPressed: () => ref.invalidate(purchasesControllerProvider),
+          child: const Text('No pudimos cargar tus compras. Reintentar'),
+        ),
+      ),
+      data: (List<ResellerOrder> orders) => RefreshIndicator(
+        onRefresh: () =>
+            ref.read(purchasesControllerProvider.notifier).refresh(),
+        child: orders.isEmpty
+            ? ListView(
+                children: const <Widget>[
+                  SizedBox(height: 100),
+                  Icon(
+                    LucideIcons.receiptText,
+                    size: 40,
+                    color: Color(0xFF5B6B84),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'Total estimado: ${formatCop(estimate)} (el servidor confirma el precio final)',
-                        ),
-                        if (_error != null)
-                          Text(
-                            _error!,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _sending ? null : _send,
-                            child: Text(
-                              _sending ? 'Enviando…' : 'Enviar pedido',
-                            ),
-                          ),
-                        ),
-                      ],
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Aún no has hecho compras. Pide desde un catálogo en la pestaña Comprar y las verás aquí.',
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                itemCount: orders.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (_, int i) => _PurchaseCard(order: orders[i]),
+              ),
+      ),
+    );
+  }
+}
+
+class _PurchaseCard extends StatelessWidget {
+  const _PurchaseCard({required this.order});
+
+  final ResellerOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final DateTime d = order.createdAt.toLocal();
+    return Material(
+      color: Colors.white,
+      elevation: 1.5,
+      shadowColor: const Color(0x14001634),
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
+        title: Text(
+          'Pedido #${order.number} · ${formatCop(order.costTotal)}',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          '${order.status.label} · ${d.day}/${d.month} · ${order.items.length} producto(s)',
+          style: const TextStyle(fontSize: 12, color: Color(0xFF5B6B84)),
+        ),
+        children: <Widget>[
+          for (final ResellerOrderItem it in order.items)
+            ListTile(
+              dense: true,
+              title: Text('${it.quantity} × ${it.name}'),
+              subtitle: Text(
+                <String>[
+                  ?it.color,
+                  if (it.size != null) 'Talla ${it.size}',
+                ].join(' · '),
               ),
             ),
-          const SizedBox(height: 16),
-          Text('Enviados', style: Theme.of(context).textTheme.titleMedium),
-          sent.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (Object e, _) => TextButton(
-              onPressed: () => ref.invalidate(purchasesControllerProvider),
-              child: const Text('No pudimos cargar tus compras. Reintentar'),
-            ),
-            data: (List<ResellerOrder> orders) => orders.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('Aún no has enviado pedidos.'),
-                  )
-                : Column(
-                    children: <Widget>[
-                      for (final ResellerOrder o in orders)
-                        Card(
-                          child: ExpansionTile(
-                            title: Text(
-                              'Pedido #${o.number} · ${formatCop(o.costTotal)}',
-                            ),
-                            subtitle: Text(o.status.label),
-                            children: <Widget>[
-                              for (final ResellerOrderItem it in o.items)
-                                ListTile(
-                                  dense: true,
-                                  title: Text('${it.quantity} × ${it.name}'),
-                                ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-          ),
         ],
       ),
     );

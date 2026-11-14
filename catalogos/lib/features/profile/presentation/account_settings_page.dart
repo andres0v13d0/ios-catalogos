@@ -27,7 +27,7 @@ class AccountSettingsPage extends ConsumerWidget {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(AppRoutes.home);
+      context.go(AppRoutes.buy);
     }
   }
 

@@ -8,11 +8,10 @@ import 'package:catalogos/app/error_app.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('ErrorApp muestra el mensaje de fallo de inicialización',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ErrorApp(error: 'FirebaseException: boom'),
-    );
+  testWidgets('ErrorApp muestra el mensaje de fallo de inicialización', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ErrorApp(error: 'FirebaseException: boom'));
     await tester.pump();
 
     expect(find.text('No se pudo iniciar la aplicación'), findsOneWidget);

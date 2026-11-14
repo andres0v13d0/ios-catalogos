@@ -73,7 +73,8 @@ class _FakeOverlayController extends CatalogPriceOverlayController {
   _FakeOverlayController() : super(_catalogId);
 
   @override
-  Future<CatalogPriceOverlayState> build() async => CatalogPriceOverlayState.empty;
+  Future<CatalogPriceOverlayState> build() async =>
+      CatalogPriceOverlayState.empty;
 }
 
 void main() {
@@ -104,7 +105,8 @@ void main() {
             onRefreshCalled: onRefreshCalled,
           ),
         ),
-        catalogPriceOverlayControllerProvider(_catalogId).overrideWith(() => _FakeOverlayController()),
+        catalogPriceOverlayControllerProvider(_catalogId)
+            .overrideWith(() => _FakeOverlayController()),
       ],
       child: MaterialApp.router(routerConfig: router),
     );

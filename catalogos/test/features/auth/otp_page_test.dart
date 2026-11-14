@@ -47,18 +47,15 @@ Future<ProviderContainer> _pumpOtp(
   addTearDown(container.dispose);
 
   // Simula una solicitud previa para fijar el teléfono/estado en el controlador.
-  await container.read(authControllerProvider.notifier).sendCode(
-        rawPhone: '3001234567',
-      );
+  await container
+      .read(authControllerProvider.notifier)
+      .sendCode(rawPhone: '3001234567');
 
   // Router mínimo: OtpPage navega a /home al autenticar; proveemos ambas rutas.
   final router = GoRouter(
     initialLocation: '/otp',
     routes: <RouteBase>[
-      GoRoute(
-        path: '/otp',
-        builder: (context, state) => const OtpPage(),
-      ),
+      GoRoute(path: '/otp', builder: (context, state) => const OtpPage()),
       GoRoute(
         path: '/home',
         builder: (context, state) => const Scaffold(body: Text('home-stub')),
@@ -95,27 +92,33 @@ Future<void> _typeCode(WidgetTester tester, String code) async {
 }
 
 void main() {
-  testWidgets('reenvío deshabilitado durante el cooldown y habilitado después',
-      (WidgetTester tester) async {
-    final repo = FakeAuthRepository();
-    await _pumpOtp(tester, repo, FakeAuthUserService());
-    await tester.pump(const Duration(milliseconds: 600));
+  testWidgets(
+    'reenvío deshabilitado durante el cooldown y habilitado después',
+    (WidgetTester tester) async {
+      final repo = FakeAuthRepository();
+      await _pumpOtp(tester, repo, FakeAuthUserService());
+      await tester.pump(const Duration(milliseconds: 600));
 
-    // Durante el cooldown se muestra la cuenta regresiva; el enlace
-    // "Reenviar código" (tappable) todavía no aparece.
-    expect(find.textContaining('Puedes pedir otro código en'), findsOneWidget);
-    expect(find.text('Reenviar código'), findsNothing);
+      // Durante el cooldown se muestra la cuenta regresiva; el enlace
+      // "Reenviar código" (tappable) todavía no aparece.
+      expect(
+        find.textContaining('Puedes pedir otro código en'),
+        findsOneWidget,
+      );
+      expect(find.text('Reenviar código'), findsNothing);
 
-    // Avanza más allá del cooldown (60s) para que se habilite.
-    await tester.pump(const Duration(seconds: 61));
-    await tester.pump();
+      // Avanza más allá del cooldown (60s) para que se habilite.
+      await tester.pump(const Duration(seconds: 61));
+      await tester.pump();
 
-    expect(find.text('Reenviar código'), findsOneWidget);
-    expect(find.textContaining('Puedes pedir otro código en'), findsNothing);
-  });
+      expect(find.text('Reenviar código'), findsOneWidget);
+      expect(find.textContaining('Puedes pedir otro código en'), findsNothing);
+    },
+  );
 
-  testWidgets('código correcto transiciona a sesión iniciada',
-      (WidgetTester tester) async {
+  testWidgets('código correcto transiciona a sesión iniciada', (
+    WidgetTester tester,
+  ) async {
     final repo = FakeAuthRepository(validCode: '123456');
     final container = await _pumpOtp(tester, repo, FakeAuthUserService());
     await tester.pump(const Duration(milliseconds: 600));
@@ -128,8 +131,7 @@ void main() {
     expect(container.read(authStateProvider), AuthStatus.signedIn);
   });
 
-  testWidgets('código incorrecto muestra error',
-      (WidgetTester tester) async {
+  testWidgets('código incorrecto muestra error', (WidgetTester tester) async {
     final repo = FakeAuthRepository(validCode: '123456');
     final container = await _pumpOtp(tester, repo, FakeAuthUserService());
     await tester.pump(const Duration(milliseconds: 600));

@@ -88,7 +88,10 @@ void main() {
 
       expect(result, isA<Ok<PriceRulesSummary>>());
       final summary = (result as Ok<PriceRulesSummary>).value;
-      expect(summary.catalogRule, const PriceRule(mode: PriceRuleMode.percent, value: 30));
+      expect(
+        summary.catalogRule,
+        const PriceRule(mode: PriceRuleMode.percent, value: 30),
+      );
       expect(
         summary.productRules['p9'],
         const PriceRule(mode: PriceRuleMode.fixed, value: 5000),
@@ -155,7 +158,8 @@ void main() {
     test('403 → catálogo no disponible para este revendedor', () async {
       adapter.onPut(
         '/reseller/app/catalogs/cat-1/price-rules',
-        (server) => server.reply(403, <String, dynamic>{'message': 'Forbidden'}),
+        (server) =>
+            server.reply(403, <String, dynamic>{'message': 'Forbidden'}),
         data: <String, dynamic>{'mode': 'percent', 'value': 30},
       );
 
@@ -192,7 +196,9 @@ void main() {
         (server) => server.throws(
           0,
           DioException.connectionError(
-            requestOptions: RequestOptions(path: '/reseller/app/catalogs/cat-1/price-rules'),
+            requestOptions: RequestOptions(
+              path: '/reseller/app/catalogs/cat-1/price-rules',
+            ),
             reason: 'Failed host lookup',
           ),
         ),
@@ -204,7 +210,10 @@ void main() {
         const PriceRule(mode: PriceRuleMode.percent, value: 30),
       );
 
-      expect((result as Err<SavedCatalogRuleResult>).failure, isA<NetworkFailure>());
+      expect(
+        (result as Err<SavedCatalogRuleResult>).failure,
+        isA<NetworkFailure>(),
+      );
     });
   });
 
@@ -212,7 +221,8 @@ void main() {
     test('404 → producto ajeno al catálogo', () async {
       adapter.onPut(
         '/reseller/app/catalogs/cat-1/products/px/price-rule',
-        (server) => server.reply(404, <String, dynamic>{'message': 'Not found'}),
+        (server) =>
+            server.reply(404, <String, dynamic>{'message': 'Not found'}),
         data: <String, dynamic>{'mode': 'fixed', 'value': 5000},
       );
 
@@ -261,7 +271,8 @@ void main() {
     test('deleteProductRule 403 catálogo ajeno', () async {
       adapter.onDelete(
         '/reseller/app/catalogs/cat-1/products/p1/price-rule',
-        (server) => server.reply(403, <String, dynamic>{'message': 'Forbidden'}),
+        (server) =>
+            server.reply(403, <String, dynamic>{'message': 'Forbidden'}),
       );
 
       final result = await repo.deleteProductRule('cat-1', 'p1');

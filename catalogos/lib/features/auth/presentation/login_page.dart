@@ -125,7 +125,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
     }
     setState(() => _formatError = null);
     _navigatedToOtp = false;
-    await ref.read(authControllerProvider.notifier).sendCode(
+    await ref
+        .read(authControllerProvider.notifier)
+        .sendCode(
           rawPhone: _phoneController.text,
           countryCode: _country.dialCode,
         );
@@ -154,7 +156,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
             const SizedBox(height: 12),
             for (final _Country country in _countries)
               ListTile(
-                leading: Text(country.flag, style: const TextStyle(fontSize: 22)),
+                leading: Text(
+                  country.flag,
+                  style: const TextStyle(fontSize: 22),
+                ),
                 title: Text(country.name),
                 trailing: Text(
                   '+${country.dialCode}',
@@ -233,7 +238,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         ),
                       ),
                       ConstrainedBox(
-                        constraints: BoxConstraints(maxHeight: constraints.maxHeight),
+                        constraints: BoxConstraints(
+                          maxHeight: constraints.maxHeight,
+                        ),
                         child: SingleChildScrollView(
                           // Ancla al final: si no cabe todo, lo que se oculta
                           // primero es el título/subtítulo, nunca el campo ni
@@ -249,7 +256,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             isSending: auth.isSending,
                             onSubmit: _onSubmit,
                             accepted: _accepted,
-                            onAcceptedChanged: (v) => setState(() => _accepted = v),
+                            onAcceptedChanged: (v) =>
+                                setState(() => _accepted = v),
                           ),
                         ),
                       ),
@@ -292,10 +300,10 @@ class _BottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Animation<Offset> slide = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: introController, curve: Curves.easeOutCubic));
+    final Animation<Offset> slide =
+        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
+          CurvedAnimation(parent: introController, curve: Curves.easeOutCubic),
+        );
 
     return SlideTransition(
       position: slide,
@@ -393,7 +401,9 @@ class _BottomSheet extends StatelessWidget {
               padding: const EdgeInsets.only(top: 16),
               child: AuthGradientButton(
                 label: 'Enviar código',
-                iconPainter: const ArrowForwardPainter(color: AppColors.primary),
+                iconPainter: const ArrowForwardPainter(
+                  color: AppColors.primary,
+                ),
                 enabled: !isSending && accepted,
                 loading: isSending,
                 onPressed: onSubmit,
@@ -421,9 +431,15 @@ class _BottomSheet extends StatelessWidget {
                           const _LegalText('Acepto los '),
                           const _LegalLink('Términos', 'terminos'),
                           const _LegalText(', la '),
-                          const _LegalLink('Política de privacidad', 'privacidad'),
+                          const _LegalLink(
+                            'Política de privacidad',
+                            'privacidad',
+                          ),
                           const _LegalText(' y el '),
-                          const _LegalLink('Tratamiento de datos', 'tratamiento-datos'),
+                          const _LegalLink(
+                            'Tratamiento de datos',
+                            'tratamiento-datos',
+                          ),
                           const _LegalText('.'),
                         ],
                       ),
@@ -479,7 +495,9 @@ class _CountryButton extends StatelessWidget {
                 const SizedBox(
                   width: 14,
                   height: 14,
-                  child: CustomPaint(painter: ChevronDownPainter(color: AppColors.primary)),
+                  child: CustomPaint(
+                    painter: ChevronDownPainter(color: AppColors.primary),
+                  ),
                 ),
               ],
             ),
@@ -526,19 +544,34 @@ class _PhoneField extends StatelessWidget {
             filled: true,
             fillColor: Colors.white,
             hintText: '300 123 4567',
-            hintStyle: const TextStyle(color: AuthPalette.hint, fontWeight: FontWeight.w500),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+            hintStyle: const TextStyle(
+              color: AuthPalette.hint,
+              fontWeight: FontWeight.w500,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 18,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AuthPalette.fieldBorder, width: 1.5),
+              borderSide: const BorderSide(
+                color: AuthPalette.fieldBorder,
+                width: 1.5,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AuthPalette.fieldBorder, width: 1.5),
+              borderSide: const BorderSide(
+                color: AuthPalette.fieldBorder,
+                width: 1.5,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.secondary, width: 2),
+              borderSide: const BorderSide(
+                color: AppColors.secondary,
+                width: 2,
+              ),
             ),
           ),
           onFieldSubmitted: (_) => onSubmitted(),
@@ -548,16 +581,19 @@ class _PhoneField extends StatelessWidget {
   }
 }
 
-
 class _LegalText extends StatelessWidget {
   const _LegalText(this.text);
   final String text;
 
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(fontSize: 12, color: AuthPalette.textMuted, height: 1.5),
-      );
+    text,
+    style: const TextStyle(
+      fontSize: 12,
+      color: AuthPalette.textMuted,
+      height: 1.5,
+    ),
+  );
 }
 
 class _LegalLink extends StatelessWidget {
@@ -567,19 +603,19 @@ class _LegalLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: () => launchUrl(
-          Uri.parse('https://catalogos.flystock.com.co/$path'),
-          mode: LaunchMode.externalApplication,
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            fontWeight: FontWeight.w600,
-            decoration: TextDecoration.underline,
-            color: AppColors.primary,
-          ),
-        ),
-      );
+    onTap: () => launchUrl(
+      Uri.parse('https://catalogos.flystock.com.co/$path'),
+      mode: LaunchMode.externalApplication,
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        height: 1.5,
+        fontWeight: FontWeight.w600,
+        decoration: TextDecoration.underline,
+        color: AppColors.primary,
+      ),
+    ),
+  );
 }

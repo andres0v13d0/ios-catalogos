@@ -82,14 +82,20 @@ _pumpSettings(WidgetTester tester, {bool deleteSucceeds = true}) async {
   final profile = _FakeProfileController(deleteSucceeds: deleteSucceeds);
 
   final GoRouter router = GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/inicio',
     routes: <RouteBase>[
-      GoRoute(path: AppRoutes.home, builder: (context, _) => const Text('home-stub')),
+      GoRoute(
+        path: '/inicio',
+        builder: (context, _) => const Text('home-stub'),
+      ),
       GoRoute(
         path: AppRoutes.accountSettings,
         builder: (context, _) => const AccountSettingsPage(),
       ),
-      GoRoute(path: AppRoutes.buy, builder: (context, _) => const Text('login-stub')),
+      GoRoute(
+        path: AppRoutes.buy,
+        builder: (context, _) => const Text('login-stub'),
+      ),
     ],
   );
 
@@ -107,11 +113,18 @@ _pumpSettings(WidgetTester tester, {bool deleteSucceeds = true}) async {
   await tester.pump();
   await tester.pump();
 
-  return (router: router, authUser: authUser, sessionStore: sessionStore, profile: profile);
+  return (
+    router: router,
+    authUser: authUser,
+    sessionStore: sessionStore,
+    profile: profile,
+  );
 }
 
 void main() {
-  testWidgets('muestra el número del revendedor formateado', (WidgetTester tester) async {
+  testWidgets('muestra el número del revendedor formateado', (
+    WidgetTester tester,
+  ) async {
     await _pumpSettings(tester);
 
     expect(find.text('+57 314 456 7890'), findsOneWidget);
@@ -142,24 +155,23 @@ void main() {
     },
   );
 
-  testWidgets(
-    '"Eliminar cuenta" confirmado con éxito borra y cierra sesión',
-    (WidgetTester tester) async {
-      final ctx = await _pumpSettings(tester);
+  testWidgets('"Eliminar cuenta" confirmado con éxito borra y cierra sesión', (
+    WidgetTester tester,
+  ) async {
+    final ctx = await _pumpSettings(tester);
 
-      await tester.tap(find.text('Eliminar cuenta').first);
-      await tester.pumpAndSettle();
-      expect(find.text('¿Eliminar tu cuenta?'), findsOneWidget);
+    await tester.tap(find.text('Eliminar cuenta').first);
+    await tester.pumpAndSettle();
+    expect(find.text('¿Eliminar tu cuenta?'), findsOneWidget);
 
-      await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pumpAndSettle();
 
-      expect(ctx.profile.deleteAccountCalls, 1);
-      expect(ctx.authUser.signedOut, isTrue);
-      expect(ctx.sessionStore.cleared, isTrue);
-      expect(find.text('login-stub'), findsOneWidget);
-    },
-  );
+    expect(ctx.profile.deleteAccountCalls, 1);
+    expect(ctx.authUser.signedOut, isTrue);
+    expect(ctx.sessionStore.cleared, isTrue);
+    expect(find.text('login-stub'), findsOneWidget);
+  });
 
   testWidgets(
     '"Eliminar cuenta" con fallo muestra el error y no cierra sesión',

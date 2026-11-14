@@ -131,4 +131,34 @@ void main() {
     }
     expect(find.text('Datos personales'), findsNothing);
   });
+
+  testWidgets(
+    'el catálogo compartido por un proveedor trae "Personalizar"; el guardado no',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            localCacheProvider.overrideWithValue(_cacheWithCatalog()),
+            visitorFeedProvider.overrideWith((ref) async => const []),
+            sharedBuyCatalogsProvider.overrideWithValue(<VisitorCatalog>[
+              const VisitorCatalog(
+                shortUuid: 'cccccccc-0000-4000-8000-000000000000',
+                catalogId: 'cccccccc-0000-4000-8000-000000000000',
+                name: 'Catálogo del Proveedor',
+                providerName: 'Proveedor SA',
+              ),
+            ]),
+          ],
+          child: const MaterialApp(home: VisitorBuyPage()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Catálogo del Proveedor'), findsOneWidget);
+      expect(find.text('Personalizar'), findsOneWidget);
+    },
+  );
 }

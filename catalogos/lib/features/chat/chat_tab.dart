@@ -7,6 +7,7 @@ import '../../app/router/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../shared/widgets/brand_header.dart';
 import 'chat_api.dart';
+import 'conversation_page.dart';
 
 /// Pestaña "Chat" (pública): conversaciones de este dispositivo con los proveedores.
 class ChatTab extends ConsumerStatefulWidget {
@@ -90,7 +91,13 @@ class _ChatTabState extends ConsumerState<ChatTab> {
                             onTap: () async {
                               await context.push(
                                 AppRoutes.conversationPath(list[i].id),
-                                extra: list[i].title,
+                                extra: ConversationInfo(
+                                  title: list[i].title,
+                                  subtitle: list[i].subtitle,
+                                  logoUrl: list[i].logoUrl,
+                                  isSupport: list[i].isSupport,
+                                  catalogId: list[i].catalogId,
+                                ),
                               );
                               ref.invalidate(conversationsProvider);
                             },

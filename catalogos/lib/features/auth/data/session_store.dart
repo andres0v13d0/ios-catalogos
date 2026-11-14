@@ -41,7 +41,7 @@ class SecureSessionStore implements SessionStore {
   // fuerte (AES-GCM con envoltura de clave RSA) en Android y Keychain en iOS,
   // por lo que no hace falta configurar `encryptedSharedPreferences`.
   SecureSessionStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
