@@ -19,6 +19,7 @@ class ChatTab extends ConsumerStatefulWidget {
 
 class _ChatTabState extends ConsumerState<ChatTab> {
   bool _onlyUnread = false;
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +49,25 @@ class _ChatTabState extends ConsumerState<ChatTab> {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              onChanged: (String v) => setState(() => _query = _fold(v)),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Buscar chats…',
+                prefixIcon: const Icon(LucideIcons.search, size: 18),
+                isDense: true,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: async.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -58,9 +78,16 @@ class _ChatTabState extends ConsumerState<ChatTab> {
                 ),
               ),
               data: (List<ChatConversation> all) {
-                final List<ChatConversation> list = _onlyUnread
-                    ? all.where((ChatConversation c) => c.unread > 0).toList()
-                    : all;
+                final List<ChatConversation> list = all
+                    .where(
+                      (ChatConversation c) =>
+                          (!_onlyUnread || c.unread > 0) &&
+                          (_query.isEmpty ||
+                              _fold(
+                                '${c.title} ${c.subtitle ?? ''} ${c.lastMessage ?? ''}',
+                              ).contains(_query)),
+                    )
+                    .toList();
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(conversationsProvider),
                   child: list.isEmpty
@@ -75,7 +102,11 @@ class _ChatTabState extends ConsumerState<ChatTab> {
                             Padding(
                               padding: const EdgeInsets.all(24),
                               child: Text(
-                                _onlyUnread ? 'No tienes mensajes sin leer.' : 'Aún no tienes conversaciones. Abre un catálogo y toca el ícono de chat para preguntar por un producto.',
+                                _query.isNotEmpty
+                                    ? 'No encontramos chats.'
+                                    : _onlyUnread
+                                    ? 'No tienes mensajes sin leer.'
+                                    : 'Aún no tienes conversaciones. Abre un catálogo y toca el ícono de chat para preguntar por un producto.',
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -111,6 +142,19 @@ class _ChatTabState extends ConsumerState<ChatTab> {
       ),
     );
   }
+}
+
+/// Minúsculas y sin tildes, para que "catalogo" encuentre "Catálogo".
+String _fold(String v) {
+  const String from = 'áàäâéèëêíìïîóòöôúùüûñ';
+  const String to = 'aaaaeeeeiiiioooouuuun';
+  final StringBuffer b = StringBuffer();
+  for (final int r in v.toLowerCase().runes) {
+    final String ch = String.fromCharCode(r);
+    final int i = from.indexOf(ch);
+    b.write(i < 0 ? ch : to[i]);
+  }
+  return b.toString().trim();
 }
 
 String _when(DateTime? t) {
@@ -163,15 +207,30 @@ class _ConversationCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    c.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.primary,
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          c.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      if (c.isSupport) ...<Widget>[
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.verified,
+                          size: 16,
+                          color: AppColors.secondary,
+                          semanticLabel: 'Cuenta verificada',
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(

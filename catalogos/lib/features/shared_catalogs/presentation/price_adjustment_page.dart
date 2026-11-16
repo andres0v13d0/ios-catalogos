@@ -37,7 +37,7 @@ class PriceAdjustmentPage extends ConsumerWidget {
       context: context,
       builder: (BuildContext dialogContext) => _RemoveConfirmationDialog(
         isSingleProduct: args.isSingleProduct,
-        subcategoryName: args.subcategory?.name,
+        subcategoryName: args.isSubcategory ? args.subcategoriesLabel : null,
         onCancel: () => Navigator.of(dialogContext).pop(false),
         onConfirm: () => Navigator.of(dialogContext).pop(true),
       ),
@@ -161,18 +161,19 @@ class PriceAdjustmentPage extends ConsumerWidget {
                         onBack: () => Navigator.of(context).pop(true),
                       ),
                       PriceAdjustmentSavedSubcategory(
-                        :final result,
-                        :final name,
+                        :final rule,
+                        :final label,
+                        :final count,
                       ) =>
                         _DoneBody(
                           title: 'Precios actualizados',
-                          subtitleRule: result.rule,
+                          subtitleRule: rule,
                           rows: <(String, String)>[
-                            ('Subcategoría', name),
                             (
-                              'Ajuste de la subcategoría',
-                              _ruleLabel(result.rule),
+                              count == 1 ? 'Subcategoría' : 'Subcategorías',
+                              label,
                             ),
+                            ('Ajuste', _ruleLabel(rule)),
                           ],
                           onBack: () => Navigator.of(context).pop(true),
                         ),
@@ -363,9 +364,11 @@ class _EditorBody extends StatelessWidget {
                             : _CatalogWideTopBar(
                                 scale: s,
                                 totalProducts: state.totalProducts,
-                                scopeLabel: args.subcategory == null
+                                scopeLabel: !args.isSubcategory
                                     ? 'Catálogo completo'
-                                    : 'Subcategoría ${args.subcategory!.name}',
+                                    : args.subcategories.length == 1
+                                    ? 'Subcategoría ${args.subcategoriesLabel}'
+                                    : args.subcategoriesLabel,
                                 hasOwnRule: state.hasOwnRule,
                                 removing: state.removing,
                                 onBack: () => Navigator.of(context).pop(false),
@@ -444,7 +447,7 @@ class _EditorBody extends StatelessWidget {
                           label: args.isSingleProduct
                               ? 'Guardar para este producto'
                               : args.isSubcategory
-                              ? 'Aplicar a ${state.totalProducts} producto${state.totalProducts == 1 ? '' : 's'} de ${args.subcategory!.name}'
+                              ? 'Aplicar a ${state.totalProducts} producto${state.totalProducts == 1 ? '' : 's'} de ${args.subcategoriesLabel}'
                               : 'Aplicar a ${state.totalProducts} producto${state.totalProducts == 1 ? '' : 's'}',
                           iconPainter: const CheckPainter(
                             color: AppColors.primary,

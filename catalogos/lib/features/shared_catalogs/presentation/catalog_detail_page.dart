@@ -137,7 +137,7 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
   Future<void> _openCatalogWideAdjust(int totalProducts) async {
     // Si el catálogo tiene subcategorías se pregunta el alcance; si falla la
     // consulta o no hay, se abre el ajuste de todo el catálogo como siempre.
-    CatalogSubcategory? subcategory;
+    List<CatalogSubcategory> subcategories = const <CatalogSubcategory>[];
     final subs = await ref
         .read(resellerPriceRulesRepositoryProvider)
         .getSubcategories(widget.catalogId);
@@ -153,14 +153,14 @@ class _CatalogDetailPageState extends ConsumerState<CatalogDetailPage> {
             ?.catalogRule,
       );
       if (scope == null || !mounted) return;
-      subcategory = scope.subcategory;
+      subcategories = scope.subcategories;
     }
     final bool? changed = await context.push<bool>(
       AppRoutes.adjustPricesPath(widget.catalogId),
       extra: PriceAdjustmentArgs(
         catalogId: widget.catalogId,
         totalProductsHint: totalProducts,
-        subcategory: subcategory,
+        subcategories: subcategories,
       ),
     );
     if (changed ?? false) {

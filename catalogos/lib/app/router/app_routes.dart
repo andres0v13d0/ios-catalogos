@@ -33,6 +33,8 @@ abstract final class AppRoutes {
   static const String buy = '/comprar';
 
   /// Catálogo guardado por un visitante (por código corto).
+  /// Enlace `share.minymol.com/<id>` abierto desde fuera (path = `/<id>`).
+  static const String shareLink = '/:id';
   static const String visitorCatalog = '/comprar/c/:code';
   static String visitorCatalogPath(String code) => '/comprar/c/$code';
 

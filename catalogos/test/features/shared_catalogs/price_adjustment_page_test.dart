@@ -66,7 +66,7 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
-    String? subcategoryId,
+    List<String>? subcategoryIds,
   }) async => Ok<PriceRulesProductsPage>(this.page);
 
   @override

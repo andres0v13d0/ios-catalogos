@@ -16,6 +16,7 @@ import '../auth/presentation/auth_state_provider.dart';
 import '../buy/cart_controller.dart';
 import '../orders/data/purchases_repository.dart';
 import '../orders/presentation/purchases_controller.dart';
+import 'catalog_access.dart';
 import 'order_message.dart';
 import 'visitor_orders.dart';
 import 'visitor_catalogs.dart';
@@ -447,6 +448,14 @@ class _OrderSummaryPageState extends ConsumerState<OrderSummaryPage> {
   }
 
   Future<void> _send(VisitorCatalog? catalog, List<CartLine> lines) async {
+    final String? denied = (await ref.read(
+      catalogAccessProvider(widget.catalogId).future,
+    )).message;
+    if (!mounted) return;
+    if (denied != null) {
+      setState(() => _error = denied);
+      return;
+    }
     setState(() {
       _sending = true;
       _error = null;
@@ -574,6 +583,19 @@ class _OrderSummaryPageState extends ConsumerState<OrderSummaryPage> {
     );
     final String provider =
         catalog?.providerName ?? (lines.isEmpty ? '' : lines.first.catalogName);
+    final ({int? units, int? amount})? rules = ref
+        .watch(
+          visitorOrderRulesProvider(catalog?.shortUuid ?? widget.catalogId),
+        )
+        .value;
+    final int units = lines.fold<int>(0, (int s, CartLine l) => s + l.quantity);
+    final String? ruleMsg = rules == null
+        ? null
+        : (rules.units != null && units < rules.units!)
+        ? 'Este proveedor pide mínimo ${rules.units} unidades por pedido. Llevas $units.'
+        : (rules.amount != null && total < rules.amount!)
+        ? 'El pedido debe ser de mínimo ${formatCop(rules.amount!)}. Llevas ${formatCop(total)}.'
+        : null;
     return Scaffold(
       backgroundColor: kSheetTint,
       body: Column(
@@ -733,12 +755,42 @@ class _OrderSummaryPageState extends ConsumerState<OrderSummaryPage> {
                         ),
                       ),
                     ),
+                    if (ruleMsg != null)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(10),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3E0),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Icon(
+                              LucideIcons.info,
+                              size: 16,
+                              color: Color(0xFFB45309),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                ruleMsg,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF8A4B08),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 10),
                     SizedBox(
                       height: 52,
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: lines.isEmpty || _sending
+                        onPressed: lines.isEmpty || _sending || ruleMsg != null
                             ? null
                             : () => _send(catalog, lines),
                         style: FilledButton.styleFrom(

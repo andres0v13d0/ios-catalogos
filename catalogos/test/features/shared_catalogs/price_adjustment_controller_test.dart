@@ -45,7 +45,8 @@ class _FakeRepo extends ResellerPriceRulesRepository {
   int deleteCatalogCalls = 0;
   int deleteProductCalls = 0;
   String? lastDeleteProductId;
-  String? lastProductsSubcategoryId;
+  List<String>? lastProductsSubcategoryIds;
+  final List<String> subRulesSaved = <String>[];
   String? lastSubRuleId;
   String? lastDeleteSubId;
 
@@ -60,9 +61,9 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
-    String? subcategoryId,
+    List<String>? subcategoryIds,
   }) async {
-    lastProductsSubcategoryId = subcategoryId;
+    lastProductsSubcategoryIds = subcategoryIds;
     return Ok<PriceRulesProductsPage>(this.page);
   }
 
@@ -98,6 +99,7 @@ class _FakeRepo extends ResellerPriceRulesRepository {
     PriceRule rule,
   ) async {
     lastSubRuleId = subcategoryId;
+    subRulesSaved.add(subcategoryId);
     return Ok<SavedSubcategoryRuleResult>(
       SavedSubcategoryRuleResult(rule: rule, subcategoryId: subcategoryId),
     );
@@ -179,7 +181,7 @@ void main() {
     const args = PriceAdjustmentArgs(
       catalogId: 'cat-1',
       totalProductsHint: 10,
-      subcategory: sub,
+      subcategories: <CatalogSubcategory>[sub],
     );
 
     test(
@@ -193,7 +195,7 @@ void main() {
           },
         );
         final ready = await readReady(args);
-        expect(repo.lastProductsSubcategoryId, 's1');
+        expect(repo.lastProductsSubcategoryIds, <String>['s1']);
         expect(ready.mode, PriceRuleMode.fixed);
         expect(ready.rawDigits, '4000');
         expect(ready.hasOwnRule, isTrue);
@@ -216,6 +218,38 @@ void main() {
         );
       },
     );
+  });
+
+  test('varias subcategorías: guarda el mismo ajuste en cada una', () async {
+    const CatalogSubcategory a = CatalogSubcategory(
+      id: 's1',
+      name: 'Camisetas',
+      productCount: 3,
+      rule: null,
+    );
+    const CatalogSubcategory b = CatalogSubcategory(
+      id: 's2',
+      name: 'Blusas',
+      productCount: 9,
+      rule: null,
+    );
+    const args = PriceAdjustmentArgs(
+      catalogId: 'cat-1',
+      totalProductsHint: 10,
+      subcategories: <CatalogSubcategory>[a, b],
+    );
+    await readReady(args);
+    expect(repo.lastProductsSubcategoryIds, <String>['s1', 's2']);
+    final ctrl = container.read(
+      priceAdjustmentControllerProvider(args).notifier,
+    )..onChipTap(10);
+    expect(await ctrl.onSubmit(), isTrue);
+    expect(repo.subRulesSaved, <String>['s1', 's2']);
+    final done = container.read(
+      priceAdjustmentControllerProvider(args),
+    ) as PriceAdjustmentSavedSubcategory;
+    expect(done.label, 'Camisetas y Blusas');
+    expect(done.count, 2);
   });
 
   group('carga inicial', () {

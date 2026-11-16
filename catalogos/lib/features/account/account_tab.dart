@@ -10,7 +10,8 @@ import '../auth/presentation/auth_state_provider.dart';
 import '../profile/presentation/account_settings_page.dart';
 import 'account_widgets.dart';
 
-/// Pestaña "Cuenta": ajustes del revendedor, o invitación a iniciar sesión.
+/// Pestaña "Cuenta": ajustes de la cuenta, o invitación a iniciar sesión
+/// (cualquiera puede: revendedor o comprador, se distingue por sus catálogos).
 class AccountTab extends ConsumerWidget {
   const AccountTab({super.key});
 
@@ -35,7 +36,8 @@ class AccountTab extends ConsumerWidget {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    '¿Eres revendedor? Inicia sesión para ver tus pedidos y vender.',
+                    'Inicia sesión con tu número de celular para guardar tus '
+                    'catálogos y ver tus pedidos.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Color(0xFF5B6B84)),
                   ),
@@ -48,7 +50,7 @@ class AccountTab extends ConsumerWidget {
                     backgroundColor: AppColors.secondary,
                     shape: const StadiumBorder(),
                   ),
-                  label: const Text('Iniciar sesión como revendedor'),
+                  label: const Text('Iniciar sesión'),
                 ),
                 const SizedBox(height: 24),
                 const LegalSection(),

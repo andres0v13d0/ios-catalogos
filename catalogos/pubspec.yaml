@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.2.3+11
+version: 1.2.4+12
 
 environment:
   sdk: ^3.13.3
@@ -109,10 +109,13 @@ dependencies:
   # (pantalla "Banner del catálogo"). En Android 13+ usa el Photo Picker y en
   # iOS 14+ usa PHPicker: NINGUNO requiere permiso de lectura de galería, así
   # que NO se declara READ_MEDIA_IMAGES/READ_EXTERNAL_STORAGE ni se usa
-  # permission_handler. NO se usa la cámara (sin NSCameraUsageDescription).
+  # permission_handler. La cámara solo se usa en el escáner de QR (mobile_scanner).
   # maxWidth/maxHeight/imageQuality aligeran la imagen ANTES de subir; el
   # servidor igual la reprocesa con su pipeline. Versión fija (pin).
   image_picker: 1.2.4
+
+  # Escáner de QR para "Agregar catálogo" (cámara). Versión fija (pin).
+  mobile_scanner: 7.4.2
 
   # Abrir WhatsApp con texto precargado (wa.me) desde la hoja "Compartir
   # enlace", vía launchUrl. Android 11+ requiere <queries> en el manifest
@@ -123,11 +126,6 @@ dependencies:
   # enlace", vía Share.share. Versión fija (pin).
   share_plus: 13.3.1
 
-  # Modal "Cómo organizar tu catálogo" (video de YouTube embebido, primera
-  # apertura de la app + botón junto a ajustes). Envuelve un WebView con el
-  # iframe oficial de YouTube, así que no requiere llaves de API.
-  # Versión fija (pin).
-  youtube_player_flutter: 10.0.1
   # Fija en 16.7.0: usa firebase-ios-sdk 12.19.0, igual que firebase_auth 6.7.0,
   # firebase_app_check 0.4.8 y firebase_core 4.15.0 (la 16.7.1 pide 12.19.3 y
   # Swift Package Manager no puede resolver ambas).
@@ -179,7 +177,7 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
-    - assets/branding/
+    - assets/branding/icon_foreground.png  # solo lo que usa la app; el resto (Play, Android 12, previews) no debe ir en el IPA
 
   # Poppins empaquetada localmente (pantalla de ingreso, rediseño "B · Hoja
   # inferior"): el dispositivo de prueba no tiene red para que `google_fonts`

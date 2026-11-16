@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/theme/app_colors.dart';
+import 'scan_qr_page.dart';
 import 'visitor_catalogs.dart';
 
 /// Hoja "Agregar catálogo": pega el enlace, se consulta el catálogo y se
@@ -70,6 +71,16 @@ class _AddCatalogSheetState extends ConsumerState<AddCatalogSheet> {
     if (text.isEmpty) return;
     _ctrl.text = text;
     _ctrl.selection = TextSelection.collapsed(offset: text.length);
+    _debounce?.cancel();
+    await _lookup();
+  }
+
+  Future<void> _scan() async {
+    final String? raw = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const ScanQrPage()),
+    );
+    if (raw == null || !mounted) return;
+    _ctrl.text = raw;
     _debounce?.cancel();
     await _lookup();
   }
@@ -154,7 +165,7 @@ class _AddCatalogSheetState extends ConsumerState<AddCatalogSheet> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Pega el enlace público del catálogo que te compartió tu proveedor.',
+                'Pega el enlace público del catálogo o escanea su código QR.',
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.5,
@@ -228,6 +239,20 @@ class _AddCatalogSheetState extends ConsumerState<AddCatalogSheet> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _scan,
+                icon: const Icon(LucideIcons.scanQrCode, size: 18),
+                label: const Text('Escanear código QR'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.secondary,
+                  side: const BorderSide(color: AppColors.secondary),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
               if (_status == _Status.error && _error != null)

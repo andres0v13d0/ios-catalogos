@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:catalogos/core/storage/storage.dart';
 import 'package:catalogos/features/buy/cart_controller.dart';
 import 'package:catalogos/features/visitor/cart_flow.dart';
+import 'package:catalogos/features/visitor/catalog_access.dart';
 import 'package:catalogos/core/result/result.dart';
 import 'package:catalogos/features/auth/presentation/auth_state_provider.dart';
 import 'package:catalogos/features/orders/data/purchases_repository.dart';
@@ -84,7 +85,12 @@ class _FakeApi extends VisitorCatalogApi {
 
   /// Sin red en las pruebas: el catálogo guardado se devuelve tal cual.
   @override
-  Future<CatalogPage> fetchPage(String shortUuid) async => CatalogPage(
+  Future<CatalogPage> fetchPage(
+    String shortUuid, {
+    String? search,
+    String? categoryId,
+    String? subcategoryId,
+  }) async => CatalogPage(
     catalog: <VisitorCatalog>[_cat, _cat2].firstWhere(
       (VisitorCatalog c) => c.shortUuid == shortUuid,
       orElse: () => _cat,
@@ -176,8 +182,18 @@ void main() {
       tester,
       const VisitorCatalogPage(code: 'ab12cd34'),
       extra: [
-        visitorCatalogProductsProvider('ab12cd34').overrideWith(
-          (ref) async => (_cat, <VisitorProduct>[_plain, _variant]),
+        visitorCatalogQueryProvider((
+          code: 'ab12cd34',
+          search: '',
+          byCategory: false,
+          chipId: null,
+        )).overrideWith(
+          (ref) async => (
+            catalog: _cat,
+            products: <VisitorProduct>[_plain, _variant],
+            categories: <CatalogCategory>[],
+            subcategories: <CatalogChip>[],
+          ),
         ),
       ],
     );
@@ -200,8 +216,19 @@ void main() {
       tester,
       const VisitorCatalogPage(code: 'ab12cd34'),
       extra: [
-        visitorCatalogProductsProvider('ab12cd34')
-            .overrideWith((ref) async => (_cat, <VisitorProduct>[_variant])),
+        visitorCatalogQueryProvider((
+          code: 'ab12cd34',
+          search: '',
+          byCategory: false,
+          chipId: null,
+        )).overrideWith(
+          (ref) async => (
+            catalog: _cat,
+            products: <VisitorProduct>[_variant],
+            categories: <CatalogCategory>[],
+            subcategories: <CatalogChip>[],
+          ),
+        ),
       ],
     );
     await tester.tap(
@@ -347,6 +374,64 @@ void main() {
       expect(c.read(cartControllerProvider), isEmpty);
     },
   );
+
+  testWidgets('catálogo pendiente de aprobación: no deja pedir y lo explica', (
+    tester,
+  ) async {
+    final _FakeApi api = _FakeApi(withId: true);
+    final _FakePurchases purchases = _FakePurchases();
+    final ProviderContainer c = await _pump(
+      tester,
+      const OrderSummaryPage(catalogId: 'ab12cd34-0000-0000-0000-000000000000'),
+      api: api,
+      extra: [
+        isSignedInProvider.overrideWithValue(true),
+        purchasesRepositoryProvider.overrideWithValue(purchases),
+        catalogAccessProvider.overrideWith(
+          (ref, id) async => CatalogAccess.pending,
+        ),
+      ],
+    );
+    c
+        .read(cartControllerProvider.notifier)
+        .add(cartLineFor(_cat, _variant, 6, color: 'Negro', size: '32'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Enviar pedido'));
+    await tester.tap(find.text('Enviar pedido'));
+    await tester.pumpAndSettle();
+
+    expect(purchases.groups, isEmpty);
+    expect(api.sent, isEmpty);
+    expect(
+      find.text('El proveedor aún no ha aceptado tu solicitud.'),
+      findsOneWidget,
+    );
+    expect(c.read(cartControllerProvider), isNotEmpty);
+  });
+
+  testWidgets('producto de un catálogo bloqueado: sin añadir y con el aviso', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      VisitorProductPage(catalog: _cat, product: _variant),
+      extra: [
+        isSignedInProvider.overrideWithValue(true),
+        catalogAccessProvider.overrideWith(
+          (ref, id) async => CatalogAccess.blocked,
+        ),
+      ],
+    );
+    expect(find.text('No tienes acceso a este catálogo.'), findsOneWidget);
+    expect(find.text('Añadir al carrito'), findsNothing);
+  });
+
+  test('sin precios: el producto conserva todo menos los precios', () {
+    final VisitorProduct p = _variant.withoutPrices();
+    expect(p.priceFrom, 0);
+    expect(p.id, _variant.id);
+    expect(p.colors, _variant.colors);
+  });
 
   testWidgets(
     'se puede enviar el pedido aunque el catálogo ya no esté en los guardados',

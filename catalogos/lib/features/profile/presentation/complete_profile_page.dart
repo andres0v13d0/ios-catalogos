@@ -67,7 +67,8 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
                 Text('¿Cómo te llamas?', style: textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
-                  'Usaremos tu nombre para personalizar tu cuenta.',
+                  'Así te reconocerán los proveedores cuando guardes sus '
+                  'catálogos o les escribas.',
                   style: textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),

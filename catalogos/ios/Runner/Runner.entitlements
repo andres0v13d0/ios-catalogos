@@ -10,5 +10,10 @@
 	-->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Universal Links: share.minymol.com abre Flimas (AASA en el backend). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:share.minymol.com</string>
+	</array>
 </dict>
 </plist>

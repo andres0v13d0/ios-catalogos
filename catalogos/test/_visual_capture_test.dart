@@ -80,7 +80,7 @@ class _FakeOverlayRepo extends ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
-    String? subcategoryId,
+    List<String>? subcategoryIds,
   }) async => Ok<PriceRulesProductsPage>(
     PriceRulesProductsPage(
       total: 24,

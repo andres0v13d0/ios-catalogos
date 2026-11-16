@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -8,6 +9,7 @@ import '../../core/network/dio_provider.dart';
 import '../../core/storage/storage.dart';
 import '../auth/presentation/auth_state_provider.dart';
 import '../buy/cart_controller.dart';
+import 'catalog_access.dart';
 import '../shared_catalogs/domain/catalog.dart';
 import '../shared_catalogs/presentation/shared_catalogs_controller.dart';
 
@@ -93,10 +95,47 @@ class VisitorProduct {
     this.minTotal = 1,
     this.colors = const <String>[],
     this.sizes = const <String>[],
+    this.isNew = false,
+    this.colorPhoto = const <String, int>{},
   });
 
   final String id;
   final String name;
+
+  /// Foto (posición en [images]) que el proveedor asoció a cada color; opcional.
+  final Map<String, int> colorPhoto;
+
+  /// Producto agregado hace poco (el backend lo lista en `newProductIds`).
+  final bool isNew;
+
+  VisitorProduct asNew() => VisitorProduct(
+    id: id,
+    name: name,
+    prices: prices,
+    image: image,
+    images: images,
+    description: description,
+    minTotal: minTotal,
+    colors: colors,
+    sizes: sizes,
+    isNew: true,
+    colorPhoto: colorPhoto,
+  );
+
+  /// El mismo producto sin precios (cuando el proveedor no dio acceso).
+  VisitorProduct withoutPrices() => VisitorProduct(
+    id: id,
+    name: name,
+    prices: const <int, int>{},
+    image: image,
+    images: images,
+    description: description,
+    minTotal: minTotal,
+    colors: colors,
+    sizes: sizes,
+    isNew: isNew,
+    colorPhoto: colorPhoto,
+  );
 
   /// Portada (primera imagen) para tarjetas y cuadrículas.
   final String? image;
@@ -136,12 +175,18 @@ class VisitorProduct {
   factory VisitorProduct.fromJson(Map<String, dynamic> j) {
     String? image;
     final List<String> gallery = <String>[];
+    final Map<String, int> indexByUrl =
+        <String, int>{}; // imageUrl → posición en gallery
     for (final Object? i in (j['imagenes'] as List<dynamic>?) ?? const []) {
       final Map<String, dynamic>? m = (i as Map?)?.cast<String, dynamic>();
       final String? u = (m?['mediumUrl'] ?? m?['imageUrl']) as String?;
       final String? full = (m?['fullUrl'] ?? m?['imageUrl'] ?? u) as String?;
       if (u != null && u.isNotEmpty) image ??= u;
-      if (full != null && full.isNotEmpty) gallery.add(full);
+      if (full != null && full.isNotEmpty) {
+        final String? orig = m?['imageUrl'] as String?;
+        if (orig != null) indexByUrl[orig] = gallery.length;
+        gallery.add(full);
+      }
     }
     final Map<int, int> prices = <int, int>{};
     ((j['precios'] as Map?)?.cast<String, dynamic>() ?? const {}).forEach((
@@ -165,6 +210,13 @@ class VisitorProduct {
       minTotal: (j['minTotalProduct'] as num?)?.toInt() ?? 1,
       colors: strs(j['colores']),
       sizes: strs(j['tallas']),
+      colorPhoto: <String, int>{
+        for (final MapEntry<String, dynamic> e
+            in ((j['coloresImagenes'] as Map?)?.cast<String, dynamic>() ??
+                    const <String, dynamic>{})
+                .entries)
+          if (indexByUrl[e.value] != null) e.key: indexByUrl[e.value]!,
+      },
     );
   }
 }
@@ -229,12 +281,28 @@ class VisitorCatalogApi {
     }
   }
 
-  Future<CatalogPage> fetchPage(String shortUuid) async {
+  /// Búsqueda y filtro por categoría/subcategoría los resuelve el backend solo en
+  /// `/catalog/short`; el de catálogos compartidos al revendedor los ignora.
+  Future<CatalogPage> fetchPage(
+    String shortUuid, {
+    String? search,
+    String? categoryId,
+    String? subcategoryId,
+  }) async {
+    final bool shared = _isReseller(shortUuid);
     final Response<Map<String, dynamic>> r = await _dio
         .get<Map<String, dynamic>>(
-          _isReseller(shortUuid)
+          shared
               ? '/reseller/app/catalogs/$shortUuid/page'
               : '/catalog/short/$shortUuid',
+          queryParameters: shared
+              ? null
+              : <String, String>{
+                  if (search != null && search.trim().isNotEmpty)
+                    'search': search.trim(),
+                  'categoryId': ?categoryId,
+                  'subcategoryId': ?subcategoryId,
+                },
         );
     final Map<String, dynamic> d = r.data ?? const <String, dynamic>{};
     final Map<String, dynamic>? c = (d['catalog'] as Map?)
@@ -269,6 +337,10 @@ class VisitorCatalogApi {
       ),
       newIds: ids(d['newProductIds']),
       ids: ids(d['productIds']),
+      categories: _parseCategories(c?['categories']),
+      subcategories: _chips(c?['subcategories']),
+      minOrderUnits: (c?['minOrderUnits'] as num?)?.toInt(),
+      minOrderAmount: (c?['minOrderAmount'] as num?)?.toInt(),
     );
   }
 
@@ -346,6 +418,58 @@ class VisitorCatalogApi {
     return PublicOrderView.fromJson(r.data ?? const <String, dynamic>{});
   }
 
+  /// Sube los catálogos guardados del celular a la cuenta y devuelve todos los
+  /// de la cuenta (`POST /reseller/app/library/sync`; requiere sesión).
+  /// shortcut: `addedAt` se deriva del orden local (más reciente primero)
+  /// porque el celular no guarda la fecha; guardarla si el orden importa más.
+  Future<List<({String shortUuid, String catalogId})>> syncLibrary(
+    List<VisitorCatalog> local,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    final Response<List<dynamic>> r = await _dio.post<List<dynamic>>(
+      '/reseller/app/library/sync',
+      data: <String, dynamic>{
+        'catalogs': <Map<String, dynamic>>[
+          for (final (int i, VisitorCatalog c) in local.indexed)
+            <String, dynamic>{
+              'shortUuid': c.shortUuid,
+              'addedAt': now.subtract(Duration(minutes: i)).toIso8601String(),
+            },
+        ],
+      },
+    );
+    return <({String shortUuid, String catalogId})>[
+      for (final Map<dynamic, dynamic> e
+          in (r.data ?? const <dynamic>[]).whereType<Map<dynamic, dynamic>>())
+        (
+          shortUuid: e['shortUuid'] as String? ?? '',
+          catalogId: e['catalogId'] as String? ?? '',
+        ),
+    ].where((e) => e.catalogId.isNotEmpty).toList();
+  }
+
+  /// `true` si el proveedor dejó el catálogo público (precios sin iniciar sesión).
+  Future<bool> isPublicCatalog(String catalogId) async {
+    final Response<Map<String, dynamic>> r = await _dio
+        .get<Map<String, dynamic>>('/catalog-access/$catalogId');
+    return r.data?['mode'] == 'public';
+  }
+
+  /// Acceso de la cuenta al catálogo (`GET /reseller/app/library/access`).
+  Future<CatalogAccess> accessFor(String catalogId) async {
+    final Response<Map<String, dynamic>> r = await _dio
+        .get<Map<String, dynamic>>(
+          '/reseller/app/library/access',
+          queryParameters: <String, dynamic>{'ids': catalogId},
+        );
+    return CatalogAccess.parse(r.data?[catalogId]);
+  }
+
+  /// Quita un catálogo de la biblioteca de la cuenta.
+  Future<void> removeFromLibrary(String catalogId) async {
+    await _dio.delete<dynamic>('/reseller/app/library/$catalogId');
+  }
+
   Future<List<VisitorProduct>> previews(
     List<String> ids,
     String catalogId,
@@ -413,6 +537,7 @@ class PublicOrderItem {
     this.color,
     this.size,
     this.totalPrice,
+    this.unitPrice,
   });
 
   final String name;
@@ -421,6 +546,7 @@ class PublicOrderItem {
   final String? color;
   final String? size;
   final num? totalPrice;
+  final num? unitPrice;
 }
 
 /// Estado y contenido de un pedido tal como lo ve quien lo hizo.
@@ -472,17 +598,66 @@ class PublicOrderView {
         color: m['color'] as String?,
         size: m['size'] as String?,
         totalPrice: m['totalPrice'] as num?,
+        unitPrice: m['unitPrice'] as num?,
       );
     }).toList(),
   );
 }
+
+class CatalogChip {
+  const CatalogChip(this.id, this.name);
+
+  final String id;
+  final String name;
+}
+
+class CatalogCategory extends CatalogChip {
+  const CatalogCategory(super.id, super.name, this.subs);
+
+  final List<CatalogChip> subs;
+}
+
+List<Map<String, dynamic>> _maps(Object? o) =>
+    ((o as List?) ?? const <dynamic>[])
+        .whereType<Map<dynamic, dynamic>>()
+        .map((Map<dynamic, dynamic> m) => m.cast<String, dynamic>())
+        .toList();
+
+List<CatalogChip> _chips(Object? o) => <CatalogChip>[
+  for (final Map<String, dynamic> m in _maps(o))
+    if (m['id'] is String && m['name'] is String)
+      CatalogChip(m['id'] as String, m['name'] as String),
+];
+
+List<CatalogCategory> _parseCategories(Object? o) => <CatalogCategory>[
+  for (final Map<String, dynamic> m in _maps(o))
+    if (m['id'] is String && m['name'] is String)
+      CatalogCategory(
+        m['id'] as String,
+        m['name'] as String,
+        _chips(m['subcategories']),
+      ),
+];
 
 class CatalogPage {
   const CatalogPage({
     required this.catalog,
     required this.newIds,
     required this.ids,
+    this.minOrderUnits,
+    this.minOrderAmount,
+    this.categories = const <CatalogCategory>[],
+    this.subcategories = const <CatalogChip>[],
   });
+
+  /// Igual que la web: si hay categorías se navega en dos filas (categoría →
+  /// sus subcategorías); si no, solo la fila plana de [subcategories].
+  final List<CatalogCategory> categories;
+  final List<CatalogChip> subcategories;
+
+  /// Pedido mínimo que fijó el proveedor (null = sin regla).
+  final int? minOrderUnits;
+  final int? minOrderAmount;
 
   final VisitorCatalog catalog;
   final List<String> newIds;
@@ -547,6 +722,11 @@ const String _cacheKey = 'visitor_catalogs';
 class VisitorCatalogsController extends Notifier<List<VisitorCatalog>> {
   @override
   List<VisitorCatalog> build() {
+    // Al iniciar sesión (o abrir la app con sesión) se funde con la cuenta.
+    ref.listen<bool>(isSignedInProvider, (bool? _, bool signedIn) {
+      if (signedIn) syncWithCloud();
+    });
+    if (ref.read(isSignedInProvider)) Future<void>.microtask(syncWithCloud);
     final String? raw = ref.read(localCacheProvider).get(_cacheKey);
     if (raw == null) return const <VisitorCatalog>[];
     try {
@@ -592,14 +772,51 @@ class VisitorCatalogsController extends Notifier<List<VisitorCatalog>> {
         );
   }
 
-  Future<void> add(VisitorCatalog c) => _save(<VisitorCatalog>[
-    c,
-    ...state.where((VisitorCatalog x) => x.shortUuid != c.shortUuid),
-  ]);
+  Future<void> add(VisitorCatalog c) async {
+    await _save(<VisitorCatalog>[
+      c,
+      ...state.where((VisitorCatalog x) => x.shortUuid != c.shortUuid),
+    ]);
+    unawaited(syncWithCloud());
+  }
 
-  Future<void> remove(String shortUuid) => _save(
-    state.where((VisitorCatalog x) => x.shortUuid != shortUuid).toList(),
-  );
+  Future<void> remove(String shortUuid) async {
+    final String? catalogId = state
+        .where((VisitorCatalog x) => x.shortUuid == shortUuid)
+        .map((VisitorCatalog x) => x.catalogId)
+        .firstOrNull;
+    await _save(
+      state.where((VisitorCatalog x) => x.shortUuid != shortUuid).toList(),
+    );
+    if (catalogId != null && ref.read(isSignedInProvider)) {
+      try {
+        await ref.read(visitorCatalogApiProvider).removeFromLibrary(catalogId);
+      } catch (_) {} // best-effort: sin red, queda en la cuenta.
+    }
+  }
+
+  /// Sube lo del celular a la cuenta y trae lo que solo estaba en la cuenta
+  /// (guardado desde otro celular). Sin sesión o sin red no hace nada.
+  Future<void> syncWithCloud() async {
+    if (!ref.read(isSignedInProvider)) return;
+    try {
+      final VisitorCatalogApi api = ref.read(visitorCatalogApiProvider);
+      final List<({String shortUuid, String catalogId})> remote = await api
+          .syncLibrary(state);
+      final Set<String> have = <String>{
+        for (final VisitorCatalog c in state) c.catalogId,
+      };
+      final List<VisitorCatalog> fetched = <VisitorCatalog>[];
+      for (final r in remote.where((r) => !have.contains(r.catalogId))) {
+        try {
+          fetched.add((await api.fetchPage(r.shortUuid)).catalog);
+        } catch (_) {} // un catálogo caído no frena el resto.
+      }
+      if (fetched.isNotEmpty) {
+        await _save(<VisitorCatalog>[...state, ...fetched]);
+      }
+    } catch (_) {}
+  }
 }
 
 final NotifierProvider<VisitorCatalogsController, List<VisitorCatalog>>
@@ -608,20 +825,91 @@ visitorCatalogsProvider =
       VisitorCatalogsController.new,
     );
 
-/// Productos de un catálogo (nuevos primero, hasta 60).
+/// Pedido mínimo vigente del catálogo (se lee al abrir "Tu pedido" para no
+/// usar una regla vieja guardada en el celular). Falla en silencio: el backend
+/// igual rechaza el pedido y la app muestra su mensaje.
+final visitorOrderRulesProvider = FutureProvider.autoDispose
+    .family<({int? units, int? amount}), String>((Ref ref, String code) async {
+      try {
+        final CatalogPage p = await ref
+            .watch(visitorCatalogApiProvider)
+            .fetchPage(code);
+        return (units: p.minOrderUnits, amount: p.minOrderAmount);
+      } catch (_) {
+        return (units: null, amount: null);
+      }
+    });
+
+/// Consulta de la pantalla del catálogo: texto y un filtro opcional.
+typedef VisitorCatalogQuery = ({
+  String code,
+  String search,
+  bool byCategory,
+  String? chipId,
+});
+
+/// Resultado de una consulta: catálogo, productos y filtros disponibles.
+typedef VisitorCatalogResult = ({
+  VisitorCatalog catalog,
+  List<VisitorProduct> products,
+  List<CatalogCategory> categories,
+  List<CatalogChip> subcategories,
+});
+
+/// Productos de un catálogo: nuevos primero y el resto, cada grupo en orden
+/// aleatorio nuevo en cada apertura (autoDispose vuelve a ejecutarlo), hasta 60.
 /// shortcut: sin paginación; paginar cuando haya catálogos de cientos de productos.
+final visitorCatalogQueryProvider = FutureProvider.autoDispose
+    .family<VisitorCatalogResult, VisitorCatalogQuery>((
+      Ref ref,
+      VisitorCatalogQuery q,
+    ) async {
+      final VisitorCatalogApi api = ref.watch(visitorCatalogApiProvider);
+      final CatalogPage p = await api.fetchPage(
+        q.code,
+        search: q.search,
+        categoryId: q.byCategory ? q.chipId : null,
+        subcategoryId: q.byCategory ? null : q.chipId,
+      );
+      final Set<String> newIds = p.newIds.toSet();
+      final List<String> ids = <String>{
+        ...p.newIds.toList()..shuffle(),
+        ...(p.ids.where((String i) => !newIds.contains(i)).toList()..shuffle()),
+      }.take(60).toList();
+      final List<VisitorProduct> prods = await api.previews(
+        ids,
+        p.catalog.catalogId,
+      );
+      final bool prices = (await ref.watch(
+        catalogAccessProvider(p.catalog.catalogId).future,
+      )).canSeePrices;
+      return (
+        catalog: p.catalog,
+        products: <VisitorProduct>[
+          for (final VisitorProduct x in prods)
+            if (prices) newIds.contains(x.id) ? x.asNew() : x else
+              (newIds.contains(x.id) ? x.asNew() : x).withoutPrices(),
+        ],
+        categories: p.categories,
+        subcategories: p.subcategories,
+      );
+    });
+
+/// Igual que [visitorCatalogQueryProvider] sin filtros (chat y otros usos).
 final visitorCatalogProductsProvider = FutureProvider.autoDispose
     .family<(VisitorCatalog, List<VisitorProduct>), String>((
       Ref ref,
       String code,
     ) async {
-      final VisitorCatalogApi api = ref.watch(visitorCatalogApiProvider);
-      final CatalogPage p = await api.fetchPage(code);
-      final List<String> ids = <String>{
-        ...p.newIds,
-        ...p.ids,
-      }.take(60).toList();
-      return (p.catalog, await api.previews(ids, p.catalog.catalogId));
+      final VisitorCatalogResult r = await ref.watch(
+        visitorCatalogQueryProvider((
+          code: code,
+          search: '',
+          byCategory: false,
+          chipId: null,
+        )).future,
+      );
+      return (r.catalog, r.products);
     });
 
 /// Novedades: los 6 productos nuevos más recientes de cada catálogo guardado.
@@ -641,8 +929,12 @@ visitorFeedProvider =
                   p.newIds.take(6).toList(),
                   p.catalog.catalogId,
                 );
+                final bool prices = (await ref.watch(
+                  catalogAccessProvider(p.catalog.catalogId).future,
+                )).canSeePrices;
                 return <(VisitorCatalog, VisitorProduct)>[
-                  for (final VisitorProduct x in prods) (p.catalog, x),
+                  for (final VisitorProduct x in prods)
+                    (p.catalog, prices ? x : x.withoutPrices()),
                 ];
               } catch (_) {
                 return <

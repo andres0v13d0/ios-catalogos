@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,32 +10,100 @@ import '../../core/utils/money.dart';
 import '../../shared/widgets/brand_header.dart';
 import '../buy/cart_controller.dart';
 import 'cart_flow.dart';
+import 'catalog_access.dart';
 import 'visitor_buy_page.dart' show openVisitorChat;
 import 'visitor_catalogs.dart';
 import 'visitor_product_page.dart';
 
 /// Detalle de un catálogo guardado: logo del proveedor, mosaico de productos
 /// con su portada a su alto real y botón explícito de añadir al carrito.
-class VisitorCatalogPage extends ConsumerWidget {
+class VisitorCatalogPage extends ConsumerStatefulWidget {
   const VisitorCatalogPage({super.key, required this.code});
 
   final String code;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<(VisitorCatalog, List<VisitorProduct>)> async = ref.watch(
-      visitorCatalogProductsProvider(code),
+  ConsumerState<VisitorCatalogPage> createState() => _VisitorCatalogPageState();
+}
+
+class _VisitorCatalogPageState extends ConsumerState<VisitorCatalogPage> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  Timer? _debounce;
+  String _search = '';
+  String? _catId;
+  String? _subId;
+  // Filtros de la primera respuesta sin filtro: al filtrar el backend puede
+  // devolverlos recortados y la fila no debe desaparecer.
+  List<CatalogCategory> _categories = const <CatalogCategory>[];
+  List<CatalogChip> _subcategories = const <CatalogChip>[];
+
+  String get code => widget.code;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String v) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _search = v.trim());
+    });
+  }
+
+  /// Igual que la web: elegir una categoría o "Todos" limpia la búsqueda.
+  void _select(String? id, {bool category = false}) {
+    _searchCtrl.clear();
+    setState(() {
+      _search = '';
+      if (id == null) {
+        _catId = null;
+        _subId = null;
+      } else if (category) {
+        _catId = id;
+        _subId = null;
+      } else {
+        _subId = id;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool searchable = !ref.watch(sharedCatalogIdsProvider).contains(code);
+    final VisitorCatalogQuery query = (
+      code: code,
+      search: searchable ? _search : '',
+      byCategory: _subId == null && _catId != null,
+      chipId: searchable ? (_subId ?? _catId) : null,
     );
+    final AsyncValue<VisitorCatalogResult> async = ref.watch(
+      visitorCatalogQueryProvider(query),
+    );
+    final VisitorCatalogResult? res = async.value;
+    if (res != null &&
+        _catId == null &&
+        _subId == null &&
+        _search.isEmpty &&
+        (res.categories.isNotEmpty || res.subcategories.isNotEmpty)) {
+      _categories = res.categories;
+      _subcategories = res.subcategories;
+    }
     final VisitorCatalog? saved = ref
         .watch(visitorCatalogsProvider)
         .where((VisitorCatalog c) => c.shortUuid == code)
         .firstOrNull;
-    final VisitorCatalog? catalog = async.value?.$1 ?? saved;
+    final VisitorCatalog? catalog = res?.catalog ?? saved;
     final List<VisitorProduct> products =
-        async.value?.$2 ?? const <VisitorProduct>[];
+        res?.products ?? const <VisitorProduct>[];
     final String provider =
         catalog?.providerName ?? catalog?.name ?? 'Catálogo';
     final bool noPrices = (catalog?.priceField ?? '').toLowerCase() == 'none';
+    final String? accessMessage = catalog == null
+        ? null
+        : ref.watch(catalogAccessProvider(catalog.catalogId)).value?.message;
     return Scaffold(
       backgroundColor: kSheetTint,
       body: Stack(
@@ -75,10 +145,46 @@ class VisitorCatalogPage extends ConsumerWidget {
                       ),
                     if (products.isNotEmpty) const SizedBox(width: 6),
                     if (catalog != null)
-                      _Chip(noPrices ? 'Sin precios' : 'Con precios'),
+                      _Chip(
+                        noPrices || accessMessage != null
+                            ? 'Sin precios'
+                            : 'Con precios',
+                      ),
                   ],
                 ),
               ),
+              if (accessMessage != null)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4D6),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(LucideIcons.lock, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          accessMessage,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (searchable)
+                _FilterBar(
+                  controller: _searchCtrl,
+                  onSearch: _onSearch,
+                  categories: _categories,
+                  subcategories: _subcategories,
+                  catId: _catId,
+                  subId: _subId,
+                  onSelect: _select,
+                ),
               Expanded(
                 child: async.when(
                   loading: () =>
@@ -86,18 +192,21 @@ class VisitorCatalogPage extends ConsumerWidget {
                   error: (_, _) => Center(
                     child: TextButton(
                       onPressed: () =>
-                          ref.invalidate(visitorCatalogProductsProvider(code)),
+                          ref.invalidate(visitorCatalogQueryProvider(query)),
                       child: const Text(
                         'No pudimos cargar el catálogo. Reintentar',
                       ),
                     ),
                   ),
-                  data: ((VisitorCatalog, List<VisitorProduct>) d) =>
-                      d.$2.isEmpty
-                      ? const Center(
-                          child: Text('Este catálogo aún no tiene productos.'),
+                  data: (VisitorCatalogResult d) => d.products.isEmpty
+                      ? Center(
+                          child: Text(
+                            _search.isNotEmpty || _catId != null
+                                ? 'No encontramos productos con ese filtro.'
+                                : 'Este catálogo aún no tiene productos.',
+                          ),
                         )
-                      : _Masonry(catalog: d.$1, products: d.$2),
+                      : _Masonry(catalog: d.catalog, products: d.products),
                 ),
               ),
             ],
@@ -107,6 +216,134 @@ class VisitorCatalogPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Buscador + categorías como en la web: una fila de categorías y, si la elegida
+/// tiene subcategorías, otra debajo con solo las suyas. Sin categorías, una
+/// fila plana de subcategorías.
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({
+    required this.controller,
+    required this.onSearch,
+    required this.categories,
+    required this.subcategories,
+    required this.catId,
+    required this.subId,
+    required this.onSelect,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onSearch;
+  final List<CatalogCategory> categories;
+  final List<CatalogChip> subcategories;
+  final String? catId;
+  final String? subId;
+  final void Function(String? id, {bool category}) onSelect;
+
+  Widget _row(
+    List<CatalogChip> items,
+    String? active,
+    void Function(String? id) pick, {
+    bool allActive = false,
+  }) => SizedBox(
+    height: 38,
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      children: <Widget>[
+        _Tab('Todos', allActive, () => pick(null)),
+        for (final CatalogChip c in items)
+          _Tab(c.name, active == c.id, () => pick(c.id)),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hierarchical = categories.isNotEmpty;
+    final CatalogCategory? cat = categories
+        .where((CatalogCategory c) => c.id == catId)
+        .firstOrNull;
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+          child: TextField(
+            controller: controller,
+            onChanged: onSearch,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Buscar productos…',
+              prefixIcon: const Icon(LucideIcons.search, size: 18),
+              isDense: true,
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        if (hierarchical) ...<Widget>[
+          _row(
+            categories,
+            catId,
+            (String? id) => onSelect(id, category: true),
+            allActive: catId == null,
+          ),
+          if (cat != null && cat.subs.isNotEmpty)
+            _row(
+              cat.subs,
+              subId,
+              (String? id) =>
+                  id == null ? onSelect(cat.id, category: true) : onSelect(id),
+              allActive: subId == null,
+            ),
+        ] else if (subcategories.isNotEmpty)
+          _row(
+            subcategories,
+            subId,
+            (String? id) => onSelect(id),
+            allActive: subId == null,
+          ),
+      ],
+    );
+  }
+}
+
+class _Tab extends StatelessWidget {
+  const _Tab(this.text, this.active, this.onTap);
+
+  final String text;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: active ? AppColors.secondary : Colors.transparent,
+            width: 2,
+          ),
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: active ? AppColors.secondary : const Color(0xFF5B6B84),
+        ),
+      ),
+    ),
+  );
 }
 
 class _Chip extends StatelessWidget {
@@ -226,25 +463,52 @@ class _ProductCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            if (p.image == null)
-              const AspectRatio(
-                aspectRatio: 1,
-                child: ColoredBox(color: Color(0xFFE3ECFB)),
-              )
-            else
-              CachedNetworkImage(
-                imageUrl: p.image!,
-                width: double.infinity,
-                fit: BoxFit.fitWidth,
-                placeholder: (_, _) => const AspectRatio(
-                  aspectRatio: 1,
-                  child: ColoredBox(color: Color(0xFFE3ECFB)),
-                ),
-                errorWidget: (_, _, _) => const AspectRatio(
-                  aspectRatio: 1,
-                  child: ColoredBox(color: Color(0xFFE3ECFB)),
-                ),
-              ),
+            Stack(
+              children: <Widget>[
+                if (p.image == null)
+                  const AspectRatio(
+                    aspectRatio: 1,
+                    child: ColoredBox(color: Color(0xFFE3ECFB)),
+                  )
+                else
+                  CachedNetworkImage(
+                    imageUrl: p.image!,
+                    width: double.infinity,
+                    fit: BoxFit.fitWidth,
+                    placeholder: (_, _) => const AspectRatio(
+                      aspectRatio: 1,
+                      child: ColoredBox(color: Color(0xFFE3ECFB)),
+                    ),
+                    errorWidget: (_, _, _) => const AspectRatio(
+                      aspectRatio: 1,
+                      child: ColoredBox(color: Color(0xFFE3ECFB)),
+                    ),
+                  ),
+                if (p.isNew)
+                  Positioned(
+                    left: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00C27A),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Nuevo',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
               child: Row(

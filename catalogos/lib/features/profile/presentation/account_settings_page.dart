@@ -171,7 +171,7 @@ class AccountSettingsPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        name.isEmpty ? 'Revendedor' : name,
+                        name.isEmpty ? 'Mi cuenta' : name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

@@ -43,7 +43,7 @@ class ResellerPriceRulesRepository {
     String catalogId, {
     int page = 1,
     int pageSize = 20,
-    String? subcategoryId,
+    List<String>? subcategoryIds,
   }) async {
     final path = '/reseller/app/catalogs/$catalogId/products';
     dynamic rawBody;
@@ -53,7 +53,8 @@ class ResellerPriceRulesRepository {
         queryParameters: <String, dynamic>{
           'page': page,
           'pageSize': pageSize,
-          'subcategoryId': ?subcategoryId,
+          if (subcategoryIds != null && subcategoryIds.isNotEmpty)
+            'subcategoryIds': subcategoryIds.join(','),
         },
       );
       rawBody = response.data;

@@ -17,7 +17,7 @@ class PriceAdjustmentArgs {
     required this.catalogId,
     required this.totalProductsHint,
     this.singleProduct,
-    this.subcategory,
+    this.subcategories = const <CatalogSubcategory>[],
   });
 
   final String catalogId;
@@ -30,12 +30,17 @@ class PriceAdjustmentArgs {
 
   final CatalogPriceRuleProduct? singleProduct;
 
-  /// Modo "una subcategoría": la regla aplica a los productos de esa
-  /// subcategoría (pierde contra la de producto, gana sobre la de catálogo).
-  final CatalogSubcategory? subcategory;
+  /// Modo "subcategorías": la regla aplica a los productos de las subcategorías
+  /// elegidas (pierde contra la de producto, gana sobre la de catálogo).
+  final List<CatalogSubcategory> subcategories;
 
   bool get isSingleProduct => singleProduct != null;
-  bool get isSubcategory => subcategory != null;
+  bool get isSubcategory => subcategories.isNotEmpty;
+
+  /// "Camisetas", "Camisetas y Blusas", "Camisetas, Blusas y 1 más"…
+  String get subcategoriesLabel => subcategories.length <= 2
+      ? subcategories.map((s) => s.name).join(' y ')
+      : '${subcategories.first.name} y ${subcategories.length - 1} más';
 }
 
 sealed class PriceAdjustmentState {
@@ -146,9 +151,10 @@ class PriceAdjustmentSavedCatalog extends PriceAdjustmentState {
 }
 
 class PriceAdjustmentSavedSubcategory extends PriceAdjustmentState {
-  const PriceAdjustmentSavedSubcategory(this.result, this.name);
-  final SavedSubcategoryRuleResult result;
-  final String name;
+  const PriceAdjustmentSavedSubcategory(this.rule, this.label, this.count);
+  final PriceRule rule;
+  final String label;
+  final int count;
 }
 
 class PriceAdjustmentSavedProduct extends PriceAdjustmentState {
@@ -194,6 +200,7 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
 
     List<CatalogPriceRuleProduct> previewProducts;
     PriceRule? existingRule;
+    bool anySubRule = false;
     int totalProducts;
     PriceRule? catalogRuleForProductMode;
 
@@ -207,7 +214,9 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
         _args.catalogId,
         page: 1,
         pageSize: ResellerPriceRulesRepository.maxPageSize,
-        subcategoryId: _args.subcategory?.id,
+        subcategoryIds: _args.isSubcategory
+            ? <String>[for (final s in _args.subcategories) s.id]
+            : null,
       );
       if (pageResult is Err<PriceRulesProductsPage>) {
         state = PriceAdjustmentLoadError(pageResult.failure);
@@ -221,9 +230,23 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
         return;
       }
       previewProducts = page.products;
-      existingRule = _args.isSubcategory
-          ? summary.subcategoryRules[_args.subcategory!.id]
-          : summary.catalogRule;
+      if (_args.isSubcategory) {
+        // Si todas las elegidas tienen el mismo ajuste, se precarga; si no, vacío.
+        final rules = <PriceRule?>[
+          for (final s in _args.subcategories) summary.subcategoryRules[s.id],
+        ];
+        final first = rules.first;
+        existingRule =
+            first != null &&
+                rules.every(
+                  (r) => r?.mode == first.mode && r?.value == first.value,
+                )
+            ? first
+            : null;
+        anySubRule = rules.any((r) => r != null);
+      } else {
+        existingRule = summary.catalogRule;
+      }
       totalProducts = page.total;
       catalogRuleForProductMode = null;
     }
@@ -235,7 +258,7 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
       mode: existingRule?.mode ?? PriceRuleMode.percent,
       rawDigits: existingRule != null ? existingRule.value.toString() : '',
       catalogRule: catalogRuleForProductMode,
-      hasOwnRule: existingRule != null,
+      hasOwnRule: existingRule != null || anySubRule,
       totalProducts: totalProducts,
       saving: false,
       removing: false,
@@ -325,23 +348,25 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
     }
 
     if (_args.isSubcategory) {
-      final result = await _repo.upsertSubcategoryRule(
-        _args.catalogId,
-        _args.subcategory!.id,
-        rule,
-      );
-      if (!ref.mounted) return false;
-      switch (result) {
-        case Ok<SavedSubcategoryRuleResult>(:final value):
-          state = PriceAdjustmentSavedSubcategory(
-            value,
-            _args.subcategory!.name,
-          );
-          return true;
-        case Err<SavedSubcategoryRuleResult>(:final failure):
-          state = s.copyWith(saving: false, actionError: failure);
+      // Mismo ajuste para cada subcategoría elegida; se detiene en el primer error.
+      for (final CatalogSubcategory sub in _args.subcategories) {
+        final result = await _repo.upsertSubcategoryRule(
+          _args.catalogId,
+          sub.id,
+          rule,
+        );
+        if (!ref.mounted) return false;
+        if (result is Err<SavedSubcategoryRuleResult>) {
+          state = s.copyWith(saving: false, actionError: result.failure);
           return false;
+        }
       }
+      state = PriceAdjustmentSavedSubcategory(
+        rule,
+        _args.subcategoriesLabel,
+        _args.subcategories.length,
+      );
+      return true;
     }
 
     final result = await _repo.upsertCatalogRule(_args.catalogId, rule);
@@ -362,17 +387,21 @@ class PriceAdjustmentController extends Notifier<PriceAdjustmentState> {
     if (s is! PriceAdjustmentReady || s.isBusy) return false;
     state = s.copyWith(removing: true, actionError: null);
 
-    final result = _args.isSingleProduct
-        ? await _repo.deleteProductRule(
-            _args.catalogId,
-            _args.singleProduct!.id,
-          )
-        : _args.isSubcategory
-        ? await _repo.deleteSubcategoryRule(
-            _args.catalogId,
-            _args.subcategory!.id,
-          )
-        : await _repo.deleteCatalogRule(_args.catalogId);
+    Result<void> result;
+    if (_args.isSingleProduct) {
+      result = await _repo.deleteProductRule(
+        _args.catalogId,
+        _args.singleProduct!.id,
+      );
+    } else if (_args.isSubcategory) {
+      result = const Ok<void>(null);
+      for (final CatalogSubcategory sub in _args.subcategories) {
+        result = await _repo.deleteSubcategoryRule(_args.catalogId, sub.id);
+        if (result is Err<void>) break;
+      }
+    } else {
+      result = await _repo.deleteCatalogRule(_args.catalogId);
+    }
 
     if (!ref.mounted) return false;
     switch (result) {

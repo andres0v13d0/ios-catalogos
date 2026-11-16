@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -299,49 +300,211 @@ class _OrderDetail extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  'Pedido #${v.number} · ${v.statusLabel}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        'Pedido #${v.number}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF001634),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE3ECFB),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        v.statusLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 2),
                 Text(
                   <String>[?v.providerName, ?v.catalogName].join(' · '),
                   style: const TextStyle(color: Color(0xFF5B6B84)),
                 ),
-                const Divider(height: 24),
-                for (final PublicOrderItem it in v.items)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                Text(
+                  _date(v.createdAt),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF8795AB),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                for (final PublicOrderItem it in v.items) _ItemTile(item: it),
+                if (v.total != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5FC),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     child: Row(
                       children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            '${it.quantity} × ${it.name}'
-                            '${[it.color, it.size == null ? null : 'Talla ${it.size}'].whereType<String>().isEmpty ? '' : ' (${[it.color, it.size == null ? null : 'Talla ${it.size}'].whereType<String>().join(' · ')})'}',
+                        Text(
+                          '${v.items.fold<int>(0, (int a, PublicOrderItem i) => a + i.quantity)} unidades',
+                          style: const TextStyle(color: Color(0xFF5B6B84)),
+                        ),
+                        const Spacer(),
+                        Text(
+                          'Total  ${formatCop(v.total!)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.secondary,
                           ),
                         ),
-                        if (it.totalPrice != null)
-                          Text(formatCop(it.totalPrice!)),
                       ],
                     ),
                   ),
-                if (v.total != null) ...<Widget>[
-                  const Divider(height: 24),
-                  Text(
-                    'Total: ${formatCop(v.total!)}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
                 if ((v.notes ?? '').isNotEmpty) ...<Widget>[
                   const SizedBox(height: 12),
-                  Text('Nota: ${v.notes}'),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Icon(
+                        LucideIcons.stickyNote,
+                        size: 16,
+                        color: Color(0xFF5B6B84),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          v.notes!,
+                          style: const TextStyle(color: Color(0xFF5B6B84)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Fila de un producto del pedido: foto, nombre, variantes y precios.
+class _ItemTile extends StatelessWidget {
+  const _ItemTile({required this.item});
+
+  final PublicOrderItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final PublicOrderItem it = item;
+    final List<String> tags = <String>[
+      ?it.color,
+      if (it.size != null) 'Talla ${it.size}',
+    ];
+    const Widget ph = ColoredBox(
+      color: Color(0xFFE3ECFB),
+      child: Icon(LucideIcons.image, color: Color(0xFF8795AB)),
+    );
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE3ECFB)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: it.imageUrl == null
+                  ? ph
+                  : CachedNetworkImage(
+                      imageUrl: it.imageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => ph,
+                      errorWidget: (_, _, _) => ph,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  it.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (tags.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    children: <Widget>[
+                      for (final String t in tags)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5FC),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(t, style: const TextStyle(fontSize: 11)),
+                        ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Row(
+                  children: <Widget>[
+                    Text(
+                      it.unitPrice == null
+                          ? '${it.quantity} uds'
+                          : '${it.quantity} × ${formatCop(it.unitPrice!)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF5B6B84),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (it.totalPrice != null)
+                      Text(
+                        formatCop(it.totalPrice!),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

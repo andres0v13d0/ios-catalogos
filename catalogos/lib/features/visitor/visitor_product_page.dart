@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -7,6 +8,7 @@ import '../../app/theme/app_colors.dart';
 import '../../core/utils/money.dart';
 import '../buy/cart_controller.dart';
 import 'cart_flow.dart';
+import 'catalog_access.dart';
 import 'image_gallery.dart';
 import 'visitor_buy_page.dart' show openVisitorChat;
 import 'visitor_catalogs.dart';
@@ -79,300 +81,330 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
         (p.colors.isNotEmpty && _color == null) ||
         (p.sizes.isNotEmpty && _size == null);
     final int unit = p.priceFor(_qty);
-    return Scaffold(
-      backgroundColor: Colors.white,
-      floatingActionButton: const FloatingCartButton(),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          SizedBox(
-            height: 340 + MediaQuery.paddingOf(context).top,
-            child: Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                if (imgs.isEmpty)
-                  const ColoredBox(color: Color(0xFFE3ECFB))
-                else
-                  PageView.builder(
-                    controller: _pages,
-                    itemCount: imgs.length,
-                    onPageChanged: (int i) => setState(() => _page = i),
-                    itemBuilder: (_, int i) => GestureDetector(
-                      onTap: () => _openGallery(imgs, i),
-                      child: ColoredBox(
-                        color: const Color(0xFFF1F5FB),
-                        // Debajo de la barra de estado, no tapada por ella.
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            top: MediaQuery.paddingOf(context).top,
-                          ),
-                          child: CachedNetworkImage(
-                            imageUrl: imgs[i],
-                            fit: BoxFit.contain,
-                            errorWidget: (_, _, _) => const SizedBox.shrink(),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  left: 14,
-                  top: MediaQuery.paddingOf(context).top + 8,
-                  child: Material(
-                    color: const Color(0xD9FFFFFF),
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      tooltip: 'Volver',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(
-                        LucideIcons.chevronLeft,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                if (imgs.length > 1)
-                  Positioned(
-                    right: 14,
-                    bottom: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0x99001634),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${_page + 1} / ${imgs.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (imgs.length > 1)
+    final String? accessMessage = ref
+        .watch(catalogAccessProvider(widget.catalog.catalogId))
+        .value
+        ?.message;
+    // Fondo claro: iconos de la barra de estado oscuros (si no, se pierden).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        floatingActionButton: const FloatingCartButton(),
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
             SizedBox(
-              height: 70,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                itemCount: imgs.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, int i) => GestureDetector(
-                  onTap: () => _pages.animateToPage(
-                    i,
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOut,
-                  ),
-                  child: Container(
-                    width: 58,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: i == _page
-                            ? AppColors.secondary
-                            : Colors.transparent,
-                        width: 2.5,
+              height: 340 + MediaQuery.paddingOf(context).top,
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  if (imgs.isEmpty)
+                    const ColoredBox(color: Color(0xFFE3ECFB))
+                  else
+                    PageView.builder(
+                      controller: _pages,
+                      itemCount: imgs.length,
+                      onPageChanged: (int i) => setState(() => _page = i),
+                      itemBuilder: (_, int i) => GestureDetector(
+                        onTap: () => _openGallery(imgs, i),
+                        child: ColoredBox(
+                          color: const Color(0xFFF1F5FB),
+                          // Debajo de la barra de estado, no tapada por ella.
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              top: MediaQuery.paddingOf(context).top,
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: imgs[i],
+                              fit: BoxFit.contain,
+                              errorWidget: (_, _, _) => const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: CachedNetworkImage(
-                      imageUrl: imgs[i],
-                      fit: BoxFit.cover,
-                      errorWidget: (_, _, _) =>
-                          const ColoredBox(color: Color(0xFFE3ECFB)),
+                  Positioned(
+                    left: 14,
+                    top: MediaQuery.paddingOf(context).top + 8,
+                    child: Material(
+                      color: const Color(0xD9FFFFFF),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: 'Volver',
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(
+                          LucideIcons.chevronLeft,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (imgs.length > 1)
+                    Positioned(
+                      right: 14,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x99001634),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_page + 1} / ${imgs.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (imgs.length > 1)
+              SizedBox(
+                height: 70,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  itemCount: imgs.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, int i) => GestureDetector(
+                    onTap: () => _pages.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut,
+                    ),
+                    child: Container(
+                      width: 58,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: i == _page
+                              ? AppColors.secondary
+                              : Colors.transparent,
+                          width: 2.5,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: CachedNetworkImage(
+                        imageUrl: imgs[i],
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) =>
+                            const ColoredBox(color: Color(0xFFE3ECFB)),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        widget.catalog.providerName ?? widget.catalog.name,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF5B6B84),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          widget.catalog.providerName ?? widget.catalog.name,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF5B6B84),
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Preguntar por este producto',
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      iconSize: 28,
-                      color: AppColors.secondary,
-                      onPressed: () => openVisitorChat(
-                        context,
-                        ref,
-                        widget.catalog,
-                        product: p,
+                      IconButton(
+                        tooltip: 'Preguntar por este producto',
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                        iconSize: 28,
+                        color: AppColors.secondary,
+                        onPressed: () => openVisitorChat(
+                          context,
+                          ref,
+                          widget.catalog,
+                          product: p,
+                        ),
+                        icon: const Icon(LucideIcons.messageCircle),
                       ),
-                      icon: const Icon(LucideIcons.messageCircle),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  p.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    ],
                   ),
-                ),
-                if (unit > 0)
+                  const SizedBox(height: 2),
                   Text(
-                    '${formatCop(unit)} por unidad',
+                    p.name,
                     style: const TextStyle(
-                      fontSize: 17,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.secondary,
+                      color: AppColors.primary,
                     ),
                   ),
-                if (p.colors.isNotEmpty) ...<Widget>[
-                  const _Label('COLOR'),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      for (final String c in p.colors)
-                        _Pill(
-                          label: c,
-                          on: _color == c,
-                          onTap: () => setState(() => _color = c),
-                        ),
-                    ],
-                  ),
-                ],
-                if (p.sizes.isNotEmpty) ...<Widget>[
-                  const _Label('TALLA'),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      for (final String s in p.sizes)
-                        _Pill(
-                          label: s,
-                          on: _size == s,
-                          onTap: () => setState(() => _size = s),
-                        ),
-                    ],
-                  ),
-                ],
-                const _Label('CANTIDAD'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    for (final int q in p.quantityOptions)
-                      _Pill(
-                        label: '$q',
-                        on: q == _qty,
-                        onTap: () => setState(() => _qty = q),
+                  if (unit > 0)
+                    Text(
+                      '${formatCop(unit)} por unidad',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
                       ),
-                  ],
-                ),
-                if ((p.description ?? '').isNotEmpty) ...<Widget>[
-                  const _Label('DESCRIPCIÓN'),
-                  Text(
-                    p.description!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.5,
-                      color: Color(0xFF3A4A66),
                     ),
+                  if (p.colors.isNotEmpty) ...<Widget>[
+                    const _Label('COLOR'),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        for (final String c in p.colors)
+                          _Pill(
+                            label: c,
+                            on: _color == c,
+                            onTap: () {
+                              setState(() => _color = c);
+                              // Si el proveedor asoció una foto a este color, mostrarla.
+                              final int? photo = p.colorPhoto[c];
+                              if (photo != null && _pages.hasClients) {
+                                _pages.animateToPage(
+                                  photo,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOut,
+                                );
+                              }
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                  if (p.sizes.isNotEmpty) ...<Widget>[
+                    const _Label('TALLA'),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        for (final String s in p.sizes)
+                          _Pill(
+                            label: s,
+                            on: _size == s,
+                            onTap: () => setState(() => _size = s),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const _Label('CANTIDAD'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      for (final int q in p.quantityOptions)
+                        _Pill(
+                          label: '$q',
+                          on: q == _qty,
+                          onTap: () => setState(() => _qty = q),
+                        ),
+                    ],
                   ),
+                  if ((p.description ?? '').isNotEmpty) ...<Widget>[
+                    const _Label('DESCRIPCIÓN'),
+                    Text(
+                      p.description!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: Color(0xFF3A4A66),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Color(0x14001634),
-              blurRadius: 16,
-              offset: Offset(0, -4),
+              ),
             ),
           ],
         ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-            child: Row(
-              children: <Widget>[
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      'Subtotal',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF5B6B84)),
-                    ),
-                    Text(
-                      formatCop(unit * _qty),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: FilledButton(
-                      onPressed: needsChoice
-                          ? null
-                          : () {
-                              ref
-                                  .read(cartControllerProvider.notifier)
-                                  .add(
-                                    cartLineFor(
-                                      widget.catalog,
-                                      p,
-                                      _qty,
-                                      color: _color,
-                                      size: _size,
-                                    ),
-                                  );
-                            },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.secondary,
-                        shape: const StadiumBorder(),
-                        textStyle: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Color(0x14001634),
+                blurRadius: 16,
+                offset: Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: accessMessage != null
+                  ? Row(
+                      children: <Widget>[
+                        const Icon(LucideIcons.lock, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(accessMessage)),
+                      ],
+                    )
+                  : Row(
+                      children: <Widget>[
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text(
+                              'Subtotal',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF5B6B84),
+                              ),
+                            ),
+                            Text(
+                              formatCop(unit * _qty),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: Text(
-                        needsChoice
-                            ? 'Elige color y talla'
-                            : 'Añadir al carrito',
-                      ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: SizedBox(
+                            height: 52,
+                            child: FilledButton(
+                              onPressed: needsChoice
+                                  ? null
+                                  : () {
+                                      ref
+                                          .read(cartControllerProvider.notifier)
+                                          .add(
+                                            cartLineFor(
+                                              widget.catalog,
+                                              p,
+                                              _qty,
+                                              color: _color,
+                                              size: _size,
+                                            ),
+                                          );
+                                    },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.secondary,
+                                shape: const StadiumBorder(),
+                                textStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              child: Text(
+                                needsChoice
+                                    ? 'Elige color y talla'
+                                    : 'Añadir al carrito',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ],
             ),
           ),
         ),

@@ -18,6 +18,7 @@ import '../../features/orders/presentation/orders_page.dart';
 import '../../features/buy/buy_page.dart';
 import '../../features/account/account_tab.dart';
 import '../../features/chat/chat_tab.dart';
+import '../../features/visitor/share_link_page.dart';
 import '../../features/visitor/visitor_catalog_page.dart';
 import '../../features/chat/conversation_page.dart';
 import 'app_routes.dart';
@@ -49,6 +50,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       // Pestañas públicas: el visitante entra sin cuenta.
       final bool isPublic =
           goingToAuthFlow ||
+          state.fullPath == AppRoutes.shareLink ||
           location == AppRoutes.buy ||
           location.startsWith('/comprar/c/') ||
           location.startsWith(AppRoutes.chat) ||
@@ -211,6 +213,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
           final ProductDetailArgs args = state.extra! as ProductDetailArgs;
           return ProductDetailPage(args: args);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.shareLink,
+        builder: (BuildContext context, GoRouterState state) =>
+            ShareLinkPage(id: state.pathParameters['id'] ?? ''),
       ),
     ],
   );
