@@ -21,7 +21,7 @@ enum CatalogAccess {
     pending => 'El proveedor aún no ha aceptado tu solicitud.',
     blocked => 'No tienes acceso a este catálogo.',
     loginRequired =>
-      'Inicia sesión en la pestaña Cuenta para ver los precios y hacer pedidos.',
+      'Inicia sesión para ver los precios y hacer pedidos.',
   };
 
   static CatalogAccess parse(Object? v) => switch (v) {

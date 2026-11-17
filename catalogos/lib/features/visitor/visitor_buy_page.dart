@@ -145,40 +145,24 @@ class VisitorBuyPage extends ConsumerWidget {
                           dotsHeight: catalogs.length > 1 ? 32 : 0,
                           compact: compact,
                           cardBuilder: (Catalog cat, int _, bool compact) {
-                            final Widget card = PosterCatalogCard(
+                            final bool shared = sharedIds.contains(cat.id);
+                            return PosterCatalogCard(
                               key: Key('catalog_${cat.id}'),
                               catalog: cat,
                               compact: compact,
                               hideProvider: savedOf(cat)?.isReseller ?? false,
-                              onTap: () => _open(context, savedOf(cat)),
-                            );
-                            if (!sharedIds.contains(cat.id)) return card;
-                            // Compartido por un proveedor: se puede personalizar
-                            // (precios de venta, banner, compartir).
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Flexible(child: card),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    onPressed: () => context.push(
-                                      AppRoutes.catalogDetailPath(cat.id),
-                                      extra: cat.displayName,
-                                    ),
-                                    icon: const Icon(
-                                      LucideIcons.slidersHorizontal,
-                                      size: 18,
-                                    ),
-                                    label: const Text('Personalizar'),
-                                  ),
-                                ),
-                              ],
+                              actionLabel: shared
+                                  ? 'Personalizar'
+                                  : 'Ver catálogo',
+                              onTap: () => shared
+                                  ? _personalize(context, cat)
+                                  : _open(context, savedOf(cat)),
                             );
                           },
                           onOpenCatalog: (Catalog cat) =>
-                              _open(context, savedOf(cat)),
+                              sharedIds.contains(cat.id)
+                              ? _personalize(context, cat)
+                              : _open(context, savedOf(cat)),
                           onLongPressCatalog: (Catalog cat) {
                             final VisitorCatalog? v = savedOf(cat);
                             if (v != null && !sharedIds.contains(cat.id)) {
@@ -194,6 +178,11 @@ class VisitorBuyPage extends ConsumerWidget {
       ),
     );
   }
+
+  /// Catálogo que te compartió un proveedor: se abre para personalizarlo
+  /// (precios de venta, banner, compartir), no para comprarlo.
+  void _personalize(BuildContext context, Catalog cat) =>
+      context.push(AppRoutes.catalogDetailPath(cat.id), extra: cat.displayName);
 
   void _open(BuildContext context, VisitorCatalog? saved) {
     if (saved != null) {

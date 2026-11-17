@@ -13,8 +13,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_routes.dart';
 import '../auth/presentation/auth_state_provider.dart';
-import '../shared_catalogs/presentation/catalog_price_overlay_controller.dart';
-import '../shared_catalogs/domain/price_rules_contract.dart';
 import 'catalog_access.dart';
 import 'image_gallery.dart';
 import 'visitor_buy_page.dart' show openVisitorChat;
@@ -92,17 +90,6 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
         .watch(catalogAccessProvider(widget.catalog.catalogId))
         .value
         ?.message;
-    final bool mine = ref
-        .watch(sharedCatalogIdsProvider)
-        .contains(widget.catalog.shortUuid);
-    final CatalogPriceRuleProduct? ov = mine
-        ? ref
-              .watch(
-                catalogPriceOverlayControllerProvider(widget.catalog.catalogId),
-              )
-              .value
-              ?.byProductId[p.id]
-        : null;
     // Fondo claro: iconos de la barra de estado oscuros (si no, se pierden).
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -358,35 +345,7 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: mine
-                  ? Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              if (ov?.lowestAdjustedPrice != null)
-                                Text(
-                                  'Tu precio ${formatCop(ov!.lowestAdjustedPrice!)}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.secondary,
-                                  ),
-                                ),
-                              Text(
-                                'Proveedor ${formatCop(p.priceFrom)} · Para pedir, usa Personalizar y comparte tu catálogo.',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF5B6B84),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  : accessMessage != null
+              child: accessMessage != null
                   ? Row(
                       children: <Widget>[
                         const Icon(LucideIcons.lock, size: 18),

@@ -15,7 +15,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_routes.dart';
 import '../auth/presentation/auth_state_provider.dart';
-import '../shared_catalogs/presentation/catalog_price_overlay_controller.dart';
 import 'catalog_access.dart';
 import 'visitor_buy_page.dart' show openVisitorChat;
 import 'visitor_catalogs.dart';
@@ -370,8 +369,12 @@ class _Logo extends StatelessWidget {
               ),
             ),
           )
+        // Tamaño explícito (46 - 2×2.5 de borde): sin él, CachedNetworkImage
+        // recibe restricciones sueltas y la foto no llena el círculo.
         : CachedNetworkImage(
             imageUrl: url!,
+            width: 41,
+            height: 41,
             fit: BoxFit.cover,
             errorWidget: (_, _, _) => const SizedBox.shrink(),
           ),
@@ -427,18 +430,6 @@ class _ProductCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final VisitorProduct p = product;
     final int from = p.priceFrom;
-    // Catálogo que el proveedor le compartió al revendedor: ve su precio de
-    // venta y el del proveedor, y no pide (para eso está Personalizar).
-    final bool mine = ref
-        .watch(sharedCatalogIdsProvider)
-        .contains(catalog.shortUuid);
-    final num? myPrice = mine
-        ? ref
-              .watch(catalogPriceOverlayControllerProvider(catalog.catalogId))
-              .value
-              ?.byProductId[p.id]
-              ?.lowestAdjustedPrice
-        : null;
     return Material(
       color: Colors.white,
       elevation: 1.5,
@@ -511,24 +502,7 @@ class _ProductCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 12),
                         ),
-                        if (myPrice != null)
-                          Text(
-                            'Tu precio ${formatCop(myPrice)}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.secondary,
-                            ),
-                          ),
-                        if (from > 0 && mine)
-                          Text(
-                            'Proveedor ${formatCop(from)}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF5B6B84),
-                            ),
-                          )
-                        else if (from > 0)
+                        if (from > 0)
                           Text(
                             formatCop(from),
                             style: const TextStyle(
@@ -540,39 +514,38 @@ class _ProductCard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (!mine)
-                    Semantics(
-                      button: true,
-                      label: 'Añadir ${p.name} al carrito',
-                      child: Material(
-                        color: AppColors.secondary,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () {
-                            // Sin color ni talla que elegir: se agrega directo con
-                            // la primera cantidad del proveedor. Si no, al detalle.
-                            if (p.colors.isEmpty && p.sizes.isEmpty) {
-                              final int q = p.quantityOptions.first;
-                              ref
-                                  .read(cartControllerProvider.notifier)
-                                  .add(cartLineFor(catalog, p, q));
-                            } else {
-                              _open(context);
-                            }
-                          },
-                          child: const SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: Icon(
-                              LucideIcons.shoppingCart,
-                              size: 18,
-                              color: Colors.white,
-                            ),
+                  Semantics(
+                    button: true,
+                    label: 'Añadir ${p.name} al carrito',
+                    child: Material(
+                      color: AppColors.secondary,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () {
+                          // Sin color ni talla que elegir: se agrega directo con
+                          // la primera cantidad del proveedor. Si no, al detalle.
+                          if (p.colors.isEmpty && p.sizes.isEmpty) {
+                            final int q = p.quantityOptions.first;
+                            ref
+                                .read(cartControllerProvider.notifier)
+                                .add(cartLineFor(catalog, p, q));
+                          } else {
+                            _open(context);
+                          }
+                        },
+                        child: const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Icon(
+                            LucideIcons.shoppingCart,
+                            size: 18,
+                            color: Colors.white,
                           ),
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

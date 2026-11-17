@@ -88,6 +88,11 @@ class _ChatTabState extends ConsumerState<ChatTab> {
                               ).contains(_query)),
                     )
                     .toList();
+                // Soporte FLY+ siempre arriba; el resto conserva su orden.
+                list.setAll(0, <ChatConversation>[
+                  ...list.where((ChatConversation c) => c.isSupport),
+                  ...list.where((ChatConversation c) => !c.isSupport),
+                ]);
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(conversationsProvider),
                   child: list.isEmpty
