@@ -36,7 +36,11 @@ class PosterCatalogCard extends ConsumerWidget {
     required this.catalog,
     required this.onTap,
     this.compact = false,
+    this.hideProvider = false,
   });
+
+  /// Catálogo de revendedor: sin logo ni nombre del proveedor.
+  final bool hideProvider;
 
   final Catalog catalog;
   final VoidCallback onTap;
@@ -114,34 +118,38 @@ class PosterCatalogCard extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              border: Border.all(color: Colors.white, width: 3),
-                            ),
-                            child: ClipOval(
-                              child: logo == null
-                                  ? Center(
-                                      child: Text(
-                                        catalog.providerInitials,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.secondary,
+                          if (!hideProvider)
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child: logo == null
+                                    ? Center(
+                                        child: Text(
+                                          catalog.providerInitials,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.secondary,
+                                          ),
                                         ),
+                                      )
+                                    : CachedNetworkImage(
+                                        imageUrl: logo,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (_, _, _) =>
+                                            const SizedBox.shrink(),
                                       ),
-                                    )
-                                  : CachedNetworkImage(
-                                      imageUrl: logo,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (_, _, _) =>
-                                          const SizedBox.shrink(),
-                                    ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
+                          if (!hideProvider) const SizedBox(height: 10),
                           Text(
                             catalog.displayName,
                             maxLines: 2,
@@ -153,15 +161,16 @@ class PosterCatalogCard extends ConsumerWidget {
                               color: Colors.white,
                             ),
                           ),
-                          Text(
-                            catalog.providerLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFFCFE0F7),
+                          if (!hideProvider)
+                            Text(
+                              catalog.providerLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFFCFE0F7),
+                              ),
                             ),
-                          ),
                           const SizedBox(height: 10),
                           Wrap(
                             spacing: 6,

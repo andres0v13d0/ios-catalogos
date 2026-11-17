@@ -363,33 +363,34 @@ class _Preview extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              width: 52,
-              height: 52,
-              child: c.logoUrl == null || c.logoUrl!.isEmpty
-                  ? const ColoredBox(
-                      color: Color(0xFFE3ECFB),
-                      child: Icon(
-                        LucideIcons.store,
-                        color: AppColors.secondary,
-                      ),
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: c.logoUrl!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, _, _) => const ColoredBox(
+          if (!c.isReseller)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: c.logoUrl == null || c.logoUrl!.isEmpty
+                    ? const ColoredBox(
                         color: Color(0xFFE3ECFB),
                         child: Icon(
                           LucideIcons.store,
                           color: AppColors.secondary,
                         ),
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: c.logoUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) => const ColoredBox(
+                          color: Color(0xFFE3ECFB),
+                          child: Icon(
+                            LucideIcons.store,
+                            color: AppColors.secondary,
+                          ),
+                        ),
                       ),
-                    ),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
+          if (!c.isReseller) const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,7 +405,9 @@ class _Preview extends StatelessWidget {
                     color: AppColors.primary,
                   ),
                 ),
-                if (c.providerName != null && c.providerName != c.name)
+                if (!c.isReseller &&
+                    c.providerName != null &&
+                    c.providerName != c.name)
                   Text(
                     c.providerName!,
                     maxLines: 1,

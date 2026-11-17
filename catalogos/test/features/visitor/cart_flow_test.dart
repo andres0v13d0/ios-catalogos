@@ -198,7 +198,6 @@ void main() {
       ],
     );
     expect(find.text('Distribuidora FLEXRUN'), findsWidgets);
-    expect(find.text('2 productos'), findsOneWidget);
     await tester.tap(
       find.bySemanticsLabel('Añadir Sandalia deportiva al carrito'),
     );
@@ -417,6 +416,7 @@ void main() {
       VisitorProductPage(catalog: _cat, product: _variant),
       extra: [
         isSignedInProvider.overrideWithValue(true),
+        sharedCatalogIdsProvider.overrideWithValue(const <String>{}),
         catalogAccessProvider.overrideWith(
           (ref, id) async => CatalogAccess.blocked,
         ),

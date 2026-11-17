@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -6,6 +7,8 @@ import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/brand_header.dart';
 import '../../auth/presentation/auth_state_provider.dart';
+import '../../visitor/visitor_buy_page.dart' show openVisitorChat;
+import '../../visitor/visitor_catalogs.dart';
 import '../../visitor/visitor_orders.dart';
 import '../domain/reseller_order.dart';
 import 'orders_controller.dart';
@@ -536,14 +539,23 @@ class _PurchasesList extends ConsumerWidget {
   }
 }
 
-class _PurchaseCard extends StatelessWidget {
+String _detail(ResellerOrderItem it) => <String>[
+  ?it.color,
+  if (it.size != null) 'Talla ${it.size}',
+].join(' · ');
+
+class _PurchaseCard extends ConsumerWidget {
   const _PurchaseCard({required this.order});
 
   final ResellerOrder order;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final DateTime d = order.createdAt.toLocal();
+    final VisitorCatalog? catalog = ref
+        .watch(visitorCatalogsProvider)
+        .where((VisitorCatalog c) => c.catalogId == order.catalogId)
+        .firstOrNull;
     return Material(
       color: Colors.white,
       elevation: 1.5,
@@ -562,16 +574,44 @@ class _PurchaseCard extends StatelessWidget {
           style: const TextStyle(fontSize: 12, color: Color(0xFF5B6B84)),
         ),
         children: <Widget>[
+          if (catalog != null)
+            ListTile(
+              dense: true,
+              leading: const Icon(LucideIcons.store, size: 20),
+              title: Text(
+                catalog.providerName ?? catalog.name,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text('Proveedor'),
+              trailing: TextButton.icon(
+                onPressed: () => openVisitorChat(context, ref, catalog),
+                icon: const Icon(LucideIcons.messageCircle, size: 18),
+                label: const Text('Chat'),
+              ),
+            ),
           for (final ResellerOrderItem it in order.items)
             ListTile(
               dense: true,
-              title: Text('${it.quantity} × ${it.name}'),
-              subtitle: Text(
-                <String>[
-                  ?it.color,
-                  if (it.size != null) 'Talla ${it.size}',
-                ].join(' · '),
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: it.imageUrl == null
+                      ? const ColoredBox(
+                          color: Color(0xFFEAF0FA),
+                          child: Icon(LucideIcons.image, size: 20),
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: it.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, _, _) =>
+                              const ColoredBox(color: Color(0xFFEAF0FA)),
+                        ),
+                ),
               ),
+              title: Text('${it.quantity} × ${it.name}'),
+              subtitle: _detail(it) == '' ? null : Text(_detail(it)),
             ),
         ],
       ),

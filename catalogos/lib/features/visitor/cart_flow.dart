@@ -81,6 +81,103 @@ String _initials(String s) {
 
 /// Botón flotante del carrito con la cantidad de referencias; se oculta vacío.
 /// Al agregar algo, "salta" y el contador se ilumina (en vez de un aviso aparte).
+// Botones de carrito vivos (catálogo y producto pueden coexistir): el último es el visible.
+final List<GlobalKey> _fabs = <GlobalKey>[];
+
+/// Estrella fugaz desde [from] hasta el botón del carrito. Llamar después de
+/// agregar: espera un frame porque el botón aparece con el primer producto.
+void flyToCart(BuildContext from) {
+  final RenderBox? src = from.findRenderObject() as RenderBox?;
+  if (src == null || !src.attached) return;
+  final Offset start = src.localToGlobal(src.size.center(Offset.zero));
+  final OverlayState overlay = Overlay.of(from);
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final RenderBox? dst = _fabs.isEmpty
+        ? null
+        : _fabs.last.currentContext?.findRenderObject() as RenderBox?;
+    if (dst == null || !dst.attached || !overlay.mounted) return;
+    final Offset end = dst.localToGlobal(dst.size.center(Offset.zero));
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) =>
+          _ShootingStar(start: start, end: end, onDone: () => entry.remove()),
+    );
+    overlay.insert(entry);
+  });
+}
+
+class _ShootingStar extends StatefulWidget {
+  const _ShootingStar({
+    required this.start,
+    required this.end,
+    required this.onDone,
+  });
+
+  final Offset start;
+  final Offset end;
+  final VoidCallback onDone;
+
+  @override
+  State<_ShootingStar> createState() => _ShootingStarState();
+}
+
+class _ShootingStarState extends State<_ShootingStar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  )..forward().whenComplete(widget.onDone);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  // Trayectoria curva: control a mitad de camino y más arriba.
+  Offset _at(double t) {
+    final Offset c = Offset(
+      (widget.start.dx + widget.end.dx) / 2,
+      math.min(widget.start.dy, widget.end.dy) - 120,
+    );
+    final double u = 1 - t;
+    return widget.start * (u * u) + c * (2 * u * t) + widget.end * (t * t);
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: AnimatedBuilder(
+      animation: _c,
+      builder: (BuildContext context, _) {
+        final double t = Curves.easeIn.transform(_c.value);
+        return Stack(
+          children: <Widget>[
+            // Estela: puntos que se encogen y se desvanecen detrás de la estrella.
+            for (int i = 6; i >= 1; i--)
+              if (t - i * 0.03 >= 0)
+                _dot(_at(t - i * 0.03), 14.0 - i * 1.8, 0.5 - i * 0.07),
+            _dot(_at(t), 18, 1, star: true),
+          ],
+        );
+      },
+    ),
+  );
+
+  Widget _dot(Offset o, double size, double opacity, {bool star = false}) =>
+      Positioned(
+        left: o.dx - size,
+        top: o.dy - size,
+        child: Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Icon(
+            star ? Icons.star_rounded : Icons.circle,
+            size: size * 2,
+            color: star ? AppColors.accent : AppColors.brand,
+          ),
+        ),
+      );
+}
+
 class FloatingCartButton extends ConsumerStatefulWidget {
   const FloatingCartButton({super.key});
 
@@ -95,8 +192,17 @@ class _FloatingCartButtonState extends ConsumerState<FloatingCartButton>
     duration: const Duration(milliseconds: 520),
   );
 
+  final GlobalKey _fabKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _fabs.add(_fabKey);
+  }
+
   @override
   void dispose() {
+    _fabs.remove(_fabKey);
     _bump.dispose();
     super.dispose();
   }
@@ -166,6 +272,7 @@ class _FloatingCartButtonState extends ConsumerState<FloatingCartButton>
           );
         },
         child: Material(
+          key: _fabKey,
           color: AppColors.primary,
           shape: const CircleBorder(),
           elevation: 6,

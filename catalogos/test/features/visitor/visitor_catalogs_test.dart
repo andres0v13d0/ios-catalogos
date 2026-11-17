@@ -90,11 +90,15 @@ void _sharedTests() {
       final CatalogPage page = await api.fetchPage(id);
       expect(page.catalog.catalogId, id);
       expect(page.catalog.providerName, 'Proveedor SA');
-      final List<VisitorProduct> p = await api.previews(page.ids, id);
+      final List<VisitorProduct> p = await api.previews(
+        page.ids,
+        id,
+        shared: true,
+      );
       expect(p.single.priceFrom, 20000);
     });
 
-    test('Comprar junta compartidos y guardados sin repetir', () {
+    test('Comprar muestra aparte el enlace propio guardado (mismo catálogo, otro código)', () {
       final ProviderContainer c = ProviderContainer(
         overrides: <Override>[
           localCacheProvider.overrideWithValue(
@@ -109,7 +113,7 @@ void _sharedTests() {
                 const VisitorCatalog(
                   shortUuid: 'zzzzzzzz',
                   catalogId: id,
-                  name: 'Repetido',
+                  name: 'Mi enlace',
                 ).toJson(),
               ]),
             ),
@@ -126,7 +130,7 @@ void _sharedTests() {
       addTearDown(c.dispose);
       expect(
         c.read(buyCatalogsProvider).map((VisitorCatalog x) => x.name).toList(),
-        <String>['Compartido', 'Guardado'],
+        <String>['Compartido', 'Guardado', 'Mi enlace'],
       );
     });
   });

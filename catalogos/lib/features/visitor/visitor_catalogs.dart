@@ -24,7 +24,11 @@ class VisitorCatalog {
     this.bannerUrl,
     this.priceField,
     this.phone,
+    this.isReseller = false,
   });
+
+  /// Catálogo de un revendedor visto como público: no se muestra el proveedor.
+  final bool isReseller;
 
   final String shortUuid;
   final String catalogId;
@@ -39,7 +43,7 @@ class VisitorCatalog {
 
   /// Forma que entiende la tarjeta del carrusel (la misma de los catálogos compartidos).
   Catalog toCatalog() => Catalog(
-    id: catalogId,
+    id: shortUuid,
     displayName: name,
     providerId: 0,
     providerName: providerName,
@@ -57,6 +61,7 @@ class VisitorCatalog {
     'bannerUrl': bannerUrl,
     'priceField': priceField,
     'phone': phone,
+    'isReseller': isReseller,
   };
 
   factory VisitorCatalog.fromJson(Map<String, dynamic> j) => VisitorCatalog(
@@ -68,6 +73,7 @@ class VisitorCatalog {
     bannerUrl: j['bannerUrl'] as String?,
     priceField: j['priceField'] as String?,
     phone: j['phone'] as String?,
+    isReseller: j['isReseller'] as bool? ?? false,
   );
 }
 
@@ -334,6 +340,7 @@ class VisitorCatalogApi {
         ]),
         priceField: c?['priceField'] as String?,
         phone: first(<Object?>[d['telefono'], c?['telefono']]),
+        isReseller: !shared && c?['isReseller'] == true,
       ),
       newIds: ids(d['newProductIds']),
       ids: ids(d['productIds']),
@@ -470,20 +477,22 @@ class VisitorCatalogApi {
     await _dio.delete<dynamic>('/reseller/app/library/$catalogId');
   }
 
+  /// `true` si [code] es el id de un catálogo que un proveedor le compartió al
+  /// revendedor (no un enlace: los enlaces usan el código corto).
+  bool isSharedCode(String code) => _isReseller(code);
+
   Future<List<VisitorProduct>> previews(
     List<String> ids,
-    String catalogId,
-  ) async {
+    String catalogId, {
+    bool shared = false,
+  }) async {
     if (ids.isEmpty) return const <VisitorProduct>[];
     // Catálogo compartido por un proveedor: precio del proveedor (no el de venta).
     final Response<List<dynamic>> r = await _dio.post<List<dynamic>>(
-      _isReseller(catalogId)
+      shared
           ? '/reseller/app/catalogs/$catalogId/previews'
           : '/catalog/products/previews',
-      data: <String, dynamic>{
-        'ids': ids,
-        if (!_isReseller(catalogId)) 'catalogId': catalogId,
-      },
+      data: <String, dynamic>{'ids': ids, if (!shared) 'catalogId': catalogId},
     );
     return (r.data ?? const [])
         .whereType<Map<dynamic, dynamic>>()
@@ -712,7 +721,7 @@ final Provider<List<VisitorCatalog>> buyCatalogsProvider =
         ...shared,
         ...ref
             .watch(visitorCatalogsProvider)
-            .where((VisitorCatalog c) => !sharedIds.contains(c.catalogId)),
+            .where((VisitorCatalog c) => !sharedIds.contains(c.shortUuid)),
       ];
     });
 
@@ -879,6 +888,7 @@ final visitorCatalogQueryProvider = FutureProvider.autoDispose
       final List<VisitorProduct> prods = await api.previews(
         ids,
         p.catalog.catalogId,
+        shared: api.isSharedCode(q.code),
       );
       final bool prices = (await ref.watch(
         catalogAccessProvider(p.catalog.catalogId).future,
@@ -887,7 +897,9 @@ final visitorCatalogQueryProvider = FutureProvider.autoDispose
         catalog: p.catalog,
         products: <VisitorProduct>[
           for (final VisitorProduct x in prods)
-            if (prices) newIds.contains(x.id) ? x.asNew() : x else
+            if (prices)
+              newIds.contains(x.id) ? x.asNew() : x
+            else
               (newIds.contains(x.id) ? x.asNew() : x).withoutPrices(),
         ],
         categories: p.categories,
@@ -928,6 +940,7 @@ visitorFeedProvider =
                 final List<VisitorProduct> prods = await api.previews(
                   p.newIds.take(6).toList(),
                   p.catalog.catalogId,
+                  shared: api.isSharedCode(c.shortUuid),
                 );
                 final bool prices = (await ref.watch(
                   catalogAccessProvider(p.catalog.catalogId).future,

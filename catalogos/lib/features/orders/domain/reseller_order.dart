@@ -24,6 +24,7 @@ class ResellerOrderItem {
     required this.saleUnitPrice,
     this.color,
     this.size,
+    this.imageUrl,
   });
 
   final String name;
@@ -32,6 +33,7 @@ class ResellerOrderItem {
   final num saleUnitPrice; // lo que paga el cliente
   final String? color;
   final String? size;
+  final String? imageUrl;
 
   factory ResellerOrderItem.fromJson(Map<String, dynamic> j) {
     final num cost = num.tryParse('${j['unitPrice']}') ?? 0;
@@ -42,6 +44,7 @@ class ResellerOrderItem {
       saleUnitPrice: num.tryParse('${j['saleUnitPrice']}') ?? cost,
       color: j['color'] as String?,
       size: j['size'] as String?,
+      imageUrl: j['imageUrl'] as String?,
     );
   }
 }
@@ -58,6 +61,7 @@ class ResellerOrder {
     this.buyerName,
     this.buyerNote,
     this.resellerNote,
+    this.catalogId,
   });
 
   final String id;
@@ -75,6 +79,9 @@ class ResellerOrder {
   /// Nota privada del revendedor (la escribe él; el proveedor no la ve).
   final String? resellerNote;
 
+  /// Catálogo al que se hizo el pedido (para mostrar proveedor y abrir su chat).
+  final String? catalogId;
+
   /// Ganancia del revendedor (precio al cliente menos costo del proveedor).
   num get profit => saleTotal - costTotal;
 
@@ -89,6 +96,7 @@ class ResellerOrder {
       buyerName: text(j['buyerNombre']),
       buyerNote: text(j['notes']),
       resellerNote: text(j['resellerNotes']),
+      catalogId: text(j['catalogId']),
       id: '${j['id']}',
       number: (j['providerOrderNumber'] as num?)?.toInt() ?? 0,
       status: OrderStatus.parse(j['status']),

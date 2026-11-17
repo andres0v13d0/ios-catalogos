@@ -8,6 +8,13 @@ import '../../app/theme/app_colors.dart';
 import '../../core/utils/money.dart';
 import '../buy/cart_controller.dart';
 import 'cart_flow.dart';
+
+import 'package:go_router/go_router.dart';
+
+import '../../app/router/app_routes.dart';
+import '../auth/presentation/auth_state_provider.dart';
+import '../shared_catalogs/presentation/catalog_price_overlay_controller.dart';
+import '../shared_catalogs/domain/price_rules_contract.dart';
 import 'catalog_access.dart';
 import 'image_gallery.dart';
 import 'visitor_buy_page.dart' show openVisitorChat;
@@ -85,6 +92,17 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
         .watch(catalogAccessProvider(widget.catalog.catalogId))
         .value
         ?.message;
+    final bool mine = ref
+        .watch(sharedCatalogIdsProvider)
+        .contains(widget.catalog.shortUuid);
+    final CatalogPriceRuleProduct? ov = mine
+        ? ref
+              .watch(
+                catalogPriceOverlayControllerProvider(widget.catalog.catalogId),
+              )
+              .value
+              ?.byProductId[p.id]
+        : null;
     // Fondo claro: iconos de la barra de estado oscuros (si no, se pierden).
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -211,7 +229,10 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
                     children: <Widget>[
                       Expanded(
                         child: Text(
-                          widget.catalog.providerName ?? widget.catalog.name,
+                          widget.catalog.isReseller
+                              ? widget.catalog.name
+                              : (widget.catalog.providerName ??
+                                    widget.catalog.name),
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF5B6B84),
@@ -337,12 +358,46 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: accessMessage != null
+              child: mine
+                  ? Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              if (ov?.lowestAdjustedPrice != null)
+                                Text(
+                                  'Tu precio ${formatCop(ov!.lowestAdjustedPrice!)}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.secondary,
+                                  ),
+                                ),
+                              Text(
+                                'Proveedor ${formatCop(p.priceFrom)} · Para pedir, usa Personalizar y comparte tu catálogo.',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF5B6B84),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : accessMessage != null
                   ? Row(
                       children: <Widget>[
                         const Icon(LucideIcons.lock, size: 18),
                         const SizedBox(width: 10),
                         Expanded(child: Text(accessMessage)),
+                        const SizedBox(width: 8),
+                        if (!ref.watch(isSignedInProvider))
+                          FilledButton(
+                            onPressed: () => context.go(AppRoutes.login),
+                            child: const Text('Iniciar sesión'),
+                          ),
                       ],
                     )
                   : Row(
@@ -371,34 +426,39 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
                         Expanded(
                           child: SizedBox(
                             height: 52,
-                            child: FilledButton(
-                              onPressed: needsChoice
-                                  ? null
-                                  : () {
-                                      ref
-                                          .read(cartControllerProvider.notifier)
-                                          .add(
-                                            cartLineFor(
-                                              widget.catalog,
-                                              p,
-                                              _qty,
-                                              color: _color,
-                                              size: _size,
-                                            ),
-                                          );
-                                    },
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.secondary,
-                                shape: const StadiumBorder(),
-                                textStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                            child: Builder(
+                              builder: (BuildContext btnCtx) => FilledButton(
+                                onPressed: needsChoice
+                                    ? null
+                                    : () {
+                                        ref
+                                            .read(
+                                              cartControllerProvider.notifier,
+                                            )
+                                            .add(
+                                              cartLineFor(
+                                                widget.catalog,
+                                                p,
+                                                _qty,
+                                                color: _color,
+                                                size: _size,
+                                              ),
+                                            );
+                                        flyToCart(btnCtx);
+                                      },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.secondary,
+                                  shape: const StadiumBorder(),
+                                  textStyle: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                needsChoice
-                                    ? 'Elige color y talla'
-                                    : 'Añadir al carrito',
+                                child: Text(
+                                  needsChoice
+                                      ? 'Elige color y talla'
+                                      : 'Añadir al carrito',
+                                ),
                               ),
                             ),
                           ),

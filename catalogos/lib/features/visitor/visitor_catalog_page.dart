@@ -10,6 +10,12 @@ import '../../core/utils/money.dart';
 import '../../shared/widgets/brand_header.dart';
 import '../buy/cart_controller.dart';
 import 'cart_flow.dart';
+
+import 'package:go_router/go_router.dart';
+
+import '../../app/router/app_routes.dart';
+import '../auth/presentation/auth_state_provider.dart';
+import '../shared_catalogs/presentation/catalog_price_overlay_controller.dart';
 import 'catalog_access.dart';
 import 'visitor_buy_page.dart' show openVisitorChat;
 import 'visitor_catalogs.dart';
@@ -96,11 +102,10 @@ class _VisitorCatalogPageState extends ConsumerState<VisitorCatalogPage> {
         .where((VisitorCatalog c) => c.shortUuid == code)
         .firstOrNull;
     final VisitorCatalog? catalog = res?.catalog ?? saved;
-    final List<VisitorProduct> products =
-        res?.products ?? const <VisitorProduct>[];
-    final String provider =
-        catalog?.providerName ?? catalog?.name ?? 'Catálogo';
-    final bool noPrices = (catalog?.priceField ?? '').toLowerCase() == 'none';
+    final bool hideProvider = catalog?.isReseller ?? false;
+    final String provider = hideProvider
+        ? (catalog?.name ?? 'Catálogo')
+        : (catalog?.providerName ?? catalog?.name ?? 'Catálogo');
     final String? accessMessage = catalog == null
         ? null
         : ref.watch(catalogAccessProvider(catalog.catalogId)).value?.message;
@@ -125,8 +130,10 @@ class _VisitorCatalogPageState extends ConsumerState<VisitorCatalogPage> {
                       label: 'Volver',
                       onTap: () => Navigator.of(context).maybePop(),
                     ),
-                    const SizedBox(width: 10),
-                    _Logo(url: catalog?.logoUrl, name: provider),
+                    if (!hideProvider) ...<Widget>[
+                      const SizedBox(width: 10),
+                      _Logo(url: catalog?.logoUrl, name: provider),
+                    ],
                   ],
                 ),
                 actions: <Widget>[
@@ -137,21 +144,6 @@ class _VisitorCatalogPageState extends ConsumerState<VisitorCatalogPage> {
                       onTap: () => openVisitorChat(context, ref, catalog),
                     ),
                 ],
-                child: Row(
-                  children: <Widget>[
-                    if (products.isNotEmpty)
-                      _Chip(
-                        '${products.length} ${products.length == 1 ? 'producto' : 'productos'}',
-                      ),
-                    if (products.isNotEmpty) const SizedBox(width: 6),
-                    if (catalog != null)
-                      _Chip(
-                        noPrices || accessMessage != null
-                            ? 'Sin precios'
-                            : 'Con precios',
-                      ),
-                  ],
-                ),
               ),
               if (accessMessage != null)
                 Container(
@@ -172,6 +164,12 @@ class _VisitorCatalogPageState extends ConsumerState<VisitorCatalogPage> {
                           style: const TextStyle(fontSize: 13),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      if (!ref.watch(isSignedInProvider))
+                        FilledButton(
+                          onPressed: () => context.go(AppRoutes.login),
+                          child: const Text('Iniciar sesión'),
+                        ),
                     ],
                   ),
                 ),
@@ -346,29 +344,6 @@ class _Tab extends StatelessWidget {
   );
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: const Color(0x2EFFFFFF),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        color: Colors.white,
-      ),
-    ),
-  );
-}
-
 class _Logo extends StatelessWidget {
   const _Logo({this.url, required this.name});
 
@@ -452,6 +427,18 @@ class _ProductCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final VisitorProduct p = product;
     final int from = p.priceFrom;
+    // Catálogo que el proveedor le compartió al revendedor: ve su precio de
+    // venta y el del proveedor, y no pide (para eso está Personalizar).
+    final bool mine = ref
+        .watch(sharedCatalogIdsProvider)
+        .contains(catalog.shortUuid);
+    final num? myPrice = mine
+        ? ref
+              .watch(catalogPriceOverlayControllerProvider(catalog.catalogId))
+              .value
+              ?.byProductId[p.id]
+              ?.lowestAdjustedPrice
+        : null;
     return Material(
       color: Colors.white,
       elevation: 1.5,
@@ -524,7 +511,24 @@ class _ProductCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 12),
                         ),
-                        if (from > 0)
+                        if (myPrice != null)
+                          Text(
+                            'Tu precio ${formatCop(myPrice)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                        if (from > 0 && mine)
+                          Text(
+                            'Proveedor ${formatCop(from)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF5B6B84),
+                            ),
+                          )
+                        else if (from > 0)
                           Text(
                             formatCop(from),
                             style: const TextStyle(
@@ -536,38 +540,39 @@ class _ProductCard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Semantics(
-                    button: true,
-                    label: 'Añadir ${p.name} al carrito',
-                    child: Material(
-                      color: AppColors.secondary,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () {
-                          // Sin color ni talla que elegir: se agrega directo con
-                          // la primera cantidad del proveedor. Si no, al detalle.
-                          if (p.colors.isEmpty && p.sizes.isEmpty) {
-                            final int q = p.quantityOptions.first;
-                            ref
-                                .read(cartControllerProvider.notifier)
-                                .add(cartLineFor(catalog, p, q));
-                          } else {
-                            _open(context);
-                          }
-                        },
-                        child: const SizedBox(
-                          width: 36,
-                          height: 36,
-                          child: Icon(
-                            LucideIcons.shoppingCart,
-                            size: 18,
-                            color: Colors.white,
+                  if (!mine)
+                    Semantics(
+                      button: true,
+                      label: 'Añadir ${p.name} al carrito',
+                      child: Material(
+                        color: AppColors.secondary,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () {
+                            // Sin color ni talla que elegir: se agrega directo con
+                            // la primera cantidad del proveedor. Si no, al detalle.
+                            if (p.colors.isEmpty && p.sizes.isEmpty) {
+                              final int q = p.quantityOptions.first;
+                              ref
+                                  .read(cartControllerProvider.notifier)
+                                  .add(cartLineFor(catalog, p, q));
+                            } else {
+                              _open(context);
+                            }
+                          },
+                          child: const SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: Icon(
+                              LucideIcons.shoppingCart,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),

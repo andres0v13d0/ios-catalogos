@@ -326,21 +326,43 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
                   ),
           ),
           if (support && !_loading && !_failed)
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: <Widget>[
-                  if (_askFeedback) ...<Widget>[
-                    _quickChip(kSupportYes, _thanks),
-                    _quickChip('No, hablar con soporte', _talkToSupport),
-                  ] else ...<Widget>[
-                    for (final SupportFaq f in kSupportFaqs)
-                      _quickChip(f.question, () => _faq(f)),
-                    _quickChip(kTalkToSupport, _talkToSupport, strong: true),
-                  ],
-                ],
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (_askFeedback) ...<Widget>[
+                        _quickChip(kSupportYes, _thanks),
+                        _quickChip('No, hablar con soporte', _talkToSupport),
+                      ] else ...<Widget>[
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            'Preguntas frecuentes: selecciona una',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                        ),
+                        for (final SupportFaq f in kSupportFaqs)
+                          _quickChip(f.question, () => _faq(f)),
+                        _quickChip(
+                          kTalkToSupport,
+                          _talkToSupport,
+                          strong: true,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           if (showQuick)
@@ -469,7 +491,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
 
 Widget _quickChip(String label, VoidCallback onTap, {bool strong = false}) =>
     Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(bottom: 6),
       child: ActionChip(
         label: Text(label),
         onPressed: onTap,

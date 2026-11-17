@@ -80,7 +80,7 @@ class VisitorBuyPage extends ConsumerWidget {
       for (final VisitorCatalog v in saved) v.toCatalog(),
     ];
     VisitorCatalog? savedOf(Catalog c) =>
-        saved.where((VisitorCatalog v) => v.catalogId == c.id).firstOrNull;
+        saved.where((VisitorCatalog v) => v.shortUuid == c.id).firstOrNull;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -149,6 +149,7 @@ class VisitorBuyPage extends ConsumerWidget {
                               key: Key('catalog_${cat.id}'),
                               catalog: cat,
                               compact: compact,
+                              hideProvider: savedOf(cat)?.isReseller ?? false,
                               onTap: () => _open(context, savedOf(cat)),
                             );
                             if (!sharedIds.contains(cat.id)) return card;
@@ -389,7 +390,7 @@ class _StoryCard extends ConsumerWidget {
       onTap: onOpen,
       onLongPress: () async {
         // Los que te compartió un proveedor no se quitan desde aquí.
-        if (ref.read(sharedCatalogIdsProvider).contains(catalog.catalogId)) {
+        if (ref.read(sharedCatalogIdsProvider).contains(catalog.shortUuid)) {
           return;
         }
         final bool? ok = await showDialog<bool>(
