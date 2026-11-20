@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/result/result.dart';
 import '../../../shared/models/reseller.dart';
 import '../../auth/data/session_store.dart';
+import '../../chat/chat_api.dart';
 import '../../auth/presentation/auth_state_provider.dart';
 import '../data/reseller_repository.dart';
 
@@ -84,6 +87,7 @@ class ProfileController extends Notifier<ProfileState> {
       case Ok<Reseller>(:final value):
         await _persist(value);
         state = ProfileState(status: _statusFor(value), reseller: value);
+        unawaited(_syncChat(value));
       case Err<Reseller>(:final failure):
         state = state.copyWith(isLoading: false, errorMessage: failure.message);
     }
@@ -105,11 +109,51 @@ class ProfileController extends Notifier<ProfileState> {
       case Ok<Reseller>(:final value):
         await _persist(value);
         state = ProfileState(status: _statusFor(value), reseller: value);
+        unawaited(_syncChat(value));
         return value.isProfileComplete;
       case Err<Reseller>(:final failure):
         state = state.copyWith(isLoading: false, errorMessage: failure.message);
         return false;
     }
+  }
+
+  /// Sube la foto ya recortada y la guarda en el perfil. `true` si quedó guardada.
+  Future<bool> savePhoto(List<int> bytes, String filename) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    final String mime = filename.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : 'image/jpeg';
+    final Result<String> up = await _repo.uploadPhoto(
+      bytes: bytes,
+      filename: filename,
+      mimeType: mime,
+    );
+    if (up is Err<String>) {
+      state = state.copyWith(isLoading: false, errorMessage: up.failure.message);
+      return false;
+    }
+    final Result<Reseller> result = await _repo.updateMe(
+      fotoUrl: (up as Ok<String>).value,
+    );
+    switch (result) {
+      case Ok<Reseller>(:final value):
+        state = ProfileState(status: _statusFor(value), reseller: value);
+        unawaited(_syncChat(value));
+        return true;
+      case Err<Reseller>(:final failure):
+        state = state.copyWith(isLoading: false, errorMessage: failure.message);
+        return false;
+    }
+  }
+
+  /// El chat usa una identidad de visitante aparte: le pasamos nombre y foto
+  /// para que el proveedor vea quién es. Best-effort, no bloquea el perfil.
+  Future<void> _syncChat(Reseller r) async {
+    final String name = (r.nombre ?? '').trim();
+    if (name.isEmpty) return;
+    try {
+      await ref.read(chatApiProvider).setName(name, fotoUrl: r.fotoUrl);
+    } catch (_) {}
   }
 
   /// Borra la cuenta del revendedor (`DELETE /reseller/me`, Apple/Google

@@ -2,6 +2,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
@@ -10,6 +12,8 @@ import '../../auth/presentation/auth_palette.dart';
 import '../../auth/presentation/auth_state_provider.dart';
 import '../../../shared/models/reseller.dart';
 import '../../../shared/widgets/brand_header.dart';
+import '../../shared_catalogs/presentation/reseller_banner_controller.dart'
+    show imagePickerProvider;
 import '../../account/account_widgets.dart';
 import 'profile_controller.dart';
 
@@ -90,6 +94,44 @@ class AccountSettingsPage extends ConsumerWidget {
     if (context.mounted) context.go(AppRoutes.buy);
   }
 
+  Future<void> _pickPhoto(BuildContext context, WidgetRef ref) async {
+    final XFile? picked = await ref
+        .read(imagePickerProvider)
+        .pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1200,
+          maxHeight: 1200,
+          imageQuality: 85,
+        );
+    if (picked == null) return;
+    final CroppedFile? cropped = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      maxWidth: 512,
+      maxHeight: 512,
+      compressQuality: 85,
+      uiSettings: <PlatformUiSettings>[
+        AndroidUiSettings(
+          toolbarTitle: 'Recorta tu foto',
+          toolbarColor: AppColors.primary,
+          toolbarWidgetColor: Colors.white,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(title: 'Recorta tu foto', aspectRatioLockEnabled: true),
+      ],
+    );
+    if (cropped == null) return;
+    final bool ok = await ref
+        .read(profileControllerProvider.notifier)
+        .savePhoto(await cropped.readAsBytes(), 'perfil.jpg');
+    if (!ok && context.mounted) {
+      final String? msg = ref.read(profileControllerProvider).errorMessage;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg ?? 'No pudimos subir tu foto.')),
+      );
+    }
+  }
+
   Future<void> _editName(BuildContext context, WidgetRef ref) async {
     final TextEditingController ctrl = TextEditingController(
       text: ref.read(profileControllerProvider).reseller?.nombre ?? '',
@@ -145,27 +187,12 @@ class AccountSettingsPage extends ConsumerWidget {
                 : null,
             child: Row(
               children: <Widget>[
-                Container(
-                  width: 56,
-                  height: 56,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0x33FFFFFF),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.accent, width: 2),
-                  ),
-                  child: name.isEmpty
-                      ? const Icon(LucideIcons.user, color: Colors.white)
-                      : Text(
-                          name.characters.first.toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                _PhotoBox(
+                  name: name,
+                  fotoUrl: me?.fotoUrl,
+                  onTap: () => _pickPhoto(context, ref),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,6 +212,20 @@ class AccountSettingsPage extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFFCFE0F7),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _pickPhoto(context, ref),
+                        child: Text(
+                          (me?.fotoUrl ?? '').isEmpty
+                              ? 'Sube tu foto de perfil'
+                              : 'Cambiar foto',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.accent,
+                          ),
                         ),
                       ),
                     ],
@@ -352,6 +393,74 @@ class _ConfirmDialog extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Cuadro de la foto de perfil (inicial si no hay foto) con insignia de cámara.
+class _PhotoBox extends StatelessWidget {
+  const _PhotoBox({required this.name, required this.fotoUrl, required this.onTap});
+
+  final String name;
+  final String? fotoUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final String url = fotoUrl ?? '';
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Container(
+            width: 84,
+            height: 84,
+            alignment: Alignment.center,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: const Color(0x33FFFFFF),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: AppColors.accent, width: 2),
+            ),
+            child: url.isNotEmpty
+                ? Image.network(
+                    url,
+                    width: 84,
+                    height: 84,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        const Icon(LucideIcons.user, color: Colors.white),
+                  )
+                : name.isEmpty
+                ? const Icon(LucideIcons.camera, color: Colors.white, size: 30)
+                : Text(
+                    name.characters.first.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+          Positioned(
+            right: -4,
+            bottom: -4,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: AppColors.accent,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                LucideIcons.camera,
+                size: 14,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

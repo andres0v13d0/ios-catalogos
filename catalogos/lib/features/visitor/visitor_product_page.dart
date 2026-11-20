@@ -56,18 +56,40 @@ class VisitorProductPage extends ConsumerStatefulWidget {
 }
 
 class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
-  final PageController _pages = PageController();
+  // Carrusel cíclico: tras la última foto sigue la primera (como Temu).
+  // shortcut: ~1000 vueltas hacia cada lado, suficiente para deslizar a mano.
+  late final PageController _pages = PageController(initialPage: _count * 1000);
   int _page = 0;
   late int _qty = widget.product.quantityOptions.first;
   String? _color;
   String? _size;
 
+  int get _count {
+    final VisitorProduct p = widget.product;
+    return p.images.isNotEmpty ? p.images.length : (p.image != null ? 1 : 0);
+  }
+
+  /// Va a la foto [i] (0..n-1) por el camino más corto del carrusel cíclico.
+  void _goTo(int i, {bool animate = true}) {
+    if (!_pages.hasClients || _count == 0) return;
+    final int raw = _pages.page!.round();
+    int delta = (i - raw % _count + _count) % _count;
+    if (delta > _count / 2) delta -= _count;
+    if (!animate) {
+      _pages.jumpToPage(raw + delta);
+      return;
+    }
+    _pages.animateToPage(
+      raw + delta,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+
   /// Fotos ampliadas; al cerrar, el carrusel queda en la que se estaba viendo.
   Future<void> _openGallery(List<String> imgs, int i) async {
     final int? last = await showImageGallery(context, imgs, initial: i);
-    if (last != null && last != _page && _pages.hasClients) {
-      _pages.jumpToPage(last);
-    }
+    if (last != null && last != _page) _goTo(last, animate: false);
   }
 
   @override
@@ -109,25 +131,30 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
                   else
                     PageView.builder(
                       controller: _pages,
-                      itemCount: imgs.length,
-                      onPageChanged: (int i) => setState(() => _page = i),
-                      itemBuilder: (_, int i) => GestureDetector(
-                        onTap: () => _openGallery(imgs, i),
-                        child: ColoredBox(
-                          color: const Color(0xFFF1F5FB),
-                          // Debajo de la barra de estado, no tapada por ella.
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              top: MediaQuery.paddingOf(context).top,
-                            ),
-                            child: CachedNetworkImage(
-                              imageUrl: imgs[i],
-                              fit: BoxFit.contain,
-                              errorWidget: (_, _, _) => const SizedBox.shrink(),
+                      itemCount: imgs.length > 1 ? null : imgs.length,
+                      onPageChanged: (int i) =>
+                          setState(() => _page = i % imgs.length),
+                      itemBuilder: (_, int raw) {
+                        final int i = raw % imgs.length;
+                        return GestureDetector(
+                          onTap: () => _openGallery(imgs, i),
+                          child: ColoredBox(
+                            color: const Color(0xFFF1F5FB),
+                            // Debajo de la barra de estado, no tapada por ella.
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                top: MediaQuery.paddingOf(context).top,
+                              ),
+                              child: CachedNetworkImage(
+                                imageUrl: imgs[i],
+                                fit: BoxFit.contain,
+                                errorWidget: (_, _, _) =>
+                                    const SizedBox.shrink(),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   Positioned(
                     left: 14,
@@ -180,11 +207,7 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
                   itemCount: imgs.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (_, int i) => GestureDetector(
-                    onTap: () => _pages.animateToPage(
-                      i,
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOut,
-                    ),
+                    onTap: () => _goTo(i),
                     child: Container(
                       width: 58,
                       decoration: BoxDecoration(
@@ -226,19 +249,36 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Preguntar por este producto',
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(),
-                        iconSize: 28,
-                        color: AppColors.secondary,
-                        onPressed: () => openVisitorChat(
-                          context,
-                          ref,
-                          widget.catalog,
-                          product: p,
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.secondary,
+                            backgroundColor: const Color(0x14004AAD),
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            shape: const StadiumBorder(),
+                            textStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onPressed: () => openVisitorChat(
+                            context,
+                            ref,
+                            widget.catalog,
+                            product: p,
+                          ),
+                          icon: const Icon(LucideIcons.messageCircle, size: 16),
+                          label: const Text(
+                            'Preguntar por este producto',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        icon: const Icon(LucideIcons.messageCircle),
                       ),
                     ],
                   ),
@@ -274,13 +314,7 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
                               setState(() => _color = c);
                               // Si el proveedor asoció una foto a este color, mostrarla.
                               final int? photo = p.colorPhoto[c];
-                              if (photo != null && _pages.hasClients) {
-                                _pages.animateToPage(
-                                  photo,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeOut,
-                                );
-                              }
+                              if (photo != null) _goTo(photo);
                             },
                           ),
                       ],
@@ -406,7 +440,7 @@ class _VisitorProductPageState extends ConsumerState<VisitorProductPage> {
                                         flyToCart(btnCtx);
                                       },
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.secondary,
+                                  backgroundColor: AppColors.cta,
                                   shape: const StadiumBorder(),
                                   textStyle: const TextStyle(
                                     fontSize: 14,

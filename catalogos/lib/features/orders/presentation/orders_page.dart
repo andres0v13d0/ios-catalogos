@@ -5,7 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/utils/text.dart';
 import '../../../shared/widgets/brand_header.dart';
+import '../../../shared/widgets/search_box.dart';
 import '../../auth/presentation/auth_state_provider.dart';
 import '../../visitor/visitor_buy_page.dart' show openVisitorChat;
 import '../../visitor/visitor_catalogs.dart';
@@ -26,6 +28,7 @@ class OrdersPage extends ConsumerStatefulWidget {
 class _OrdersPageState extends ConsumerState<OrdersPage> {
   bool _purchases = false;
   OrderStatus? _filter; // null = todos
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -81,10 +84,15 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
               ],
             ),
           ),
+          SearchBox(
+            hint: 'Buscar por cliente o producto…',
+            onChanged: (String v) => setState(() => _query = v),
+          ),
           Expanded(
             child: _purchases
-                ? const _PurchasesList()
+                ? _PurchasesList(query: _query)
                 : _ReceivedOrders(
+                    query: _query,
                     filter: _filter,
                     onFilter: (OrderStatus? s) => setState(() => _filter = s),
                   ),
@@ -96,8 +104,13 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
 }
 
 class _ReceivedOrders extends ConsumerWidget {
-  const _ReceivedOrders({required this.filter, required this.onFilter});
+  const _ReceivedOrders({
+    required this.query,
+    required this.filter,
+    required this.onFilter,
+  });
 
+  final String query;
   final OrderStatus? filter;
   final ValueChanged<OrderStatus?> onFilter;
 
@@ -136,9 +149,13 @@ class _ReceivedOrders extends ConsumerWidget {
               ),
             ),
             data: (List<ResellerOrder> all) {
-              final List<ResellerOrder> orders = filter == null
-                  ? all
-                  : all.where((ResellerOrder o) => o.status == filter).toList();
+              final List<ResellerOrder> orders = all
+                  .where(
+                    (ResellerOrder o) =>
+                        (filter == null || o.status == filter) &&
+                        _matches(o, query),
+                  )
+                  .toList();
               final List<Widget> rows = <Widget>[];
               void section(String title, List<ResellerOrder> l) {
                 if (l.isEmpty) return;
@@ -492,7 +509,9 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
 
 /// "Mis compras": pedidos que el revendedor hizo a proveedores (guardados en su cuenta).
 class _PurchasesList extends ConsumerWidget {
-  const _PurchasesList();
+  const _PurchasesList({required this.query});
+
+  final String query;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -507,42 +526,53 @@ class _PurchasesList extends ConsumerWidget {
           child: const Text('No pudimos cargar tus compras. Reintentar'),
         ),
       ),
-      data: (List<ResellerOrder> orders) => RefreshIndicator(
-        onRefresh: () =>
-            ref.read(purchasesControllerProvider.notifier).refresh(),
-        child: orders.isEmpty
-            ? ListView(
-                children: const <Widget>[
-                  SizedBox(height: 100),
-                  Icon(
-                    LucideIcons.receiptText,
-                    size: 40,
-                    color: Color(0xFF5B6B84),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      'Aún no has hecho compras. Pide desde un catálogo en la pestaña Comprar y las verás aquí.',
-                      textAlign: TextAlign.center,
+      data: (List<ResellerOrder> all) {
+        final List<ResellerOrder> orders = all
+            .where((ResellerOrder o) => _matches(o, query))
+            .toList();
+        return RefreshIndicator(
+          onRefresh: () =>
+              ref.read(purchasesControllerProvider.notifier).refresh(),
+          child: orders.isEmpty
+              ? ListView(
+                  children: const <Widget>[
+                    SizedBox(height: 100),
+                    Icon(
+                      LucideIcons.receiptText,
+                      size: 40,
+                      color: Color(0xFF5B6B84),
                     ),
-                  ),
-                ],
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                itemCount: orders.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (_, int i) => _PurchaseCard(order: orders[i]),
-              ),
-      ),
+                    Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Aún no has hecho compras. Pide desde un catálogo en la pestaña Comprar y las verás aquí.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  itemCount: orders.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (_, int i) => _PurchaseCard(order: orders[i]),
+                ),
+        );
+      },
     );
   }
 }
 
-String _detail(ResellerOrderItem it) => <String>[
-  ?it.color,
-  if (it.size != null) 'Talla ${it.size}',
-].join(' · ');
+/// ¿El pedido coincide con [q] (ya normalizado) por número, cliente o producto?
+bool _matches(ResellerOrder o, String q) =>
+    q.isEmpty ||
+    foldSearch(
+      '#${o.number} ${o.buyerName ?? ''} '
+      '${o.items.map((ResellerOrderItem i) => i.name).join(' ')}',
+    ).contains(q);
+
+String _detail(ResellerOrderItem it) =>
+    <String>[?it.color, if (it.size != null) 'Talla ${it.size}'].join(' · ');
 
 class _PurchaseCard extends ConsumerWidget {
   const _PurchaseCard({required this.order});

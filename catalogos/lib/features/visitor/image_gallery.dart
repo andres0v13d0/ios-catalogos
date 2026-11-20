@@ -30,8 +30,9 @@ class _Gallery extends StatefulWidget {
 }
 
 class _GalleryState extends State<_Gallery> {
+  // Cíclico: tras la última foto sigue la primera.
   late final PageController _pages = PageController(
-    initialPage: widget.initial,
+    initialPage: widget.initial + widget.images.length * 1000,
   );
   late int _page = widget.initial;
   final TransformationController _zoom = TransformationController();
@@ -61,37 +62,40 @@ class _GalleryState extends State<_Gallery> {
             PageView.builder(
               controller: _pages,
               physics: _zoomed ? const NeverScrollableScrollPhysics() : null,
-              itemCount: widget.images.length,
-              onPageChanged: (int i) {
+              itemCount: widget.images.length > 1 ? null : 1,
+              onPageChanged: (int raw) {
                 _zoom.value = Matrix4.identity();
                 setState(() {
-                  _page = i;
+                  _page = raw % widget.images.length;
                   _zoomed = false;
                 });
               },
-              itemBuilder: (_, int i) => InteractiveViewer(
-                transformationController: i == _page ? _zoom : null,
-                panEnabled: _zoomed,
-                minScale: 1,
-                maxScale: 4,
-                onInteractionEnd: (_) {
-                  final bool z = _zoom.value.getMaxScaleOnAxis() > 1.01;
-                  if (z != _zoomed) setState(() => _zoomed = z);
-                },
-                child: Center(
-                  child: CachedNetworkImage(
-                    imageUrl: widget.images[i],
-                    fit: BoxFit.contain,
-                    placeholder: (_, _) =>
-                        const CircularProgressIndicator(color: Colors.white),
-                    errorWidget: (_, _, _) => const Icon(
-                      LucideIcons.imageOff,
-                      color: Colors.white54,
-                      size: 40,
+              itemBuilder: (_, int raw) {
+                final int i = raw % widget.images.length;
+                return InteractiveViewer(
+                  transformationController: i == _page ? _zoom : null,
+                  panEnabled: _zoomed,
+                  minScale: 1,
+                  maxScale: 4,
+                  onInteractionEnd: (_) {
+                    final bool z = _zoom.value.getMaxScaleOnAxis() > 1.01;
+                    if (z != _zoomed) setState(() => _zoomed = z);
+                  },
+                  child: Center(
+                    child: CachedNetworkImage(
+                      imageUrl: widget.images[i],
+                      fit: BoxFit.contain,
+                      placeholder: (_, _) =>
+                          const CircularProgressIndicator(color: Colors.white),
+                      errorWidget: (_, _, _) => const Icon(
+                        LucideIcons.imageOff,
+                        color: Colors.white54,
+                        size: 40,
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
             SafeArea(
               child: Padding(

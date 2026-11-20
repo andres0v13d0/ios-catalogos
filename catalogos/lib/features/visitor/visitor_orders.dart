@@ -8,7 +8,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/storage/storage.dart';
 import '../../core/utils/money.dart';
+import '../../core/utils/text.dart';
 import '../../shared/widgets/brand_header.dart';
+import '../../shared/widgets/search_box.dart';
 import 'visitor_catalogs.dart';
 
 /// Pedido enviado desde este celular (sin cuenta). El estado se consulta al servidor.
@@ -20,6 +22,7 @@ class SavedOrder {
     required this.catalogName,
     required this.createdAt,
     this.providerName,
+    this.productNames = const <String>[],
   });
 
   final String id;
@@ -29,6 +32,14 @@ class SavedOrder {
   final String? providerName;
   final DateTime createdAt;
 
+  /// Para buscar por producto; vacío en pedidos guardados antes de este campo.
+  final List<String> productNames;
+
+  /// ¿Coincide con [q] (ya normalizado) por proveedor, catálogo, número o producto?
+  bool matches(String q) => foldSearch(
+    '${providerName ?? ''} $catalogName #$number ${productNames.join(' ')}',
+  ).contains(q);
+
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'number': number,
@@ -36,6 +47,7 @@ class SavedOrder {
     'catalogName': catalogName,
     'providerName': providerName,
     'createdAt': createdAt.toIso8601String(),
+    'productNames': productNames,
   };
 
   factory SavedOrder.fromJson(Map<String, dynamic> j) => SavedOrder(
@@ -45,6 +57,9 @@ class SavedOrder {
     catalogName: j['catalogName'] as String? ?? 'Catálogo',
     providerName: j['providerName'] as String?,
     createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.now(),
+    productNames: ((j['productNames'] as List<dynamic>?) ?? const <dynamic>[])
+        .map((dynamic e) => '$e')
+        .toList(),
   );
 }
 
@@ -100,12 +115,22 @@ String _date(DateTime d) =>
     '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
 /// Pestaña "Pedidos" del visitante: solo los pedidos hechos en este celular.
-class VisitorOrdersPage extends ConsumerWidget {
+class VisitorOrdersPage extends ConsumerStatefulWidget {
   const VisitorOrdersPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final List<SavedOrder> orders = ref.watch(visitorOrdersProvider);
+  ConsumerState<VisitorOrdersPage> createState() => _VisitorOrdersPageState();
+}
+
+class _VisitorOrdersPageState extends ConsumerState<VisitorOrdersPage> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final List<SavedOrder> all = ref.watch(visitorOrdersProvider);
+    final List<SavedOrder> orders = _query.isEmpty
+        ? all
+        : all.where((SavedOrder o) => o.matches(_query)).toList();
     return Scaffold(
       backgroundColor: kSheetTint,
       body: Column(
@@ -115,8 +140,13 @@ class VisitorOrdersPage extends ConsumerWidget {
             subtitle: 'Tus pedidos en este celular',
             sheetColor: kSheetTint,
           ),
+          if (all.isNotEmpty)
+            SearchBox(
+              hint: 'Buscar por proveedor o producto…',
+              onChanged: (String v) => setState(() => _query = v),
+            ),
           Expanded(
-            child: orders.isEmpty
+            child: all.isEmpty
                 ? const Center(
                     child: Padding(
                       padding: EdgeInsets.all(32),
@@ -137,6 +167,8 @@ class VisitorOrdersPage extends ConsumerWidget {
                       ),
                     ),
                   )
+                : orders.isEmpty
+                ? const Center(child: Text('No encontramos pedidos.'))
                 : RefreshIndicator(
                     onRefresh: () async {
                       for (final SavedOrder o in orders) {

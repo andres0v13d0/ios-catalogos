@@ -616,6 +616,9 @@ class _OrderSummaryPageState extends ConsumerState<OrderSummaryPage> {
                   catalogName: catalogName,
                   providerName: providerName,
                   createdAt: DateTime.now(),
+                  productNames: <String>[
+                    for (final CartLine l in lines) l.name,
+                  ],
                 ),
               );
         }

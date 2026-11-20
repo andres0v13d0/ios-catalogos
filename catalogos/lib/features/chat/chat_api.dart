@@ -239,9 +239,9 @@ class ChatApi {
   Future<void> markRead(String id) =>
       _dio.post<dynamic>('/conversations/$id/read');
 
-  Future<void> setName(String nombre) => _dio.patch<dynamic>(
+  Future<void> setName(String nombre, {String? fotoUrl}) => _dio.patch<dynamic>(
     '/guest-chat/me',
-    data: <String, dynamic>{'nombre': nombre},
+    data: <String, dynamic>{'nombre': nombre, 'fotoUrl': ?fotoUrl},
   );
 
   /// Solo se pregunta el nombre una vez (también si el usuario lo omite).

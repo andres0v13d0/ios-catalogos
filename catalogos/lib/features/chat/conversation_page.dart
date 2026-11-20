@@ -26,7 +26,12 @@ class ConversationInfo {
     this.logoUrl,
     this.isSupport = false,
     this.catalogId,
+    this.draftProduct,
   });
+
+  /// Producto por el que se pregunta: queda adjunto sobre el cuadro de texto
+  /// y se envía junto con el mensaje (como una foto en WhatsApp).
+  final Map<String, dynamic>? draftProduct;
 
   /// Catálogo de la conversación: de ahí salen los productos que se adjuntan.
   final String? catalogId;
@@ -67,6 +72,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
   // Preguntas y respuestas rápidas del soporte: solo viven en esta pantalla.
   final List<ChatMessage> _local = <ChatMessage>[];
   bool _askFeedback = false;
+  Map<String, dynamic>? _draft; // producto adjunto sin enviar
 
   ChatApi get _api => ref.read(chatApiProvider);
 
@@ -74,6 +80,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
   void initState() {
     super.initState();
     activeChatId = widget.conversationId;
+    _draft = widget.info?.draftProduct;
     _input.addListener(() => setState(() {}));
     _load();
     _timer = Timer.periodic(const Duration(seconds: 8), (_) => _load());
@@ -109,15 +116,21 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
 
   Future<void> _send() async {
     final String text = _input.text.trim();
-    if (text.isEmpty || _sending) return;
-    setState(() => _sending = true);
+    final Map<String, dynamic>? draft = _draft;
+    if ((text.isEmpty && draft == null) || _sending) return;
+    setState(() {
+      _sending = true;
+      _draft = null;
+    });
     _input.clear();
     try {
-      await _api.send(widget.conversationId, text);
+      if (draft != null) await _api.sendProduct(widget.conversationId, draft);
+      if (text.isNotEmpty) await _api.send(widget.conversationId, text);
       await _load();
     } catch (_) {
       if (!mounted) return;
       _input.text = text;
+      _draft = draft;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No pudimos enviar el mensaje. Intenta de nuevo.'),
@@ -194,10 +207,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
       builder: (BuildContext c) => _ProductPicker(shortUuid: cat.shortUuid),
     );
     if (p == null) return;
-    await _guarded(
-      () => _api.sendProduct(widget.conversationId, productChatPayload(cat, p)),
-      'No pudimos enviar el producto. Intenta de nuevo.',
-    );
+    setState(() => _draft = productChatPayload(cat, p));
   }
 
   Future<void> _sendPhoto() async {
@@ -279,7 +289,8 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
   @override
   Widget build(BuildContext context) {
     final ConversationInfo info = _info();
-    final bool canSend = _input.text.trim().isNotEmpty && !_sending;
+    final bool canSend =
+        (_input.text.trim().isNotEmpty || _draft != null) && !_sending;
     final bool support = info.isSupport;
     final bool showQuick =
         !support &&
@@ -391,6 +402,11 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
                   ),
                 ),
               ),
+            ),
+          if (_draft != null)
+            _DraftProduct(
+              product: _draft!,
+              onRemove: () => setState(() => _draft = null),
             ),
           Container(
             decoration: const BoxDecoration(
@@ -608,6 +624,76 @@ class _DayChip extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Producto adjunto, listo para enviar, sobre el cuadro de texto.
+class _DraftProduct extends StatelessWidget {
+  const _DraftProduct({required this.product, required this.onRemove});
+
+  final Map<String, dynamic> product;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? img = product['imageUrl'] as String?;
+    final num? price = product['price'] as num?;
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 0),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: kSheetTint,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: <Widget>[
+            if (img != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  img,
+                  width: 52,
+                  height: 52,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            if (img != null) const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    '${product['name']}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  if (price != null)
+                    Text(
+                      formatCop(price),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Quitar',
+              onPressed: onRemove,
+              icon: const Icon(LucideIcons.x, size: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _Bubble extends StatelessWidget {

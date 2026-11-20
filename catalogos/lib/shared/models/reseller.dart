@@ -15,6 +15,7 @@ class Reseller {
     required this.countryCode,
     this.firebaseUid,
     this.nombre,
+    this.fotoUrl,
   });
 
   /// Id del reseller en el backend.
@@ -34,6 +35,9 @@ class Reseller {
   /// Nombre del reseller; `null`/vacío significa perfil incompleto (tarea 1.13).
   final String? nombre;
 
+  /// URL de la foto de perfil; `null` si no ha subido una.
+  final String? fotoUrl;
+
   /// Código de país ISO (p. ej. `CO`).
   final String countryCode;
 
@@ -50,6 +54,7 @@ class Reseller {
       firebaseUid: json['firebaseUid'] as String?,
       telefonoE164: json['telefonoE164'] as String,
       nombre: json['nombre'] as String?,
+      fotoUrl: json['fotoUrl'] as String?,
       countryCode: json['countryCode'] as String,
       // `tipo` se ignora deliberadamente.
     );
@@ -61,6 +66,7 @@ class Reseller {
     'firebaseUid': firebaseUid,
     'telefonoE164': telefonoE164,
     'nombre': nombre,
+    'fotoUrl': fotoUrl,
     'countryCode': countryCode,
   };
 
@@ -69,6 +75,7 @@ class Reseller {
     String? firebaseUid,
     String? telefonoE164,
     String? nombre,
+    String? fotoUrl,
     String? countryCode,
   }) {
     return Reseller(
@@ -76,6 +83,7 @@ class Reseller {
       firebaseUid: firebaseUid ?? this.firebaseUid,
       telefonoE164: telefonoE164 ?? this.telefonoE164,
       nombre: nombre ?? this.nombre,
+      fotoUrl: fotoUrl ?? this.fotoUrl,
       countryCode: countryCode ?? this.countryCode,
     );
   }

@@ -38,10 +38,12 @@ class PosterCatalogCard extends ConsumerWidget {
     this.compact = false,
     this.hideProvider = false,
     this.actionLabel = 'Ver catálogo',
+    this.actionColors = const <Color>[AppColors.accent, AppColors.brand],
   });
 
   /// Texto del botón (en un catálogo compartido por proveedor: «Personalizar»).
   final String actionLabel;
+  final List<Color> actionColors;
 
   /// Catálogo de revendedor: sin logo ni nombre del proveedor.
   final bool hideProvider;
@@ -205,6 +207,7 @@ class PosterCatalogCard extends ConsumerWidget {
                           const SizedBox(height: 12),
                           AuthGradientButton(
                             label: actionLabel,
+                            colors: actionColors,
                             height: compact ? 46 : 50,
                             iconPainter: const ArrowForwardPainter(
                               color: AppColors.primary,

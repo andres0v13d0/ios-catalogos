@@ -41,6 +41,7 @@ class ResellerRepository {
   Future<Result<Reseller>> updateMe({
     String? nombre,
     String? countryCode,
+    String? fotoUrl,
   }) async {
     final body = <String, dynamic>{};
     if (nombre != null) {
@@ -49,6 +50,9 @@ class ResellerRepository {
     if (countryCode != null) {
       body['countryCode'] = countryCode;
     }
+    if (fotoUrl != null) {
+      body['fotoUrl'] = fotoUrl;
+    }
     try {
       final response = await _dio.patch<dynamic>(_path, data: body);
       return Ok<Reseller>(_parse(response.data));
@@ -56,6 +60,37 @@ class ResellerRepository {
       return Err<Reseller>(_failureOf(e));
     } catch (e) {
       return Err<Reseller>(UnknownFailure(cause: e));
+    }
+  }
+
+  /// Sube [bytes] a S3 con una URL firmada (`POST /reseller/me/photo-upload`)
+  /// y devuelve la URL pública final. Guardarla es trabajo de [updateMe].
+  Future<Result<String>> uploadPhoto({
+    required List<int> bytes,
+    required String filename,
+    required String mimeType,
+  }) async {
+    try {
+      final signed = await _dio.post<Map<String, dynamic>>(
+        '$_path/photo-upload',
+        data: <String, dynamic>{'filename': filename, 'mimeType': mimeType},
+      );
+      // PUT directo a S3: sin nuestros encabezados de sesión.
+      await Dio().put<void>(
+        signed.data!['signedUrl'] as String,
+        data: Stream<List<int>>.fromIterable(<List<int>>[bytes]),
+        options: Options(
+          headers: <String, dynamic>{
+            'Content-Type': mimeType,
+            Headers.contentLengthHeader: bytes.length,
+          },
+        ),
+      );
+      return Ok<String>(signed.data!['finalUrl'] as String);
+    } on DioException catch (e) {
+      return Err<String>(_failureOf(e));
+    } catch (e) {
+      return Err<String>(UnknownFailure(cause: e));
     }
   }
 

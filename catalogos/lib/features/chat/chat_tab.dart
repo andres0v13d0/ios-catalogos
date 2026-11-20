@@ -5,7 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/router/app_routes.dart';
 import '../../app/theme/app_colors.dart';
+import '../../core/utils/text.dart';
 import '../../shared/widgets/brand_header.dart';
+import '../../shared/widgets/search_box.dart';
 import 'chat_api.dart';
 import 'conversation_page.dart';
 
@@ -49,24 +51,9 @@ class _ChatTabState extends ConsumerState<ChatTab> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              onChanged: (String v) => setState(() => _query = _fold(v)),
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Buscar chats…',
-                prefixIcon: const Icon(LucideIcons.search, size: 18),
-                isDense: true,
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
+          SearchBox(
+            hint: 'Buscar chats…',
+            onChanged: (String v) => setState(() => _query = v),
           ),
           Expanded(
             child: async.when(
@@ -83,7 +70,7 @@ class _ChatTabState extends ConsumerState<ChatTab> {
                       (ChatConversation c) =>
                           (!_onlyUnread || c.unread > 0) &&
                           (_query.isEmpty ||
-                              _fold(
+                              foldSearch(
                                 '${c.title} ${c.subtitle ?? ''} ${c.lastMessage ?? ''}',
                               ).contains(_query)),
                     )
@@ -147,19 +134,6 @@ class _ChatTabState extends ConsumerState<ChatTab> {
       ),
     );
   }
-}
-
-/// Minúsculas y sin tildes, para que "catalogo" encuentre "Catálogo".
-String _fold(String v) {
-  const String from = 'áàäâéèëêíìïîóòöôúùüûñ';
-  const String to = 'aaaaeeeeiiiioooouuuun';
-  final StringBuffer b = StringBuffer();
-  for (final int r in v.toLowerCase().runes) {
-    final String ch = String.fromCharCode(r);
-    final int i = from.indexOf(ch);
-    b.write(i < 0 ? ch : to[i]);
-  }
-  return b.toString().trim();
 }
 
 String _when(DateTime? t) {

@@ -19,6 +19,9 @@ abstract final class AppColors {
   /// Verde de marca / final del gradiente. `#00FF94`.
   static const Color brand = Color(0xFF00FF94);
 
+  /// Naranja para la acción principal de compra (resalta sobre el azul). `#EA580C`.
+  static const Color cta = Color(0xFFEA580C);
+
   /// Fondo general de la app. `#F8F9FA`.
   static const Color background = Color(0xFFF8F9FA);
 

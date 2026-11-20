@@ -22,6 +22,7 @@ class AuthGradientButton extends StatelessWidget {
     required this.loading,
     required this.onPressed,
     this.height = 54,
+    this.colors = const <Color>[AppColors.accent, AppColors.brand],
   });
 
   final String label;
@@ -34,6 +35,9 @@ class AuthGradientButton extends StatelessWidget {
   /// 48dp (mínimo táctil accesible) en pantallas cortas — las pantallas de
   /// login siguen usando el valor por defecto.
   final double height;
+
+  /// Degradado del fondo (izquierda→derecha); la sombra toma el último color.
+  final List<Color> colors;
 
   @override
   Widget build(BuildContext context) {
@@ -48,15 +52,15 @@ class AuthGradientButton extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: <Color>[AppColors.accent, AppColors.brand],
+              colors: colors,
             ),
-            boxShadow: const <BoxShadow>[
+            boxShadow: <BoxShadow>[
               BoxShadow(
-                color: Color.fromRGBO(0, 255, 148, 0.3),
-                offset: Offset(0, 10),
+                color: colors.last.withValues(alpha: 0.3),
+                offset: const Offset(0, 10),
                 blurRadius: 24,
               ),
             ],

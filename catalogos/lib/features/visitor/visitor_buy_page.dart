@@ -1,3 +1,5 @@
+import '../../app/theme/app_colors.dart';
+
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'dart:async';
@@ -10,6 +12,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_routes.dart';
 import '../../core/utils/money.dart';
 import '../buy/cart_controller.dart';
+import '../../shared/models/reseller.dart';
+import '../profile/presentation/profile_controller.dart';
 import '../chat/ask_name_sheet.dart';
 import '../chat/chat_api.dart';
 import '../chat/conversation_page.dart';
@@ -154,6 +158,15 @@ class VisitorBuyPage extends ConsumerWidget {
                               actionLabel: shared
                                   ? 'Personalizar'
                                   : 'Ver catálogo',
+                              actionColors: shared
+                                  ? const <Color>[
+                                      Color(0xFFFFC46B),
+                                      Color(0xFFFF8A00),
+                                    ]
+                                  : const <Color>[
+                                      AppColors.accent,
+                                      AppColors.brand,
+                                    ],
                               onTap: () => shared
                                   ? _personalize(context, cat)
                                   : _open(context, savedOf(cat)),
@@ -687,7 +700,15 @@ Future<void> openVisitorChat(
   final GoRouter router = GoRouter.of(context);
   try {
     final String id = await api.start(c.catalogId);
-    if (!api.nameAsked && context.mounted) {
+    // Con cuenta, el chat usa el nombre y la foto del perfil (sin preguntar).
+    final Reseller? me = ref.read(profileControllerProvider).reseller;
+    final bool hasProfileName = (me?.nombre ?? '').trim().isNotEmpty;
+    if (hasProfileName) {
+      await api
+          .setName(me!.nombre!.trim(), fotoUrl: me.fotoUrl)
+          .catchError((Object _) {});
+    }
+    if (!hasProfileName && !api.nameAsked && context.mounted) {
       final String? name = await showAskNameSheet(
         context,
         providerName: c.providerName ?? c.name,
@@ -697,10 +718,6 @@ Future<void> openVisitorChat(
         await api.setName(name.trim()).catchError((Object _) {});
       }
     }
-    // Pregunta por un producto: la tarjeta queda como primer mensaje.
-    if (product != null) {
-      await api.sendProduct(id, productChatPayload(c, product));
-    }
     unawaited(
       router.push(
         AppRoutes.conversationPath(id),
@@ -709,6 +726,8 @@ Future<void> openVisitorChat(
           subtitle: c.providerName,
           logoUrl: c.logoUrl,
           catalogId: c.catalogId,
+          // Pregunta por un producto: queda adjunto sin enviar hasta que el usuario lo mande.
+          draftProduct: product == null ? null : productChatPayload(c, product),
         ),
       ),
     );
