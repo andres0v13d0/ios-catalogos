@@ -193,6 +193,7 @@ void main() {
             products: <VisitorProduct>[_plain, _variant],
             categories: <CatalogCategory>[],
             subcategories: <CatalogChip>[],
+            loadMore: null,
           ),
         ),
       ],
@@ -206,6 +207,47 @@ void main() {
     expect(cart, hasLength(1));
     expect(cart.single.quantity, 6); // la primera cantidad del proveedor
     expect(cart.single.unitPrice, 34500);
+  });
+
+  testWidgets('catálogo: al llegar al final carga más productos', (
+    tester,
+  ) async {
+    VisitorProduct item(int i) => VisitorProduct(
+      id: 'x$i',
+      name: 'Producto $i',
+      prices: const <int, int>{6: 1000},
+    );
+    int calls = 0;
+    await _pump(
+      tester,
+      const VisitorCatalogPage(code: 'ab12cd34'),
+      extra: [
+        visitorCatalogQueryProvider((
+          code: 'ab12cd34',
+          search: '',
+          byCategory: false,
+          chipId: null,
+        )).overrideWith(
+          (ref) async => (
+            catalog: _cat,
+            products: <VisitorProduct>[for (int i = 0; i < 20; i++) item(i)],
+            categories: <CatalogCategory>[],
+            subcategories: <CatalogChip>[],
+            loadMore: () async => ++calls == 1
+                ? <VisitorProduct>[for (int i = 20; i < 40; i++) item(i)]
+                : const <VisitorProduct>[],
+          ),
+        ),
+      ],
+    );
+    // Sin scroll no se pide nada extra más allá de lo que el borde exija;
+    // al bajar hasta el final se piden más y, al vaciarse, se detiene.
+    final Finder scroll = find.byType(SingleChildScrollView);
+    for (int i = 0; i < 6; i++) {
+      await tester.drag(scroll, const Offset(0, -3000));
+      await tester.pumpAndSettle();
+    }
+    expect(calls, 2); // 1ª tanda con datos, 2ª vacía = fin
   });
 
   testWidgets('catálogo: con color y talla el + abre el detalle', (
@@ -226,6 +268,7 @@ void main() {
             products: <VisitorProduct>[_variant],
             categories: <CatalogCategory>[],
             subcategories: <CatalogChip>[],
+            loadMore: null,
           ),
         ),
       ],

@@ -203,7 +203,12 @@ class _VisitorCatalogPageState extends ConsumerState<VisitorCatalogPage> {
                                 : 'Este catálogo aún no tiene productos.',
                           ),
                         )
-                      : _Masonry(catalog: d.catalog, products: d.products),
+                      : _Masonry(
+                          key: ObjectKey(d.products),
+                          catalog: d.catalog,
+                          products: d.products,
+                          loadMore: d.loadMore,
+                        ),
                 ),
               ),
             ],
@@ -382,32 +387,95 @@ class _Logo extends StatelessWidget {
 }
 
 /// Mosaico de dos columnas: cada foto conserva su alto (no se recorta).
-class _Masonry extends ConsumerWidget {
-  const _Masonry({required this.catalog, required this.products});
+class _Masonry extends ConsumerStatefulWidget {
+  const _Masonry({
+    super.key,
+    required this.catalog,
+    required this.products,
+    this.loadMore,
+  });
 
   final VisitorCatalog catalog;
   final List<VisitorProduct> products;
+  final Future<List<VisitorProduct>> Function()? loadMore;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Masonry> createState() => _MasonryState();
+}
+
+class _MasonryState extends ConsumerState<_Masonry> {
+  final ScrollController _scroll = ScrollController();
+  final List<VisitorProduct> _extra = <VisitorProduct>[];
+  bool _loading = false;
+  late bool _more = widget.loadMore != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_check);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// Pide la siguiente tanda al acercarse al final (a ~1.5 pantallas).
+  Future<void> _check() async {
+    if (_loading || !_more || !_scroll.hasClients) return;
+    final ScrollPosition pos = _scroll.position;
+    if (pos.extentAfter > pos.viewportDimension * 1.5) return;
+    setState(() => _loading = true);
+    try {
+      final List<VisitorProduct> next = await widget.loadMore!();
+      if (!mounted) return;
+      setState(() {
+        _extra.addAll(next);
+        _more = next.isNotEmpty;
+      });
+    } catch (_) {
+      // Sin red: se reintenta con el siguiente scroll.
+    }
+    if (!mounted) return;
+    setState(() => _loading = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<VisitorProduct> products = <VisitorProduct>[
+      ...widget.products,
+      ..._extra,
+    ];
     final List<Widget> left = <Widget>[];
     final List<Widget> right = <Widget>[];
     for (int i = 0; i < products.length; i++) {
       (i.isEven ? left : right).add(
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: _ProductCard(catalog: catalog, product: products[i]),
+          child: _ProductCard(catalog: widget.catalog, product: products[i]),
         ),
       );
     }
     return SingleChildScrollView(
+      controller: _scroll,
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 100),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: <Widget>[
-          Expanded(child: Column(children: left)),
-          const SizedBox(width: 10),
-          Expanded(child: Column(children: right)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(child: Column(children: left)),
+              const SizedBox(width: 10),
+              Expanded(child: Column(children: right)),
+            ],
+          ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
         ],
       ),
     );

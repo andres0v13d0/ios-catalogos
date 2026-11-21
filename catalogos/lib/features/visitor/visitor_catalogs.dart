@@ -863,11 +863,18 @@ typedef VisitorCatalogResult = ({
   List<VisitorProduct> products,
   List<CatalogCategory> categories,
   List<CatalogChip> subcategories,
+
+  /// Siguiente tanda de productos (scroll infinito); lista vacía = no quedan.
+  /// `null` si no hay más allá de `products`.
+  Future<List<VisitorProduct>> Function()? loadMore,
 });
 
+/// Tamaño de cada tanda de productos del catálogo del visitante.
+const int kVisitorCatalogPageSize = 60;
+
 /// Productos de un catálogo: nuevos primero y el resto, cada grupo en orden
-/// aleatorio nuevo en cada apertura (autoDispose vuelve a ejecutarlo), hasta 60.
-/// shortcut: sin paginación; paginar cuando haya catálogos de cientos de productos.
+/// aleatorio nuevo en cada apertura (autoDispose vuelve a ejecutarlo). Entrega
+/// la primera tanda y `loadMore` para las siguientes (scroll infinito).
 final visitorCatalogQueryProvider = FutureProvider.autoDispose
     .family<VisitorCatalogResult, VisitorCatalogQuery>((
       Ref ref,
@@ -884,26 +891,45 @@ final visitorCatalogQueryProvider = FutureProvider.autoDispose
       final List<String> ids = <String>{
         ...p.newIds.toList()..shuffle(),
         ...(p.ids.where((String i) => !newIds.contains(i)).toList()..shuffle()),
-      }.take(60).toList();
-      final List<VisitorProduct> prods = await api.previews(
-        ids,
-        p.catalog.catalogId,
-        shared: api.isSharedCode(q.code),
-      );
+      }.toList();
+      final bool shared = api.isSharedCode(q.code);
       final bool prices = (await ref.watch(
         catalogAccessProvider(p.catalog.catalogId).future,
       )).canSeePrices;
+      Future<List<VisitorProduct>> fetch(List<String> batch) async =>
+          <VisitorProduct>[
+            for (final VisitorProduct x in await api.previews(
+              batch,
+              p.catalog.catalogId,
+              shared: shared,
+            ))
+              if (prices)
+                newIds.contains(x.id) ? x.asNew() : x
+              else
+                (newIds.contains(x.id) ? x.asNew() : x).withoutPrices(),
+          ];
+      final List<String> rest = ids.skip(kVisitorCatalogPageSize).toList();
+      final List<VisitorProduct> first = await fetch(
+        ids.take(kVisitorCatalogPageSize).toList(),
+      );
+      Future<List<VisitorProduct>> loadMore() async {
+        while (rest.isNotEmpty) {
+          final List<String> batch = rest
+              .take(kVisitorCatalogPageSize)
+              .toList();
+          final List<VisitorProduct> next = await fetch(batch);
+          rest.removeRange(0, batch.length); // solo si la red no falló
+          if (next.isNotEmpty) return next;
+        }
+        return const <VisitorProduct>[];
+      }
+
       return (
         catalog: p.catalog,
-        products: <VisitorProduct>[
-          for (final VisitorProduct x in prods)
-            if (prices)
-              newIds.contains(x.id) ? x.asNew() : x
-            else
-              (newIds.contains(x.id) ? x.asNew() : x).withoutPrices(),
-        ],
+        products: first,
         categories: p.categories,
         subcategories: p.subcategories,
+        loadMore: rest.isEmpty ? null : loadMore,
       );
     });
 

@@ -48,7 +48,10 @@ class _ShareLinkPageState extends ConsumerState<ShareLinkPage> {
               children: <Widget>[
                 const Text('No pudimos abrir este catálogo.'),
                 const SizedBox(height: 12),
-                TextButton(onPressed: _resolve, child: const Text('Reintentar')),
+                TextButton(
+                  onPressed: _resolve,
+                  child: const Text('Reintentar'),
+                ),
                 TextButton(
                   onPressed: () => context.go(AppRoutes.buy),
                   child: const Text('Ir al inicio'),
