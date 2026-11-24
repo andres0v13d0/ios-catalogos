@@ -9,6 +9,8 @@ import '../../../core/utils/text.dart';
 import '../../../shared/widgets/brand_header.dart';
 import '../../../shared/widgets/search_box.dart';
 import '../../auth/presentation/auth_state_provider.dart';
+import '../../buy/cart_controller.dart';
+import '../../visitor/cart_flow.dart' show openCart;
 import '../../visitor/visitor_buy_page.dart' show openVisitorChat;
 import '../../visitor/visitor_catalogs.dart';
 import '../../visitor/visitor_orders.dart';
@@ -518,6 +520,40 @@ class _PurchasesList extends ConsumerWidget {
     final AsyncValue<List<ResellerOrder>> async = ref.watch(
       purchasesControllerProvider,
     );
+    final int cartCount = ref.watch(cartControllerProvider).length;
+    return Column(
+      children: <Widget>[
+        if (cartCount > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                leading: const Icon(LucideIcons.shoppingCart),
+                title: Text(
+                  'Carrito · $cartCount producto(s)',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: const Text('Pendiente por enviar'),
+                trailing: const Icon(LucideIcons.chevronRight),
+                onTap: () => openCart(context, ref),
+              ),
+            ),
+          ),
+        Expanded(child: _list(context, ref, async)),
+      ],
+    );
+  }
+
+  Widget _list(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<ResellerOrder>> async,
+  ) {
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (Object e, _) => Center(

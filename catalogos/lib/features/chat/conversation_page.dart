@@ -72,6 +72,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
   // Preguntas y respuestas rápidas del soporte: solo viven en esta pantalla.
   final List<ChatMessage> _local = <ChatMessage>[];
   bool _askFeedback = false;
+  bool _faqOpen = false; // lista de preguntas desplegada con el botón
   Map<String, dynamic>? _draft; // producto adjunto sin enviar
 
   ChatApi get _api => ref.read(chatApiProvider);
@@ -252,6 +253,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
   );
 
   void _faq(SupportFaq f) => setState(() {
+    _faqOpen = false;
     _say(f.question, mine: true);
     _say('${f.answer}\n\n$kSupportAsk', mine: false);
     _askFeedback = true;
@@ -261,6 +263,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
     _say(kSupportYes, mine: true);
     _say(kSupportThanks, mine: false);
     _askFeedback = false;
+    _faqOpen = false;
   });
 
   /// Manda un mensaje real al equipo (le llega la notificación) y responde según el horario.
@@ -269,6 +272,7 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
     setState(() {
       _sending = true;
       _askFeedback = false;
+      _faqOpen = false;
     });
     try {
       await _api.send(widget.conversationId, kSupportRequestMessage);
@@ -336,46 +340,58 @@ class _ConversationPageState extends ConsumerState<ConversationPage> {
                         : _messages,
                   ),
           ),
-          if (support && !_loading && !_failed)
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.4,
-              ),
-              child: SingleChildScrollView(
+          if (support && !_loading && !_failed && _input.text.isEmpty)
+            if (!_askFeedback && !_faqOpen)
+              Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      if (_askFeedback) ...<Widget>[
-                        _quickChip(kSupportYes, _thanks),
-                        _quickChip('No, hablar con soporte', _talkToSupport),
-                      ] else ...<Widget>[
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            'Preguntas frecuentes: selecciona una',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.secondary,
+                  child: _quickChip(
+                    'Preguntas frecuentes',
+                    () => setState(() => _faqOpen = true),
+                  ),
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        if (_askFeedback) ...<Widget>[
+                          _quickChip(kSupportYes, _thanks),
+                          _quickChip('No, hablar con soporte', _talkToSupport),
+                        ] else ...<Widget>[
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              'Preguntas frecuentes: selecciona una',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.secondary,
+                              ),
                             ),
                           ),
-                        ),
-                        for (final SupportFaq f in kSupportFaqs)
-                          _quickChip(f.question, () => _faq(f)),
-                        _quickChip(
-                          kTalkToSupport,
-                          _talkToSupport,
-                          strong: true,
-                        ),
+                          for (final SupportFaq f in kSupportFaqs)
+                            _quickChip(f.question, () => _faq(f)),
+                          _quickChip(
+                            kTalkToSupport,
+                            _talkToSupport,
+                            strong: true,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
           if (showQuick)
             SizedBox(
               height: 44,

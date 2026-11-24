@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Genera la imagen con QR de descarga de la app FLY+.
 
-Uso: make_qr_poster.py <url_corto> <salida.png> [texto_extra]
+Uso: make_qr_poster.py <url_corto> <salida.png> [texto_extra] [titulo] [subtitulo] [icono.png]
 Requiere: pip install qrcode pillow
 """
 import sys
@@ -19,8 +19,11 @@ def font(weight, size):
     return ImageFont.truetype(str(ROOT / "fonts" / f"Poppins-{weight}.ttf"), size)
 
 
+ICON = ROOT / "branding" / "play_store_icon_512.png"
+
+
 def rounded_icon(size):
-    ic = Image.open(ROOT / "branding" / "play_store_icon_512.png").convert("RGBA").resize((size, size), Image.LANCZOS)
+    ic = Image.open(ICON).convert("RGBA").resize((size, size), Image.LANCZOS)
     m = Image.new("L", (size, size), 0)
     ImageDraw.Draw(m).rounded_rectangle((0, 0, size, size), size // 4, fill=255)
     ic.putalpha(m)
@@ -31,7 +34,10 @@ def centered(d, y, text, f, fill):
     d.text(((W - d.textlength(text, font=f)) / 2, y), text, font=f, fill=fill)
 
 
-def main(url, out, extra=""):
+def main(url, out, extra="", title="Descarga Flymas", subtitle="La app para revendedores", icon=""):
+    global ICON
+    if icon:
+        ICON = Path(icon)
     img = Image.new("RGB", (W, H), NAVY)
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     g = ImageDraw.Draw(glow)
@@ -41,8 +47,9 @@ def main(url, out, extra=""):
     d = ImageDraw.Draw(img)
 
     img.paste(rounded_icon(150), ((W - 150) // 2, 70), rounded_icon(150))
-    centered(d, 245, "Descarga Flymas", font("Bold", 84), "white")
-    centered(d, 350, "La app para revendedores", font("SemiBold", 40), CYAN)
+    centered(d, 245, title, font("Bold", 84), "white")
+    if subtitle:
+        centered(d, 350, subtitle, font("SemiBold", 40), CYAN)
 
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_H, border=0, box_size=20)
     qr.add_data(url)
@@ -72,4 +79,4 @@ def main(url, out, extra=""):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         sys.exit(__doc__)
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:7])
